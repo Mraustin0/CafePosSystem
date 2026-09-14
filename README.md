@@ -33,7 +33,10 @@ Production: React build ถูก copy เข้า Spring Boot เป็น sta
 
 ## Database Design (ER Diagram)
 
-<!-- TODO: ใส่ ER Diagram จาก doc/diagrams -->
+8 ตาราง — One-to-One (`users`–`user_profiles`, `orders`–`payments`), One-to-Many, Many-to-Many (`products`–`add_ons`)
+
+- ER Diagram: [doc/diagrams/er-diagram.md](doc/diagrams/er-diagram.md)
+- Data Dictionary: [doc/data-dictionary.md](doc/data-dictionary.md)
 
 ## Installation & Setup
 
@@ -50,7 +53,7 @@ cd CafePosSystem/code/frontend && npm install
 
 ```bash
 cd code
-docker compose up -d db              # PostgreSQL :5432
+docker compose up -d db              # PostgreSQL :5433 (กันชนกับ Postgres ที่ลงในเครื่อง)
 cd backend && ./mvnw spring-boot:run # API :8080
 cd frontend && npm run dev           # UI :5173 (proxy /api → :8080)
 ```

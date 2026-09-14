@@ -10,10 +10,10 @@
 
 | ลำดับ | ชื่อ-นามสกุล | รหัสนักศึกษา | Section | Branch | หน้าที่รับผิดชอบ |
 | ----- | ------------ | ------------ | ------- | ------ | ---------------- |
-| 1 | Phakawat | 6733804189 | 04 | `Phakawat_6733804189_04` | Auth & User Management (F-01–09), Security, Exception Handler, Docker / CI / Deploy |
-| 2 | Thana-nan | 6733805868 | 04 | `Thana-nan_6733805868_04` | Menu Management: Category, Product, Add-on (F-10–23) |
-| 3 | Kawinthida | 6733803905 | 04 | `Kawinthida_6733803905_04` | Sales / Order + หน้าขาย POS (F-24–31) |
-| 4 | Kanyawee | 6733805737 | 04 | `Kanyawee_6733805737_04` | Payment & Reports (F-32–38) |
+| 1 | Phakawat | 6733804189 | 04 | `Phakawat_6733804189_04` | Auth & User (F-01–09), Sales / Order + POS (F-24–31), Payment (F-32–34), Design Patterns, Security, Exception Handler, Docker / CI / Deploy |
+| 2 | Thana-nan | 6733805868 | 04 | `Thana-nan_6733805868_04` | Category, Add-on (F-10–13, F-20–23) |
+| 3 | Kawinthida | 6733803905 | 04 | `Kawinthida_6733803905_04` | Product (F-14–19) |
+| 4 | Kanyawee | 6733805737 | 04 | `Kanyawee_6733805737_04` | Reports (F-35–38), Test Report |
 
 รายละเอียดการแบ่งงาน: [doc/system-functions.md](doc/system-functions.md#การแบ่งงาน)
 

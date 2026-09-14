@@ -118,30 +118,29 @@
 
 ## การแบ่งงาน
 
-ทุกคนทำครบทั้ง Backend (Entity → Repository → Service → Controller + DTO/Mapper + Unit Test) และหน้า Frontend ของโมดูลตัวเอง
+Phakawat รับงานหลัก (Order, Payment, Design Pattern ทั้งหมด, งานส่วนกลาง) — สมาชิกที่เหลือรับโมดูล CRUD / รายงาน คนละเท่า ๆ กัน
+ทุกคนทำครบ Backend (Repository → Service → Controller + DTO/Mapper + Unit Test) และหน้า Frontend ของโมดูลตัวเอง
 
 | | Phakawat | Thana-nan | Kawinthida | Kanyawee |
 | - | -------- | --------- | ---------- | -------- |
 | **Branch** | `Phakawat_6733804189_04` | `Thana-nan_6733805868_04` | `Kawinthida_6733803905_04` | `Kanyawee_6733805737_04` |
-| **โมดูล** | Auth & User Management | Menu Management | Sales / Order | Payment & Reports |
-| **ฟังก์ชัน** | F-01 – F-09 | F-10 – F-23 | F-24 – F-31 | F-32 – F-38 |
-| **ตาราง** | `users`, `user_profiles` | `categories`, `products`, `add_ons`, `product_add_ons` | `orders`, `order_items` | `payments` (+ query รายงาน) |
-| **REST API** | `/api/v1/auth`, `/api/v1/users` | `/api/v1/categories`, `/api/v1/products`, `/api/v1/add-ons` | `/api/v1/orders`, `/api/v1/orders/{id}/items` | `/api/v1/orders/{id}/payment`, `/api/v1/reports` |
-| **หน้า Frontend** | Login, โปรไฟล์, จัดการผู้ใช้ | จัดการหมวด / สินค้า / add-on | หน้าขาย POS (ตะกร้า), รายการออเดอร์, ใบเสร็จ | หน้าชำระเงิน, Dashboard รายงาน |
-| **Design Pattern** (Behavioral) | — | — | **Strategy** — ส่วนลด (ไม่มี / % / จำนวนเงิน)<br>**State** — สถานะออเดอร์ | **Observer** — `OrderPaidEvent` (ApplicationEvent) หลังชำระเงิน |
-| **งานส่วนกลาง** | Spring Security, `GlobalExceptionHandler` + Error Response, Docker / CI / Deploy (Render + Neon) | Pagination & Sorting (F-14) เป็นตัวอย่างให้ทีม | — | Seed data (Flyway V2) สำหรับ demo |
-| **Diagram** (`doc/diagrams/`) | Use Case + Use Case Description, Component & Deployment | Domain Model, Class Diagram | Sequence Diagram (สร้างออเดอร์, ยกเลิก), State Diagram | Sequence Diagram (ชำระเงิน), Activity Diagram |
-| **เอกสาร** | README | `design-patterns.md` (ส่วนรวม) | `solid-analysis.md` (ส่วนรวม) | Test Report (`test/`), Slide |
+| **โมดูล** | Auth & User, Sales / Order, Payment | Category, Add-on | Product | Reports |
+| **ฟังก์ชัน** | F-01 – F-09, F-24 – F-34 | F-10 – F-13, F-20 – F-23 | F-14 – F-19 | F-35 – F-38 |
+| **ตาราง** | `users`, `user_profiles`, `orders`, `order_items`, `payments` | `categories`, `add_ons` | `products`, `product_add_ons` | query จาก `orders`, `order_items`, `payments` |
+| **REST API** | `/api/v1/auth`, `/api/v1/users`, `/api/v1/orders`, `/api/v1/orders/{id}/items`, `/api/v1/orders/{id}/payment` | `/api/v1/categories`, `/api/v1/add-ons` | `/api/v1/products` | `/api/v1/reports` |
+| **หน้า Frontend** | Login, โปรไฟล์, จัดการผู้ใช้, หน้าขาย POS, รายการออเดอร์, ใบเสร็จ, หน้าชำระเงิน | จัดการหมวด, จัดการ add-on | จัดการสินค้า | Dashboard รายงาน |
+| **Design Pattern** (Behavioral) | **Strategy** — ส่วนลด<br>**State** — สถานะออเดอร์<br>**Observer** — `OrderPaidEvent` | — | — | — |
+| **งานส่วนกลาง** | Spring Security, `GlobalExceptionHandler` + Error Response, Docker / CI / Deploy (Render + Neon), Seed data | — | Pagination & Sorting (F-14) | — |
+| **Diagram** (`doc/diagrams/`) | Class Diagram, Sequence Diagram ×3 (สร้างออเดอร์, ชำระเงิน, ยกเลิก), State Diagram, Component & Deployment | Use Case Diagram + Use Case Description | Domain Model | Activity Diagram |
+| **เอกสาร** | README, `design-patterns.md`, `solid-analysis.md`, Slide | — | — | Test Report (`test/`) |
 
 ### ลำดับการทำงาน (Dependency)
 
 1. **Phakawat** ทำ `GlobalExceptionHandler`, Error Response และ Security พื้นฐานก่อน — ทุกโมดูลใช้ร่วมกัน
-2. **Thana-nan** ทำ Product API ก่อน — Order ต้องใช้สินค้า
-3. **Kawinthida** ทำ Order API — Payment ต้องใช้ออเดอร์
-4. **Kanyawee** เริ่ม Payment ได้พร้อมข้อ 3 โดยใช้ Order entity ที่มีอยู่แล้ว, รายงานทำหลังสุด
-
-ระหว่างรอ API ของคนอื่น ให้ทำ Service + Unit Test (Mockito mock repository/service) ไปก่อนได้
+2. **Thana-nan** (Category) และ **Kawinthida** (Product) ทำพร้อมกัน — Product ต้องใช้ Category entity ที่มีอยู่แล้ว
+3. **Phakawat** ทำ Order → Payment หลัง Product API เสร็จ
+4. **Kanyawee** ทำรายงานหลังมีข้อมูลออเดอร์ — ระหว่างรอให้ทำ Service + Unit Test (Mockito mock repository) และหน้า Dashboard ด้วยข้อมูลตัวอย่างไปก่อน
 
 ### เอกสารส่วนรวม
 
-`doc/solid-analysis.md` และ `doc/design-patterns.md` — คนที่ชื่ออยู่เป็นคนรวบรวม แต่ **ทุกคนเขียนส่วนที่อยู่ในโค้ดของตัวเอง** (ไฟล์ / บรรทัด / เหตุผล)
+`doc/solid-analysis.md` และ `doc/design-patterns.md` — Phakawat เป็นคนรวบรวม แต่ **ทุกคนเขียนส่วนที่อยู่ในโค้ดของตัวเอง** (ไฟล์ / บรรทัด / เหตุผล)

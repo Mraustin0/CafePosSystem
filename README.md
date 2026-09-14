@@ -111,3 +111,4 @@ cd code/backend
 - `develop` — integration
 - `ชื่อ_รหัสนักศึกษา_section` — branch ส่วนตัว → PR เข้า `develop` (reviewer ≥ 1 คน)
 - Commit message: `<type>: <สิ่งที่ทำ>` (feat, fix, refactor, test, docs, chore)
+# CafePosSystem

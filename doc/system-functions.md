@@ -113,3 +113,35 @@
 
 - **เลือก add-on ต่อรายการในบิล** (เช่น ลาเต้ + เพิ่มช็อต) ยังเก็บไม่ได้ — ตอนนี้มีแค่ "add-on ที่สินค้านี้เลือกได้" ถ้าจะทำต้องเพิ่มตาราง `order_item_add_ons (order_item_id, add_on_id, price)`
 - **เงินที่รับมา** (สำหรับคำนวณเงินทอน) เก็บใน `payments.amount` — ถ้าต้องการแยก "ยอดที่ต้องจ่าย" กับ "เงินที่รับ" ต้องเพิ่มคอลัมน์
+
+---
+
+## การแบ่งงาน
+
+ทุกคนทำครบทั้ง Backend (Entity → Repository → Service → Controller + DTO/Mapper + Unit Test) และหน้า Frontend ของโมดูลตัวเอง
+
+| | Phakawat | Thana-nan | Kawinthida | Kanyawee |
+| - | -------- | --------- | ---------- | -------- |
+| **Branch** | `Phakawat_6733804189_04` | `Thana-nan_6733805868_04` | `Kawinthida_6733803905_04` | `Kanyawee_6733805737_04` |
+| **โมดูล** | Auth & User Management | Menu Management | Sales / Order | Payment & Reports |
+| **ฟังก์ชัน** | F-01 – F-09 | F-10 – F-23 | F-24 – F-31 | F-32 – F-38 |
+| **ตาราง** | `users`, `user_profiles` | `categories`, `products`, `add_ons`, `product_add_ons` | `orders`, `order_items` | `payments` (+ query รายงาน) |
+| **REST API** | `/api/v1/auth`, `/api/v1/users` | `/api/v1/categories`, `/api/v1/products`, `/api/v1/add-ons` | `/api/v1/orders`, `/api/v1/orders/{id}/items` | `/api/v1/orders/{id}/payment`, `/api/v1/reports` |
+| **หน้า Frontend** | Login, โปรไฟล์, จัดการผู้ใช้ | จัดการหมวด / สินค้า / add-on | หน้าขาย POS (ตะกร้า), รายการออเดอร์, ใบเสร็จ | หน้าชำระเงิน, Dashboard รายงาน |
+| **Design Pattern** (Behavioral) | — | — | **Strategy** — ส่วนลด (ไม่มี / % / จำนวนเงิน)<br>**State** — สถานะออเดอร์ | **Observer** — `OrderPaidEvent` (ApplicationEvent) หลังชำระเงิน |
+| **งานส่วนกลาง** | Spring Security, `GlobalExceptionHandler` + Error Response, Docker / CI / Deploy (Render + Neon) | Pagination & Sorting (F-14) เป็นตัวอย่างให้ทีม | — | Seed data (Flyway V2) สำหรับ demo |
+| **Diagram** (`doc/diagrams/`) | Use Case + Use Case Description, Component & Deployment | Domain Model, Class Diagram | Sequence Diagram (สร้างออเดอร์, ยกเลิก), State Diagram | Sequence Diagram (ชำระเงิน), Activity Diagram |
+| **เอกสาร** | README | `design-patterns.md` (ส่วนรวม) | `solid-analysis.md` (ส่วนรวม) | Test Report (`test/`), Slide |
+
+### ลำดับการทำงาน (Dependency)
+
+1. **Phakawat** ทำ `GlobalExceptionHandler`, Error Response และ Security พื้นฐานก่อน — ทุกโมดูลใช้ร่วมกัน
+2. **Thana-nan** ทำ Product API ก่อน — Order ต้องใช้สินค้า
+3. **Kawinthida** ทำ Order API — Payment ต้องใช้ออเดอร์
+4. **Kanyawee** เริ่ม Payment ได้พร้อมข้อ 3 โดยใช้ Order entity ที่มีอยู่แล้ว, รายงานทำหลังสุด
+
+ระหว่างรอ API ของคนอื่น ให้ทำ Service + Unit Test (Mockito mock repository/service) ไปก่อนได้
+
+### เอกสารส่วนรวม
+
+`doc/solid-analysis.md` และ `doc/design-patterns.md` — คนที่ชื่ออยู่เป็นคนรวบรวม แต่ **ทุกคนเขียนส่วนที่อยู่ในโค้ดของตัวเอง** (ไฟล์ / บรรทัด / เหตุผล)

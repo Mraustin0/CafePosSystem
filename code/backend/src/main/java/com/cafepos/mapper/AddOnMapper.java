@@ -5,6 +5,8 @@ import com.cafepos.dto.request.AddOnRequest;
 import com.cafepos.dto.response.AddOnResponse;
 import org.springframework.stereotype.Component;
 
+import java.math.RoundingMode;
+
 @Component
 public class AddOnMapper {
 
@@ -16,7 +18,7 @@ public class AddOnMapper {
 
     public void updateEntity(AddOn addOn, AddOnRequest request) {
         addOn.setName(request.name().trim());
-        addOn.setPrice(request.price());
+        addOn.setPrice(request.price().setScale(2, RoundingMode.HALF_UP)); // match NUMERIC(10,2) so responses show 70.00, not 70
     }
 
     public AddOnResponse toResponse(AddOn addOn) {

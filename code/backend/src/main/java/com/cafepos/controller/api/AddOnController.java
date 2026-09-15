@@ -3,42 +3,51 @@ package com.cafepos.controller.api;
 import com.cafepos.dto.request.AddOnRequest;
 import com.cafepos.dto.request.StatusUpdateRequest;
 import com.cafepos.dto.response.AddOnResponse;
+import com.cafepos.service.AddOnService;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
-
-import static com.cafepos.common.NotImplementedYet.error;
 
 /** F-20 – F-23 */
 @RestController
 @RequestMapping("/api/v1/add-ons")
 public class AddOnController {
 
+    private final AddOnService addOnService;
+
+    public AddOnController(AddOnService addOnService) {
+        this.addOnService = addOnService;
+    }
+
     @GetMapping
     public List<AddOnResponse> findAll(@RequestParam(required = false) Boolean active) {
-        throw error();
+        return addOnService.findAll(active);
     }
 
     @GetMapping("/{id}")
     public AddOnResponse findById(@PathVariable Long id) {
-        throw error();
+        return addOnService.findById(id);
     }
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public AddOnResponse create(@Valid @RequestBody AddOnRequest request) {
-        throw error();
+    public ResponseEntity<AddOnResponse> create(@Valid @RequestBody AddOnRequest request) {
+        AddOnResponse created = addOnService.create(request);
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}").buildAndExpand(created.id()).toUri();
+        return ResponseEntity.created(location).body(created);
     }
 
     @PutMapping("/{id}")
     public AddOnResponse update(@PathVariable Long id, @Valid @RequestBody AddOnRequest request) {
-        throw error();
+        return addOnService.update(id, request);
     }
 
     @PatchMapping("/{id}/status")
     public AddOnResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest request) {
-        throw error();
+        return addOnService.updateStatus(id, request.active());
     }
 }

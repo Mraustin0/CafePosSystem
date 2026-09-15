@@ -31,6 +31,8 @@ public class OrderMapper {
                 cashierName,
                 order.getItems().stream().map(this::toItemResponse).toList(),
                 order.getSubtotal(),
+                order.getDiscountType(),
+                order.getDiscountValue(),
                 order.getDiscountAmount(),
                 order.getTotal(),
                 order.getCreatedAt(),

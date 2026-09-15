@@ -1,5 +1,6 @@
 package com.cafepos.domain.entity;
 
+import com.cafepos.domain.enums.DiscountType;
 import com.cafepos.domain.enums.OrderStatus;
 import com.cafepos.domain.state.OrderState;
 import jakarta.persistence.*;
@@ -37,6 +38,14 @@ public class Order {
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal subtotal = BigDecimal.ZERO;
+
+    // How the discount was entered (e.g. PERCENT 10), kept so it can be recalculated when items change.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "discount_type", nullable = false, length = 20)
+    private DiscountType discountType = DiscountType.NONE;
+
+    @Column(name = "discount_value", precision = 10, scale = 2)
+    private BigDecimal discountValue;
 
     @Column(name = "discount_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal discountAmount = BigDecimal.ZERO;

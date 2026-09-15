@@ -23,7 +23,10 @@ public interface OrderService {
 
     OrderResponse findById(Long id, CurrentUser actor);
 
-    /** Replaces every item and removes any discount (re-apply it for the new subtotal). PENDING only. */
+    /**
+     * Replaces every item and recalculates the saved discount for the new subtotal. PENDING only.
+     * A fixed-amount discount larger than the new subtotal rejects the change (400) — nothing is modified.
+     */
     OrderResponse replaceItems(Long id, OrderItemsRequest request, CurrentUser actor);
 
     OrderResponse applyDiscount(Long id, ApplyDiscountRequest request, CurrentUser actor);

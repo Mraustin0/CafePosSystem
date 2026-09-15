@@ -99,7 +99,13 @@ public class OrderServiceImpl implements OrderService {
         order.ensureModifiable();
         order.getItems().clear(); // orphanRemoval deletes the old rows and their add-ons
         fillItems(order, request.items());
-        applyDiscount(order, DiscountType.NONE, null);
+        try {
+            applyDiscount(order, order.getDiscountType(), order.getDiscountValue());
+        } catch (BadRequestException e) {
+            // Rolls back the whole transaction, so the order keeps its old items.
+            throw new BadRequestException("The current discount does not fit the new subtotal "
+                    + order.getSubtotal() + ": change or remove the discount first");
+        }
         return toResponse(order);
     }
 
@@ -161,11 +167,15 @@ public class OrderServiceImpl implements OrderService {
                         "Add-on " + addOnId + " is not available for " + product.getName()));
     }
 
+    /** Recalculates subtotal, discount and total; remembers type/value so later item changes can reuse them. */
     private void applyDiscount(Order order, DiscountType type, BigDecimal value) {
         BigDecimal subtotal = order.getItems().stream().map(OrderItem::lineTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal discount = discountStrategies.get(type).calculate(subtotal, value);
         order.setSubtotal(subtotal);
+        BigDecimal normalizedValue = type == DiscountType.NONE || value == null ? null : value.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal discount = discountStrategies.get(type).calculate(subtotal, normalizedValue);
+        order.setDiscountType(type);
+        order.setDiscountValue(normalizedValue);
         order.setDiscountAmount(discount);
         order.setTotal(subtotal.subtract(discount));
     }

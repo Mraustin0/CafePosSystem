@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
@@ -54,6 +55,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
     public ResponseEntity<ApiErrorResponse> handleBadRequest(Exception ex, HttpServletRequest req) {
         return build(HttpStatus.BAD_REQUEST, "Malformed request", req);
+    }
+
+    // e.g. ?sort=unknownField on a paged endpoint
+    @ExceptionHandler(PropertyReferenceException.class)
+    public ResponseEntity<ApiErrorResponse> handleBadSort(PropertyReferenceException ex, HttpServletRequest req) {
+        return build(HttpStatus.BAD_REQUEST, "Invalid sort property: " + ex.getPropertyName(), req);
     }
 
     @ExceptionHandler(Exception.class)

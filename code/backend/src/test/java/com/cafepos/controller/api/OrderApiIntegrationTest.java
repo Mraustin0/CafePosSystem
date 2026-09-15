@@ -23,7 +23,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Order flow on the seed data (V2). Seed ids, in insert order:
  * users admin=1, cashier1=2, cashier2=3 · products Latte=3, Croissant=7 (no add-ons), Banana Cake=9 (inactive)
- * · add-ons Extra Shot=1, Oat Milk=2, Honey=4 (inactive) · orders ORD-DEMO-0001=1 (PAID by cashier1, cash 200).
+ * · add-ons Extra Shot=1, Oat Milk=2, Honey=4 (inactive) · orders ORD-DEMO-0001=1 (PAID by cashier1, cash 200),
+ * ORD-DEMO-0002=2 (PAID, 10.50 discount).
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -71,11 +72,13 @@ class OrderApiIntegrationTest {
     }
 
     @Test
-    void discount_thenReplaceItems_resetsDiscount() throws Exception {
+    void percentDiscount_isRecalculatedWhenItemsChange() throws Exception {
         long id = createOrder(CASHIER_1);
 
         send(put("/api/v1/orders/" + id + "/discount"), CASHIER_1, "{\"type\":\"PERCENT\",\"value\":10}")
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.discountType").value("PERCENT"))
+                .andExpect(jsonPath("$.discountValue").value(10.00))
                 .andExpect(jsonPath("$.discountAmount").value(16.00))
                 .andExpect(jsonPath("$.total").value(144.00));
         send(put("/api/v1/orders/" + id + "/discount"), CASHIER_1, "{\"type\":\"FIXED_AMOUNT\",\"value\":999}")
@@ -83,10 +86,32 @@ class OrderApiIntegrationTest {
 
         send(put("/api/v1/orders/" + id + "/items"), CASHIER_1, "{\"items\":[{\"productId\":7,\"quantity\":1}]}")
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.items", hasSize(1)))
                 .andExpect(jsonPath("$.items[0].productName").value("Croissant"))
                 .andExpect(jsonPath("$.subtotal").value(55.00))
-                .andExpect(jsonPath("$.discountAmount").value(0.0))
+                .andExpect(jsonPath("$.discountType").value("PERCENT"))
+                .andExpect(jsonPath("$.discountAmount").value(5.50))
+                .andExpect(jsonPath("$.total").value(49.50));
+    }
+
+    @Test
+    void fixedDiscountLargerThanNewSubtotal_rejectsItemChange_andKeepsOrder() throws Exception {
+        long id = createOrder(CASHIER_1); // subtotal 160
+        send(put("/api/v1/orders/" + id + "/discount"), CASHIER_1, "{\"type\":\"FIXED_AMOUNT\",\"value\":100}")
+                .andExpect(jsonPath("$.total").value(60.00));
+
+        send(put("/api/v1/orders/" + id + "/items"), CASHIER_1, "{\"items\":[{\"productId\":7,\"quantity\":1}]}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("change or remove the discount first")));
+
+        send(get("/api/v1/orders/" + id), CASHIER_1, null)
+                .andExpect(jsonPath("$.items[0].productName").value("Latte"))
+                .andExpect(jsonPath("$.subtotal").value(160.00))
+                .andExpect(jsonPath("$.discountAmount").value(100.00));
+
+        send(put("/api/v1/orders/" + id + "/discount"), CASHIER_1, "{\"type\":\"NONE\"}")
+                .andExpect(jsonPath("$.discountValue").doesNotExist());
+        send(put("/api/v1/orders/" + id + "/items"), CASHIER_1, "{\"items\":[{\"productId\":7,\"quantity\":1}]}")
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.total").value(55.00));
     }
 
@@ -108,6 +133,15 @@ class OrderApiIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.payment.method").value("CASH"))
                 .andExpect(jsonPath("$.payment.change").value(35.00)); // 200 - 165
+    }
+
+    @Test
+    void existingDiscountedOrders_areMigratedAsFixedAmount() throws Exception {
+        // ORD-DEMO-0002 (id 2) had 10.50 off before V4 added discount_type/discount_value
+        send(get("/api/v1/orders/2"), ADMIN, null)
+                .andExpect(jsonPath("$.discountType").value("FIXED_AMOUNT"))
+                .andExpect(jsonPath("$.discountValue").value(10.50))
+                .andExpect(jsonPath("$.total").value(94.50));
     }
 
     @Test

@@ -19,4 +19,9 @@ final class PendingOrderState implements OrderState {
     public OrderStatus cancel() {
         return OrderStatus.CANCELLED;
     }
+
+    @Override
+    public OrderStatus pay() {
+        return OrderStatus.PAID;
+    }
 }

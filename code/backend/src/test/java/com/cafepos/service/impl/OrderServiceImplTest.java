@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 /** Rules not reachable through the HTTP flow tests (see OrderApiIntegrationTest for the happy paths). */
@@ -57,6 +58,7 @@ class OrderServiceImplTest {
         order.setCashier(owner);
         order.setSubtotal(new BigDecimal("100.00"));
         when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderRepository.findVisibleById(any(), any())).thenCallRealMethod(); // the rule under test lives there
 
         OrderServiceImpl service = service(List.of(new NoDiscount(), new PercentDiscount(), new FixedAmountDiscount()));
 

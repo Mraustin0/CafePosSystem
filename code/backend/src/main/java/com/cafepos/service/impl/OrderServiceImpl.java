@@ -182,8 +182,7 @@ public class OrderServiceImpl implements OrderService {
 
     /** Another cashier's order answers 404, same as a missing one, so ids can't be probed. */
     private Order getVisibleOrder(Long id, CurrentUser actor) {
-        return orderRepository.findById(id)
-                .filter(o -> actor.admin() || o.getCashier().getId().equals(actor.id()))
+        return orderRepository.findVisibleById(id, actor)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", id));
     }
 

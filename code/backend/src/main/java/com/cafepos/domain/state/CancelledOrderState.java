@@ -20,4 +20,9 @@ final class CancelledOrderState implements OrderState {
     public OrderStatus cancel() {
         throw new ConflictException("Order is already cancelled");
     }
+
+    @Override
+    public OrderStatus pay() {
+        throw new ConflictException("Order is cancelled and cannot be paid");
+    }
 }

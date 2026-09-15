@@ -81,4 +81,8 @@ public class Order {
     public void cancel() {
         status = OrderState.of(status).cancel();
     }
+
+    public void markPaid() {
+        status = OrderState.of(status).pay();
+    }
 }

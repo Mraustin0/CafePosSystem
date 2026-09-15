@@ -22,6 +22,21 @@ class OrderStateTest {
     }
 
     @Test
+    void pending_canBePaid_onlyOnce() {
+        Order order = order(OrderStatus.PENDING);
+
+        order.markPaid();
+
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.PAID);
+        assertThatThrownBy(order::markPaid).hasMessageContaining("already paid");
+    }
+
+    @Test
+    void cancelled_cannotBePaid() {
+        assertThatThrownBy(order(OrderStatus.CANCELLED)::markPaid).isInstanceOf(ConflictException.class);
+    }
+
+    @Test
     void paid_isReadOnly() {
         Order order = order(OrderStatus.PAID);
 

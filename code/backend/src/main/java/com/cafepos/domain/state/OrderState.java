@@ -17,6 +17,9 @@ public interface OrderState {
     /** @return the status after cancelling */
     OrderStatus cancel();
 
+    /** @return the status after payment */
+    OrderStatus pay();
+
     static OrderState of(OrderStatus status) {
         return switch (status) {
             case PENDING -> PendingOrderState.INSTANCE;

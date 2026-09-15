@@ -5,9 +5,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import static org.hamcrest.Matchers.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -21,12 +24,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class ProductApiIntegrationTest {
 
+    private static final RequestPostProcessor ADMIN = jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"));
+
     @Autowired
     private MockMvc mockMvc;
 
     @Test
     void filtersByCategoryAndActive_withCategoryAndAddOnsLoaded() throws Exception {
-        mockMvc.perform(get("/api/v1/products").param("search", "latte").param("active", "true"))
+        mockMvc.perform(get("/api/v1/products").param("search", "latte").param("active", "true").with(ADMIN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[*].name", contains("Latte", "Matcha Latte")))
                 .andExpect(jsonPath("$.content[0].category.name").value("Coffee"))
@@ -35,21 +40,21 @@ class ProductApiIntegrationTest {
 
     @Test
     void searchIsCaseInsensitive_andTreatsWildcardsLiterally() throws Exception {
-        mockMvc.perform(get("/api/v1/products").param("search", "MOCHA"))
+        mockMvc.perform(get("/api/v1/products").param("search", "MOCHA").with(ADMIN))
                 .andExpect(jsonPath("$.content[*].name", contains("Mocha")));
-        mockMvc.perform(get("/api/v1/products").param("search", "%"))
+        mockMvc.perform(get("/api/v1/products").param("search", "%").with(ADMIN))
                 .andExpect(jsonPath("$.totalElements").value(0));
     }
 
     @Test
     void inactiveFilter_returnsOnlyInactiveProducts() throws Exception {
-        mockMvc.perform(get("/api/v1/products").param("active", "false"))
+        mockMvc.perform(get("/api/v1/products").param("active", "false").with(ADMIN))
                 .andExpect(jsonPath("$.content[*].name", contains("Banana Cake")));
     }
 
     @Test
     void paginatesAndSorts() throws Exception {
-        mockMvc.perform(get("/api/v1/products")
+        mockMvc.perform(get("/api/v1/products").with(ADMIN)
                         .param("search", "a").param("active", "true")
                         .param("size", "2").param("page", "0").param("sort", "price,desc"))
                 .andExpect(status().isOk())
@@ -61,20 +66,20 @@ class ProductApiIntegrationTest {
 
     @Test
     void unknownSortProperty_returns400() throws Exception {
-        mockMvc.perform(get("/api/v1/products").param("sort", "hacked"))
+        mockMvc.perform(get("/api/v1/products").param("sort", "hacked").with(ADMIN))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400));
     }
 
     @Test
     void findById_includesAddOns() throws Exception {
-        mockMvc.perform(get("/api/v1/products").param("search", "thai milk tea"))
+        mockMvc.perform(get("/api/v1/products").param("search", "thai milk tea").with(ADMIN))
                 .andExpect(jsonPath("$.content[0].addOns", hasSize(2)));
     }
 
     @Test
     void create_withUnknownAddOn_returns404() throws Exception {
-        mockMvc.perform(post("/api/v1/products")
+        mockMvc.perform(post("/api/v1/products").with(ADMIN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"categoryId\":1,\"name\":\"Ghost\",\"price\":10,\"addOnIds\":[999]}"))
                 .andExpect(status().isNotFound())

@@ -5,6 +5,7 @@ import com.cafepos.dto.response.AddOnResponse;
 import com.cafepos.service.AddOnService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -18,7 +19,9 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+// Security rules are covered by SecurityIntegrationTest; this class only tests the controller.
 @WebMvcTest(AddOnController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class AddOnControllerTest {
 
     private static final AddOnResponse OAT_MILK = new AddOnResponse(1L, "Oat Milk", new BigDecimal("20.00"), true);

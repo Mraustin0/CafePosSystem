@@ -22,6 +22,9 @@ export function AuthProvider({ children }) {
   }, [])
 
   const login = useCallback(async (username, password) => {
+    // A stale token (expired, or signed by a key from before a server restart) would be sent with the
+    // login request and rejected before it reaches /auth/login.
+    localStorage.removeItem(TOKEN_KEY)
     const res = await authApi.login(username, password)
     const next = { accessToken: res.accessToken, user: res.user, expiresAt: Date.now() + res.expiresIn * 1000 }
     localStorage.setItem(TOKEN_KEY, JSON.stringify(next))

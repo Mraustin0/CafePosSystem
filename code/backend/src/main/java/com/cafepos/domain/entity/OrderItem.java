@@ -6,6 +6,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "order_items")
@@ -32,4 +34,9 @@ public class OrderItem {
     // Price snapshot at order time, not a live link to Product.price.
     @Column(name = "unit_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal unitPrice;
+
+    // Value objects owned by this line: saved and deleted together with it, no separate repository.
+    @ElementCollection
+    @CollectionTable(name = "order_item_add_ons", joinColumns = @JoinColumn(name = "order_item_id"))
+    private List<OrderItemAddOn> addOns = new ArrayList<>();
 }

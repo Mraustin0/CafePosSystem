@@ -5,6 +5,7 @@
   - `V1__init_schema.sql` — ตารางหลัก
   - `V2__seed_demo_data.sql` — ข้อมูลตัวอย่าง
   - `V3__order_item_add_ons.sql` — add-on ที่เลือกในแต่ละรายการของบิล
+  - `V4__order_discount_rule.sql` — เก็บแบบส่วนลดใน `orders` เพื่อคำนวณใหม่เมื่อแก้รายการ
 - ER Diagram: [diagrams/er-diagram.md](diagrams/er-diagram.md)
 
 คำย่อ: **PK** Primary Key · **FK** Foreign Key · **UK** Unique · **NN** Not Null · **IDENTITY** เลขรันอัตโนมัติ
@@ -88,11 +89,18 @@ Entity: `domain/entity/Order.java`
 | cashier_id | BIGINT | NN, FK → `users.id` | | แคชเชียร์ที่เปิดบิล |
 | status | VARCHAR(20) | NN, CHECK IN (`PENDING`, `PAID`, `CANCELLED`) | `PENDING` (ใน entity) | สถานะ — enum `OrderStatus` |
 | subtotal | NUMERIC(10,2) | NN, CHECK ≥ 0 | | ผลรวมราคาทุกรายการ (รวมค่า add-on) ก่อนส่วนลด — ดูสูตรที่ `order_items` |
-| discount_amount | NUMERIC(10,2) | NN, CHECK ≥ 0 | `0` | ส่วนลด |
+| discount_type | VARCHAR(20) | NN, CHECK IN (`NONE`, `PERCENT`, `FIXED_AMOUNT`) | `NONE` | แบบส่วนลด — enum `DiscountType` (เลือก `DiscountStrategy`) |
+| discount_value | NUMERIC(10,2) | CHECK ≥ 0 | | ค่าที่แคชเชียร์กรอก: `PERCENT` = เปอร์เซ็นต์ (10 = 10%), `FIXED_AMOUNT` = บาท, `NONE` = ว่าง |
+| discount_amount | NUMERIC(10,2) | NN, CHECK ≥ 0 | `0` | จำนวนเงินที่ลดจริง คำนวณจาก `discount_type` + `discount_value` + `subtotal` |
 | total | NUMERIC(10,2) | NN, CHECK ≥ 0 | | ยอดสุทธิ = subtotal − discount_amount |
 | created_at | TIMESTAMPTZ(6) | NN | | วันเวลาที่เปิดบิล |
 
 > เก็บ subtotal/discount/total ไว้ในตาราง (ไม่คำนวณสด) เพื่อให้บิลเก่าไม่เปลี่ยนเมื่อกฎส่วนลดเปลี่ยน
+>
+> เก็บ `discount_type` + `discount_value` ไว้ด้วย เมื่อแก้รายการในบิล (PENDING) ระบบคำนวณส่วนลดใหม่จากยอดใหม่
+> เช่น ลด 10% ยอด 160 → 16.00, แก้รายการเหลือ 55 → 5.50 · ถ้าลดแบบจำนวนเงินแล้วเกินยอดใหม่ ระบบปฏิเสธการแก้ (400) ต้องแก้ส่วนลดก่อน
+>
+> ออเดอร์ที่มีส่วนลดก่อน V4 ถูกบันทึกเป็น `FIXED_AMOUNT` เท่ากับ `discount_amount` เดิม (ยอดไม่เปลี่ยน)
 
 ## 8. `order_items` — รายการสินค้าในออเดอร์
 

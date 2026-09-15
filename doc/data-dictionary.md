@@ -1,7 +1,10 @@
 # Data Dictionary — Cafe POS
 
 - DBMS: PostgreSQL 17
-- Migration: Flyway — `code/backend/src/main/resources/db/migration/V1__init_schema.sql`
+- Migration: Flyway — `code/backend/src/main/resources/db/migration/`
+  - `V1__init_schema.sql` — ตารางหลัก
+  - `V2__seed_demo_data.sql` — ข้อมูลตัวอย่าง
+  - `V3__order_item_add_ons.sql` — add-on ที่เลือกในแต่ละรายการของบิล
 - ER Diagram: [diagrams/er-diagram.md](diagrams/er-diagram.md)
 
 คำย่อ: **PK** Primary Key · **FK** Foreign Key · **UK** Unique · **NN** Not Null · **IDENTITY** เลขรันอัตโนมัติ
@@ -84,7 +87,7 @@ Entity: `domain/entity/Order.java`
 | order_number | VARCHAR(20) | NN, UK | | เลขที่บิลที่แสดงบนใบเสร็จ |
 | cashier_id | BIGINT | NN, FK → `users.id` | | แคชเชียร์ที่เปิดบิล |
 | status | VARCHAR(20) | NN, CHECK IN (`PENDING`, `PAID`, `CANCELLED`) | `PENDING` (ใน entity) | สถานะ — enum `OrderStatus` |
-| subtotal | NUMERIC(10,2) | NN, CHECK ≥ 0 | | ผลรวม `quantity × unit_price` ก่อนส่วนลด |
+| subtotal | NUMERIC(10,2) | NN, CHECK ≥ 0 | | ผลรวมราคาทุกรายการ (รวมค่า add-on) ก่อนส่วนลด — ดูสูตรที่ `order_items` |
 | discount_amount | NUMERIC(10,2) | NN, CHECK ≥ 0 | `0` | ส่วนลด |
 | total | NUMERIC(10,2) | NN, CHECK ≥ 0 | | ยอดสุทธิ = subtotal − discount_amount |
 | created_at | TIMESTAMPTZ(6) | NN | | วันเวลาที่เปิดบิล |
@@ -101,9 +104,26 @@ Entity: `domain/entity/OrderItem.java`
 | order_id | BIGINT | NN, FK → `orders.id` ON DELETE CASCADE | | ออเดอร์ที่รายการนี้อยู่ |
 | product_id | BIGINT | NN, FK → `products.id` | | สินค้าที่สั่ง |
 | quantity | INT | NN, CHECK > 0 | | จำนวน |
-| unit_price | NUMERIC(10,2) | NN, CHECK ≥ 0 | | ราคาต่อหน่วย **ณ เวลาที่สั่ง** (snapshot) |
+| unit_price | NUMERIC(10,2) | NN, CHECK ≥ 0 | | ราคาสินค้าต่อหน่วย **ณ เวลาที่สั่ง** (snapshot) ไม่รวม add-on |
 
-## 9. `payments` — การชำระเงิน (1:1 กับ `orders`)
+> ยอดของรายการ (ไม่เก็บในตาราง คำนวณจาก snapshot) = `quantity × (unit_price + Σ order_item_add_ons.price)`
+> เช่น Latte 60 + Oat Milk 20, จำนวน 2 → 2 × (60 + 20) = **160**
+
+## 9. `order_item_add_ons` — add-on ที่เลือกในแต่ละรายการของบิล (M:N พร้อมข้อมูล)
+
+Mapping: `OrderItem.addOns` (`@ElementCollection` ของ `@Embeddable OrderItemAddOn`) — ไม่มี entity / repository แยก
+
+| Column | Type | Constraint | Default | คำอธิบาย |
+| ------ | ---- | ---------- | ------- | -------- |
+| order_item_id | BIGINT | PK, FK → `order_items.id` ON DELETE CASCADE | | รายการในบิล |
+| add_on_id | BIGINT | PK, FK → `add_ons.id` | | add-on ที่เลือก |
+| price | NUMERIC(10,2) | NN, CHECK ≥ 0 | | ราคา add-on **ณ เวลาที่สั่ง** (snapshot) ต่อ 1 หน่วยสินค้า |
+
+- PK `(order_item_id, add_on_id)` → add-on ตัวเดียวกันเลือกได้ครั้งเดียวต่อรายการ
+- add-on ที่เลือกได้ต้อง `active = true` และอยู่ใน `product_add_ons` ของสินค้านั้น (ตรวจใน Service → 400)
+- ต่างจาก `product_add_ons`: ตารางนั้นคือ "เลือก**ได้**อะไรบ้าง" ตารางนี้คือ "เลือก**ไป**แล้วอะไรบ้าง"
+
+## 10. `payments` — การชำระเงิน (1:1 กับ `orders`)
 
 Entity: `domain/entity/Payment.java`
 
@@ -129,6 +149,7 @@ PostgreSQL สร้าง index ให้ PK และ UNIQUE อัตโน�
 | `idx_orders_status_created` | orders (status, created_at) | รายงานยอดขายตามสถานะ + ช่วงวันที่ |
 | `idx_order_items_order` | order_items (order_id) | โหลดรายการของบิล |
 | `idx_order_items_product` | order_items (product_id) | รายงานสินค้าขายดี / เช็คก่อนลบสินค้า |
+| `idx_order_item_add_ons_add_on` | order_item_add_ons (add_on_id) | ค้นย้อนจาก add-on → รายการที่ขาย (PK ครอบคลุมทิศ order_item_id แล้ว) |
 
 ## Foreign Key Delete Rules
 
@@ -140,4 +161,6 @@ PostgreSQL สร้าง index ให้ PK และ UNIQUE อัตโน�
 | orders.cashier_id → users | RESTRICT | บิลต้องอ้างถึงผู้ขายได้เสมอ (ใช้ `active=false` แทนการลบ) |
 | order_items.order_id → orders | CASCADE | รายการไม่มีความหมายถ้าไม่มีบิล |
 | order_items.product_id → products | RESTRICT | รักษาประวัติการขาย (ใช้ `active=false`) |
+| order_item_add_ons.order_item_id → order_items | CASCADE | add-on ที่เลือกไม่มีความหมายถ้าไม่มีรายการ |
+| order_item_add_ons.add_on_id → add_ons | RESTRICT | ห้ามลบ add-on ที่เคยขายไปแล้ว (ใช้ `active=false`) |
 | payments.order_id → orders | RESTRICT | ห้ามลบบิลที่ชำระแล้ว |

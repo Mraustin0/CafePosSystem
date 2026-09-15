@@ -1,6 +1,7 @@
 package com.cafepos.domain.entity;
 
 import com.cafepos.domain.enums.OrderStatus;
+import com.cafepos.domain.state.OrderState;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -60,5 +61,15 @@ public class Order {
     public void removeItem(OrderItem item) {
         items.remove(item);
         item.setOrder(null);
+    }
+
+    // State pattern: the rules live in domain/state, the entity only asks its current state.
+
+    public void ensureModifiable() {
+        OrderState.of(status).ensureModifiable();
+    }
+
+    public void cancel() {
+        status = OrderState.of(status).cancel();
     }
 }

@@ -39,4 +39,10 @@ public class OrderItem {
     @ElementCollection
     @CollectionTable(name = "order_item_add_ons", joinColumns = @JoinColumn(name = "order_item_id"))
     private List<OrderItemAddOn> addOns = new ArrayList<>();
+
+    /** quantity x (unit price + chosen add-on prices), all from order-time snapshots. */
+    public BigDecimal lineTotal() {
+        BigDecimal addOnTotal = addOns.stream().map(OrderItemAddOn::getPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return unitPrice.add(addOnTotal).multiply(BigDecimal.valueOf(quantity));
+    }
 }

@@ -1,0 +1,481 @@
+import { useState } from "react";
+import "./PosScreen.css";
+import CoffeeModal from "./CoffeeModal";
+import TeaModal from "./TeaModal"; // 👉 Import TeaModal เข้ามา
+import { AddNewItemModal } from "./AddNewItemModal";
+
+/* ---------------------------------------------------------
+   Icons
+--------------------------------------------------------- */
+const Icon = {
+  Coffee: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}>
+      <path d="M4 9h13a3 3 0 0 1 0 6h-1" strokeLinecap="round" />
+      <path d="M4 9v6a4 4 0 0 0 4 4h4a4 4 0 0 0 4-4V9" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M6 4c-.6.8-.6 1.4 0 2M10 4c-.6.8-.6 1.4 0 2" strokeLinecap="round" />
+    </svg>
+  ),
+  Tea: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}>
+      <path d="M4 9h14a3 3 0 0 1 0 6h-1" strokeLinecap="round" />
+      <path d="M4 9v7a3 3 0 0 0 3 3h7a3 3 0 0 0 3-3V9" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8 3c-1 1-1 2 0 3M12 3c-1 1-1 2 0 3" strokeLinecap="round" />
+    </svg>
+  ),
+  Milk: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}>
+      <path d="M9 3h6l1 4-2 2v10a2 2 0 0 1-2 2h-0a2 2 0 0 1-2-2V9L8 7z" strokeLinejoin="round" />
+    </svg>
+  ),
+  Snack: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}>
+      <rect x="4" y="10" width="16" height="9" rx="2" />
+      <path d="M4 10 12 4l8 6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  Tag: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}>
+      <path d="M11 3h6a2 2 0 0 1 2 2v6l-9 9-8-8z" strokeLinejoin="round" />
+      <circle cx="15.5" cy="7.5" r="1.2" />
+    </svg>
+  ),
+  Grid: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}>
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+      <rect x="14" y="14" width="7" height="7" rx="1.5" />
+    </svg>
+  ),
+  Gear: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14 3h-4l-.6 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2 1.2L10 21h4l.6-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5c.07-.4.1-.8.1-1.2Z" strokeLinejoin="round" />
+    </svg>
+  ),
+  Search: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...p}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m21 21-4.3-4.3" strokeLinecap="round" />
+    </svg>
+  ),
+  Chevron: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...p}>
+      <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  User: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}>
+      <circle cx="12" cy="8" r="3.4" />
+      <path d="M5 20c1.4-3.6 4.3-5.4 7-5.4s5.6 1.8 7 5.4" strokeLinecap="round" />
+    </svg>
+  ),
+  Trash: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}>
+      <path d="M4 7h16M9 7V4h6v3M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  Plus: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" {...p}>
+      <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+    </svg>
+  ),
+  Minus: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" {...p}>
+      <path d="M5 12h14" strokeLinecap="round" />
+    </svg>
+  ),
+  Print: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}>
+      <path d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-2M6 14h12v7H6z" strokeLinejoin="round" />
+    </svg>
+  ),
+  Card: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}>
+      <rect x="2.5" y="5" width="19" height="14" rx="2" />
+      <path d="M2.5 10h19" />
+    </svg>
+  ),
+  Edit: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}>
+      <path d="M12 20h9" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+};
+
+/* ---------------------------------------------------------
+   Static data
+--------------------------------------------------------- */
+const NAV_ITEMS = [
+  { key: "coffee", label: "กาแฟ", icon: Icon.Coffee },
+  { key: "tea", label: "ชา", icon: Icon.Tea },
+  { key: "snack", label: "ขนม", icon: Icon.Snack },
+];
+
+const NAV_FOOTER = [
+  { key: "manage", label: "จัดการเมนู", icon: Icon.Edit },
+  { key: "promo", label: "โปรโมชั่น", icon: Icon.Tag },
+  { key: "dashboard", label: "Dashboard", icon: Icon.Grid },
+  { key: "settings", label: "ตั้งค่า", icon: Icon.Gear },
+];
+
+const INITIAL_MENU = [
+  // ☕️ --- หมวดกาแฟ (coffee) ---
+  { 
+    id: 1, category: "coffee", name: "ESPRESSO SHOT", price: 55, qty: 0, 
+    imgSrc: "https://placehold.co/400x300/e2e8f0/64748b?text=Espresso", kind: "espresso" 
+  },
+  { 
+    id: 2, category: "coffee", name: "ICED AMERICANO", price: 55, qty: 0, 
+    imgSrc: "https://images.unsplash.com/photo-1497935586351-b67a49e012bf?w=400&h=300&fit=crop", kind: "americano" 
+  },
+
+  // 🍵 --- หมวดชา (tea) ---
+  { 
+    id: 3, category: "tea", name: "ชาไทยพรีเมียม", price: 65, qty: 0, 
+    imgSrc: "https://placehold.co/400x300/fed7aa/c2410c?text=Thai+Tea", kind: "tea" 
+  },
+  { 
+    id: 4, category: "tea", name: "ชาเขียวมัทฉะ", price: 75, qty: 0, 
+    imgSrc: "https://placehold.co/400x300/bbf7d0/15803d?text=Matcha", kind: "tea" 
+  },
+
+  // 🥐 --- หมวดขนม (snack) ---
+  { 
+    id: 5, category: "snack", name: "คุกกี้ช็อกโกแลต", price: 45, qty: 0, 
+    imgSrc: "https://placehold.co/400x300/fef08a/a16207?text=Cookie", kind: "snack" 
+  },
+  { 
+    id: 6, category: "snack", name: "ครัวซองต์เนยสด", price: 65, qty: 0, 
+    imgSrc: "https://placehold.co/400x300/fef08a/a16207?text=Croissant", kind: "snack" 
+  },
+];
+
+const INITIAL_CART = [
+  {
+    id: 101,
+    name: "คาปูซิโน่ / Cappuccino",
+    isNew: true,
+    price: 9.75,
+    qty: 1,
+    detail: "เย็น (Iced) • หัวกลาง • หวาน 100%",
+    extras: "+ เพิ่มช็อตกาแฟ (+Extra Shot), + วิปครีม",
+    note: "โน้ต: แยกน้ำแข็ง",
+  },
+];
+
+export default function PosScreen() {
+  const [activeNav, setActiveNav] = useState("coffee");
+  const [menu, setMenu] = useState(INITIAL_MENU);
+  const [cart, setCart] = useState(INITIAL_CART);
+  const [selectedItemForModal, setSelectedItemForModal] = useState(null);
+  
+  // 👉 State สำหรับคุม Tea Modal
+  const [selectedTeaForModal, setSelectedTeaForModal] = useState(null);
+  
+  const [isAddMenuOpen, setIsAddMenuOpen] = useState(false); 
+
+  const changeMenuQty = (id, delta) => {
+    setMenu((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, qty: Math.max(0, item.qty + delta) } : item
+      )
+    );
+  };
+
+  const changeCartQty = (id, delta) => {
+    setCart((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, qty: Math.max(1, item.qty + delta) } : item
+      )
+    );
+  };
+
+  const removeCartItem = (id) => setCart((prev) => prev.filter((item) => item.id !== id));
+
+  const itemCount = cart.length;
+  const quantityCount = cart.reduce((sum, item) => sum + item.qty, 0);
+
+  // หาชื่อหมวดหมู่ปัจจุบันมาแสดงตรง Title (ถ้าไม่มี fallback กลับไป "กาแฟ")
+  const currentNavLabel = NAV_ITEMS.find((nav) => nav.key === activeNav)?.label || "กาแฟ";
+
+  return (
+    <div className="pos">
+      {/* ---------------- Header ด้านบนสุด ---------------- */}
+      <header className="pos-header">
+        <div className="pos-brand">
+          <div className="pos-brand__logo">EP</div>
+          <div>
+            <div className="pos-brand__title">Easy POS Studio</div>
+            <div className="pos-brand__subtitle">สาขาหลัก • Terminal 01</div>
+          </div>
+        </div>
+
+        <div className="pos-cashier">
+          <div className="pos-cashier__text">
+            <div className="pos-cashier__name">แคชเชียร์ 01</div>
+            <div className="pos-cashier__status">
+              <span className="pos-dot pos-dot--online" />
+              ออนไลน์
+            </div>
+          </div>
+          <div className="pos-cashier__avatar">
+            <Icon.User />
+          </div>
+          <Icon.Chevron className="pos-cashier__chevron" />
+        </div>
+      </header>
+
+      {/* ---------------- Main Content Area ---------------- */}
+      <div className="pos-content">
+        {/* -------- Sidebar -------- */}
+        <aside className="pos-sidebar">
+          <nav className="pos-sidebar__nav">
+            {NAV_ITEMS.map(({ key, label, icon: ItemIcon }) => (
+              <button
+                key={key}
+                className={`pos-navitem ${activeNav === key ? "is-active" : ""}`}
+                onClick={() => setActiveNav(key)}
+              >
+                <ItemIcon className="pos-navitem__icon" />
+                <span>{label}</span>
+              </button>
+            ))}
+          </nav>
+          
+          <nav className="pos-sidebar__footer">
+            {NAV_FOOTER.map(({ key, label, icon: ItemIcon }) => (
+              <button
+                key={key}
+                className={`pos-navitem ${activeNav === key ? "is-active" : "pos-navitem--muted"}`}
+                onClick={() => setActiveNav(key)}
+              >
+                <ItemIcon className="pos-navitem__icon" />
+                <span>{label}</span>
+              </button>
+            ))}
+          </nav>
+        </aside>
+
+        {/* -------- Main column -------- */}
+        <div className="pos-main">
+          <div className="pos-body">
+            {/* -------- Menu grid -------- */}
+            <section className="pos-menu">
+              <div className="pos-menu__head">
+                {/* เปลี่ยนชื่อหมวดหมู่ตาม Tab ที่กด */}
+                <h2>หมวด{currentNavLabel}</h2>
+  
+                <div className="pos-search pos-search--inline">
+                  <Icon.Search className="pos-search__icon" />
+                  <input type="text" placeholder="ค้นหาเมนู (Search menu)..." />
+                </div>
+              </div>
+
+              <div className="pos-menu__grid">
+                
+                {/* 👉 การ์ด "เพิ่มเมนูใหม่" แทรกไว้เป็นอันแรก */}
+                <article 
+                  className="pos-card pos-card--add"
+                  onClick={() => setIsAddMenuOpen(true)}
+                >
+                  <div className="pos-card__add-content">
+                    <div className="pos-card__add-icon">
+                      <Icon.Plus />
+                    </div>
+                    <span className="pos-card__add-text">เพิ่มเมนูใหม่</span>
+                    <span className="pos-card__add-subtext">(คลิกเพื่อเปิดฟอร์ม)</span>
+                  </div>
+                </article>
+
+                {/* 👉 เพิ่ม .filter ตรงนี้ เพื่อกรองเมนูตาม activeNav ก่อน .map */}
+                {menu
+                  .filter((item) => item.category === activeNav)
+                  .map((item) => (
+                  <article className="pos-card" key={item.id}>
+                    <div className={`pos-card__image ${item.kind ? `is-${item.kind}` : ""}`}>
+                      {item.imgSrc ? (
+                        <img src={item.imgSrc} alt={item.name} className="pos-real-image" />
+                      ) : (
+                        item.kind === "espresso" && <div className="pos-cup" />
+                      )}
+                    </div>
+                    
+                    <div className="pos-card__body">
+                      {item.price !== null ? (
+                        <h3>{item.name}</h3>
+                      ) : (
+                        <h3 className="pos-skeleton pos-skeleton--title" />
+                      )}
+
+                      <div className="pos-card__row">
+                        <div className="pos-card__price">
+                          <span className="pos-card__pricelabel">ราคา</span>
+                          {item.price !== null ? (
+                            <span className="pos-card__pricevalue">฿ {item.price}</span>
+                          ) : (
+                            <span className="pos-skeleton pos-skeleton--price" />
+                          )}
+                        </div>
+
+                        <div className="pos-stepper">
+                          <button onClick={() => changeMenuQty(item.id, -1)} aria-label="ลดจำนวน">
+                            <Icon.Minus />
+                          </button>
+                          <span className={item.qty > 0 ? "is-active" : ""}>{item.qty}</span>
+                          
+                          {/* 👉 เช็กว่าถ้าอยู่หมวด 'ชา' ให้เปิด TeaModal แทน CoffeeModal */}
+                          <button 
+                            onClick={() => {
+                              if (activeNav === "tea") {
+                                setSelectedTeaForModal(item);
+                              } else {
+                                setSelectedItemForModal(item);
+                              }
+                            }} 
+                            aria-label="เพิ่มจำนวน"
+                          >
+                            <Icon.Plus />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+
+            {/* -------- Order / invoice panel -------- */}
+            <aside className="pos-order">
+              <div className="pos-order__meta">
+                <div>
+                  <div className="pos-order__invoice">Invoice No: 123454</div>
+                </div>
+                <div className="pos-order__date">23/01/2024 | 14:00:23</div>
+              </div>
+
+              <div className="pos-order__shop">
+                <div className="pos-order__shoplogo">EP</div>
+                <div className="pos-order__shopinfo">
+                  <div className="pos-order__shopname">Easy POS Studio</div>
+                  <div className="pos-order__shopemail">easypos@gmail.com</div>
+                </div>
+                <div className="pos-pill">Order: #0029</div>
+              </div>
+
+              <div className="pos-order__items">
+                {cart.map((item) => (
+                  <div className="pos-orderitem" key={item.id}>
+                    <div className="pos-orderitem__icon">
+                      {/* ถ้ามีของที่มาจาก TeaModal อาจจะเปลี่ยน Icon หรือสีไอคอนได้ตามชอบ */}
+                      <Icon.Coffee />
+                    </div>
+                    <div className="pos-orderitem__body">
+                      <div className="pos-orderitem__row">
+                        <div className="pos-orderitem__name">
+                          {item.name}
+                          {item.isNew && <span className="pos-badge">ใหม่</span>}
+                        </div>
+                        <div className="pos-orderitem__price">${item.price.toFixed(2)}</div>
+                      </div>
+                      <div className="pos-orderitem__detail">{item.detail}</div>
+                      <div className="pos-orderitem__extras">{item.extras}</div>
+                      {item.note && <div className="pos-orderitem__note">{item.note}</div>}
+
+                      <div className="pos-orderitem__footer">
+                        <div className="pos-stepper pos-stepper--panel">
+                          <button onClick={() => changeCartQty(item.id, -1)} aria-label="ลดจำนวน">
+                            <Icon.Minus />
+                          </button>
+                          <span>{item.qty}</span>
+                          <button onClick={() => changeCartQty(item.id, 1)} aria-label="เพิ่มจำนวน">
+                            <Icon.Plus />
+                          </button>
+                        </div>
+                        <button className="pos-iconbtn" onClick={() => removeCartItem(item.id)} aria-label="ลบรายการ">
+                          <Icon.Trash />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {cart.length === 0 && <div className="pos-order__empty">ยังไม่มีรายการสั่งซื้อ</div>}
+              </div>
+
+              <div className="pos-promo">
+                <div className="pos-promo__head">
+                  <Icon.Tag className="pos-promo__icon" />
+                  <span>โปรโมชั่น (Promotion)</span>
+                  <span className="pos-pill pos-pill--green">ประหยัด ฿8.68</span>
+                </div>
+                <div className="pos-promo__row">
+                  <div className="pos-promo__label">
+                    <span className="pos-dot pos-dot--green" />
+                    ส่วนลด Member 10%
+                  </div>
+                  <div className="pos-promo__value">-$8.68</div>
+                </div>
+                <div className="pos-promo__row pos-promo__row--sub">
+                  <span>โค้ด: MEMBER10</span>
+                  <button className="pos-linkbtn">ยกเลิกส่วนลด</button>
+                </div>
+              </div>
+
+              <div className="pos-total">
+                <div>
+                  <div className="pos-total__label">Total</div>
+                  <div className="pos-total__meta">
+                    Items: {itemCount}, Quantity: {quantityCount}
+                  </div>
+                </div>
+                <div className="pos-total__value">$86.75</div>
+              </div>
+
+              <div className="pos-order__buttons">
+                <button className="pos-btn pos-btn--outline">
+                  <Icon.Print />
+                  Print Invoice
+                </button>
+                <button className="pos-btn pos-btn--solid pos-btn--full">
+                  <Icon.Card />
+                  Payments
+                </button>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </div>
+
+      {/* ---------------- Modals ---------------- */}
+
+      {selectedItemForModal && (
+        <CoffeeModal
+          item={selectedItemForModal}
+          onClose={() => setSelectedItemForModal(null)}
+          onAddToCart={(customizedItem) => {
+            setCart((prev) => [...prev, { ...customizedItem, id: Date.now() }]);
+          }}
+        />
+      )}
+
+      {/* 👉 แสดง Tea Modal เมื่อคลิกเมนูในหมวดชา */}
+      {selectedTeaForModal && (
+        <TeaModal
+          item={selectedTeaForModal}
+          onClose={() => setSelectedTeaForModal(null)}
+          onAddToCart={(customizedItem) => {
+            setCart((prev) => [...prev, { ...customizedItem, id: Date.now() }]);
+          }}
+        />
+      )}
+
+      {isAddMenuOpen && (
+        <AddNewItemModal
+          activeCategory={activeNav}
+          onClose={() => setIsAddMenuOpen(false)}
+        />
+      )}
+    </div>
+  );
+}

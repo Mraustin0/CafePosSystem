@@ -1,5 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import "./PosScreen.css";
+import { AddNewItemModal } from "./AddNewItemModal";
+import { listProducts, createProduct } from "../../api/products";
+import { getCategories } from "../../api/categories";
+
+// Nav key -> backend category name (must match seed data in V2__seed_demo_data.sql)
+const NAV_TO_CATEGORY_NAME = { coffee: "Coffee", tea: "Tea", snack: "Bakery" };
 
 /* ---------------------------------------------------------
    Icons — small inline SVGs, no external icon library needed
@@ -140,6 +146,46 @@ export default function PosScreen() {
   const [activeNav, setActiveNav] = useState("coffee");
   const [menu, setMenu] = useState(INITIAL_MENU);
   const [cart, setCart] = useState(INITIAL_CART);
+  const [categories, setCategories] = useState([]);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [loadError, setLoadError] = useState(null);
+
+  const loadProducts = useCallback(async () => {
+    try {
+      const page = await listProducts({ active: true, size: 100 });
+      const items = (page?.content ?? []).map((p) => ({
+        id: p.id,
+        name: p.name,
+        price: p.price != null ? Number(p.price) : null,
+        qty: 1,
+        image: !!p.imageUrl,
+        categoryId: p.category?.id ?? null,
+        categoryName: p.category?.name ?? null,
+      }));
+      setMenu(items);
+    } catch (err) {
+      setLoadError(err?.message ?? "โหลดเมนูไม่สำเร็จ");
+    }
+  }, []);
+
+  useEffect(() => {
+    getCategories().then(setCategories).catch(() => {});
+    loadProducts();
+  }, [loadProducts]);
+
+  const currentCategoryName = NAV_TO_CATEGORY_NAME[activeNav];
+  const visibleMenu = currentCategoryName
+    ? menu.filter((m) => m.categoryName === currentCategoryName || m.categoryName == null)
+    : menu;
+
+  const handleAddSubmit = async ({ name, price }) => {
+    const categoryName = NAV_TO_CATEGORY_NAME[activeNav];
+    if (!categoryName) throw new Error(`หมวด "${activeNav}" ยังไม่ผูกกับ backend`);
+    const category = categories.find((c) => c.name === categoryName);
+    if (!category) throw new Error(`ไม่พบหมวด "${categoryName}" ในฐานข้อมูล`);
+    await createProduct({ categoryId: category.id, name, price, imageUrl: null, addOnIds: [] });
+    await loadProducts();
+  };
 
   const changeMenuQty = (id, delta) => {
     setMenu((prev) =>
@@ -233,15 +279,18 @@ export default function PosScreen() {
                   <Icon.Trash />
                   ลบเมนู
                 </button>
-                <button className="pos-btn pos-btn--solid">
+                <button className="pos-btn pos-btn--solid" onClick={() => setShowAddModal(true)}
+                        disabled={!NAV_TO_CATEGORY_NAME[activeNav]}
+                        title={NAV_TO_CATEGORY_NAME[activeNav] ? "" : `หมวด ${activeNav} ยังไม่ผูก backend`}>
                   <Icon.Plus />
                   เพิ่มเมนู
                 </button>
               </div>
             </div>
 
+            {loadError && <p style={{ color: "#c0392b", padding: "0 24px" }}>{loadError}</p>}
             <div className="pos-menu__grid">
-              {menu.map((item) => (
+              {visibleMenu.map((item) => (
                 <article className="pos-card" key={item.id}>
                   <div className={`pos-card__image ${item.kind ? `is-${item.kind}` : ""}`}>
                     {item.kind === "espresso" && <div className="pos-cup" />}
@@ -377,6 +426,13 @@ export default function PosScreen() {
           </aside>
         </div>
       </div>
+      {showAddModal && (
+        <AddNewItemModal
+          activeCategory={activeNav}
+          onClose={() => setShowAddModal(false)}
+          onSubmit={handleAddSubmit}
+        />
+      )}
     </div>
   );
 }

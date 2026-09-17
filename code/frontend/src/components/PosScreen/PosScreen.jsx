@@ -171,15 +171,21 @@ export default function PosScreen() {
       return [...prev, { id: product.id, name: product.name, price: product.price, qty: 1 }];
     });
   };
-
+  const decFromCart = (id) => setCart((prev) => prev.flatMap((c) => c.id === id ? (c.qty > 1 ? [{ ...c, qty: c.qty - 1 }] : []) : [c]));
   const changeCartQty = (id, delta) => {
     setCart((prev) => prev.map((item) => item.id === id ? { ...item, qty: Math.max(1, item.qty + delta) } : item));
   };
   const removeCartItem = (id) => setCart((prev) => prev.filter((item) => item.id !== id));
+  const cartQty = (id) => cart.find((c) => c.id === id)?.qty ?? 0;
+  const clearCart = () => setCart([]);
 
   const subtotal = useMemo(() => cart.reduce((s, i) => s + i.price * i.qty, 0), [cart]);
+  const memberDiscount = subtotal * 0.10; // ponytail: visual placeholder, wire to applyDiscount API later
+  const total = subtotal - memberDiscount;
   const itemCount = cart.length;
   const quantityCount = cart.reduce((sum, item) => sum + item.qty, 0);
+  const invoiceNo = useMemo(() => Math.floor(100000 + Math.random() * 900000), []);
+  const orderNo = useMemo(() => String(Math.floor(1 + Math.random() * 999)).padStart(4, "0"), []);
 
   const now = new Date();
   const dateStr = now.toLocaleString("th-TH", { dateStyle: "short", timeStyle: "medium" });
@@ -233,12 +239,13 @@ export default function PosScreen() {
               <div className="pos-cashier__name">{cashierName}</div>
               <div className="pos-cashier__status">
                 <span className="pos-dot pos-dot--online" />
-                {user?.role === "ADMIN" ? "แอดมิน" : "แคชเชียร์"}
+                {user?.role === "ADMIN" ? "แอดมิน" : "แคชเชียร์"} • ออนไลน์
               </div>
             </div>
             <div className="pos-cashier__avatar">
               <Icon.User />
             </div>
+            <Icon.Chevron className="pos-cashier__chevron" />
           </div>
         </header>
 
@@ -247,8 +254,15 @@ export default function PosScreen() {
           {/* -------- Menu grid -------- */}
           <section className="pos-menu">
             <div className="pos-menu__head">
-              <h2>{CATEGORY_HEADING[activeNav] ?? activeNav}</h2>
+              <h2>
+                {CATEGORY_HEADING[activeNav] ?? activeNav} <span className="pos-skeleton pos-skeleton--label" />
+              </h2>
               <div className="pos-menu__actions">
+                <button className="pos-btn pos-btn--ghost-danger" onClick={clearCart}
+                        disabled={cart.length === 0} title={cart.length === 0 ? "ตะกร้าว่าง" : "ล้างตะกร้า"}>
+                  <Icon.Trash />
+                  ลบเมนู
+                </button>
                 <button className="pos-btn pos-btn--solid" onClick={() => setShowAddModal(true)}
                         disabled={!NAV_TO_CATEGORY_NAME[activeNav]}
                         title={NAV_TO_CATEGORY_NAME[activeNav] ? "" : `หมวด ${activeNav} ยังไม่ผูก backend`}>
@@ -267,23 +281,39 @@ export default function PosScreen() {
                     : `หมวด "${activeNav}" ยังไม่ผูกกับ backend`}
                 </div>
               )}
-              {visibleMenu.map((item) => (
-                <article className="pos-card" key={item.id}
-                         onClick={() => addToCart(item)}
-                         style={{ cursor: "pointer" }}
-                         title="คลิกเพื่อเพิ่มลงตะกร้า">
-                  <div className="pos-card__image" />
-                  <div className="pos-card__body">
-                    <h3>{item.name}</h3>
-                    <div className="pos-card__row">
-                      <div className="pos-card__price">
-                        <span className="pos-card__pricelabel">ราคา</span>
-                        <span className="pos-card__pricevalue">฿ {item.price.toFixed(2)}</span>
+              {visibleMenu.map((item) => {
+                const inCart = cartQty(item.id);
+                const kind = item.name.match(/espresso/i) ? "espresso"
+                            : item.name.match(/americano/i) ? "americano" : "";
+                return (
+                  <article className="pos-card" key={item.id}
+                           onClick={() => addToCart(item)}
+                           style={{ cursor: "pointer" }}
+                           title="คลิกเพื่อเพิ่มลงตะกร้า">
+                    <div className={`pos-card__image ${kind ? `is-${kind}` : ""}`}>
+                      {kind === "espresso" && <div className="pos-cup" />}
+                    </div>
+                    <div className="pos-card__body">
+                      <h3>{item.name}</h3>
+                      <div className="pos-card__row">
+                        <div className="pos-card__price">
+                          <span className="pos-card__pricelabel">ราคา</span>
+                          <span className="pos-card__pricevalue">฿ {item.price.toFixed(2)}</span>
+                        </div>
+                        <div className="pos-stepper" onClick={(e) => e.stopPropagation()}>
+                          <button onClick={() => decFromCart(item.id)} aria-label="ลดจำนวน" disabled={inCart === 0}>
+                            <Icon.Minus />
+                          </button>
+                          <span className={inCart > 0 ? "is-active" : ""}>{inCart}</span>
+                          <button onClick={() => addToCart(item)} aria-label="เพิ่มจำนวน">
+                            <Icon.Plus />
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           </section>
 
@@ -291,7 +321,7 @@ export default function PosScreen() {
           <aside className="pos-order">
             <div className="pos-order__meta">
               <div>
-                <div className="pos-order__invoice">ตะกร้าปัจจุบัน</div>
+                <div className="pos-order__invoice">Invoice No: {invoiceNo}</div>
               </div>
               <div className="pos-order__date">{dateStr}</div>
             </div>
@@ -300,8 +330,9 @@ export default function PosScreen() {
               <div className="pos-order__shoplogo">WP</div>
               <div className="pos-order__shopinfo">
                 <div className="pos-order__shopname">WongNok POS</div>
-                <div className="pos-order__shopemail">Terminal 01 · {cashierName}</div>
+                <div className="pos-order__shopemail">easypos@gmail.com</div>
               </div>
+              <div className="pos-pill">Order: #{orderNo}</div>
             </div>
 
             <div className="pos-order__items">
@@ -333,23 +364,46 @@ export default function PosScreen() {
               ))}
             </div>
 
+            {cart.length > 0 && (
+              <div className="pos-promo">
+                <div className="pos-promo__head">
+                  <Icon.Tag className="pos-promo__icon" />
+                  <span>โปรโมชั่น (Promotion)</span>
+                  <span className="pos-pill pos-pill--green">ประหยัด ฿{memberDiscount.toFixed(2)}</span>
+                </div>
+                <div className="pos-promo__row">
+                  <div className="pos-promo__label">
+                    <span className="pos-dot pos-dot--green" />
+                    ส่วนลด Member 10%
+                  </div>
+                  <div className="pos-promo__value">-฿{memberDiscount.toFixed(2)}</div>
+                </div>
+                <div className="pos-promo__row pos-promo__row--sub">
+                  <span>โค้ด: MEMBER10</span>
+                  <button className="pos-linkbtn" disabled title="ยังไม่เชื่อม applyDiscount API">ยกเลิกส่วนลด</button>
+                </div>
+              </div>
+            )}
+
             <div className="pos-total">
               <div>
-                <div className="pos-total__label">รวม</div>
-                <div className="pos-total__meta">รายการ: {itemCount}, จำนวน: {quantityCount}</div>
+                <div className="pos-total__label">Total</div>
+                <div className="pos-total__meta">
+                  Items: {itemCount}, Quantity: {quantityCount}
+                </div>
               </div>
-              <div className="pos-total__value">฿{subtotal.toFixed(2)}</div>
+              <div className="pos-total__value">฿{total.toFixed(2)}</div>
             </div>
 
             <div className="pos-order__buttons">
               <button className="pos-btn pos-btn--outline" disabled title="ยังไม่พร้อม — จะทำหลังชำระเงินได้">
                 <Icon.Print />
-                พิมพ์ใบเสร็จ
+                Print Invoice
               </button>
               <button className="pos-btn pos-btn--solid pos-btn--full" disabled={cart.length === 0}
                       title={cart.length === 0 ? "ตะกร้าว่าง" : "ยังไม่เชื่อมกับ API ชำระเงิน"}>
                 <Icon.Card />
-                ชำระเงิน
+                Payments
               </button>
             </div>
           </aside>

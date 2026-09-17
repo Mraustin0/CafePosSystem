@@ -199,64 +199,65 @@ export default function PosScreen() {
 
   return (
     <div className="pos">
-      {/* ---------------- Sidebar ---------------- */}
-      <aside className="pos-sidebar">
-        <nav className="pos-sidebar__nav">
-          {NAV_ITEMS.map(({ key, label, icon: ItemIcon }) => (
-            <button
-              key={key}
-              className={`pos-navitem ${activeNav === key ? "is-active" : ""}`}
-              onClick={() => setActiveNav(key)}
-            >
-              <ItemIcon className="pos-navitem__icon" />
-              <span>{label}</span>
-            </button>
-          ))}
-        </nav>
-        <nav className="pos-sidebar__footer">
-          {NAV_FOOTER.map(({ key, label, icon: ItemIcon }) => (
-            <button key={key} className="pos-navitem pos-navitem--muted">
-              <ItemIcon className="pos-navitem__icon" />
-              <span>{label}</span>
-            </button>
-          ))}
-        </nav>
-      </aside>
+      {/* ---------------- Header (full width, above sidebar+main) ---------------- */}
+      <header className="pos-header">
+        <div className="pos-brand">
+          <div className="pos-brand__logo">WP</div>
+          <div>
+            <div className="pos-brand__title">WongNok POS Studio</div>
+            <div className="pos-brand__subtitle">สาขาหลัก • Terminal 01</div>
+          </div>
+        </div>
 
-      {/* ---------------- Main column ---------------- */}
-      <div className="pos-main">
-        {/* Header */}
-        <header className="pos-header">
-          <div className="pos-brand">
-            <div className="pos-brand__logo">WP</div>
-            <div>
-              <div className="pos-brand__title">WongNok POS Studio</div>
-              <div className="pos-brand__subtitle">สาขาหลัก • Terminal 01</div>
+        <div className="pos-search">
+          <Icon.Search className="pos-search__icon" />
+          <input type="text" placeholder="ค้นหาเมนู (Search menu)..." />
+        </div>
+
+        <div className="pos-cashier">
+          <div className="pos-cashier__text">
+            <div className="pos-cashier__name">{cashierName}</div>
+            <div className="pos-cashier__status">
+              <span className="pos-dot pos-dot--online" />
+              {user?.role === "ADMIN" ? "แอดมิน" : "แคชเชียร์"} • ออนไลน์
             </div>
           </div>
-
-          <div className="pos-search">
-            <Icon.Search className="pos-search__icon" />
-            <input type="text" placeholder="ค้นหาเมนู (Search menu)..." />
+          <div className="pos-cashier__avatar">
+            <Icon.User />
           </div>
+          <Icon.Chevron className="pos-cashier__chevron" />
+        </div>
+      </header>
 
-          <div className="pos-cashier">
-            <div className="pos-cashier__text">
-              <div className="pos-cashier__name">{cashierName}</div>
-              <div className="pos-cashier__status">
-                <span className="pos-dot pos-dot--online" />
-                {user?.role === "ADMIN" ? "แอดมิน" : "แคชเชียร์"} • ออนไลน์
-              </div>
-            </div>
-            <div className="pos-cashier__avatar">
-              <Icon.User />
-            </div>
-            <Icon.Chevron className="pos-cashier__chevron" />
-          </div>
-        </header>
+      <div className="pos-content">
+        {/* ---------------- Sidebar ---------------- */}
+        <aside className="pos-sidebar">
+          <nav className="pos-sidebar__nav">
+            {NAV_ITEMS.map(({ key, label, icon: ItemIcon }) => (
+              <button
+                key={key}
+                className={`pos-navitem ${activeNav === key ? "is-active" : ""}`}
+                onClick={() => setActiveNav(key)}
+              >
+                <ItemIcon className="pos-navitem__icon" />
+                <span>{label}</span>
+              </button>
+            ))}
+          </nav>
+          <nav className="pos-sidebar__footer">
+            {NAV_FOOTER.map(({ key, label, icon: ItemIcon }) => (
+              <button key={key} className="pos-navitem pos-navitem--muted">
+                <ItemIcon className="pos-navitem__icon" />
+                <span>{label}</span>
+              </button>
+            ))}
+          </nav>
+        </aside>
 
-        {/* Body: menu grid + order panel */}
-        <div className="pos-body">
+        {/* ---------------- Main column ---------------- */}
+        <div className="pos-main">
+          {/* Body: menu grid + order panel */}
+          <div className="pos-body">
           {/* -------- Menu grid -------- */}
           <section className="pos-menu">
             <div className="pos-menu__head">
@@ -411,6 +412,7 @@ export default function PosScreen() {
               </button>
             </div>
           </aside>
+        </div>
         </div>
       </div>
       {selectedItemForModal && (

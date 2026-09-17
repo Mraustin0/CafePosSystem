@@ -131,6 +131,7 @@ export default function PosScreen() {
   const [selectedItemForModal, setSelectedItemForModal] = useState(null);
   const [selectedTeaForModal, setSelectedTeaForModal] = useState(null);
   const [loadError, setLoadError] = useState(null);
+  const [searchText, setSearchText] = useState("");
 
   const loadProducts = useCallback(async () => {
     try {
@@ -156,8 +157,9 @@ export default function PosScreen() {
   }, [loadProducts]);
 
   const currentCategoryName = NAV_TO_CATEGORY_NAME[activeNav];
+  const search = searchText.trim().toLowerCase();
   const visibleMenu = currentCategoryName
-    ? menu.filter((m) => m.categoryName === currentCategoryName)
+    ? menu.filter((m) => m.categoryName === currentCategoryName && (!search || m.name.toLowerCase().includes(search)))
     : [];
 
   const handleAddSubmit = async ({ name, price }) => {
@@ -209,10 +211,7 @@ export default function PosScreen() {
           </div>
         </div>
 
-        <div className="pos-search">
-          <Icon.Search className="pos-search__icon" />
-          <input type="text" placeholder="ค้นหาเมนู (Search menu)..." />
-        </div>
+        <div style={{ flex: 1 }} />
 
         <div className="pos-cashier">
           <div className="pos-cashier__text">
@@ -264,6 +263,11 @@ export default function PosScreen() {
               <h2>
                 {CATEGORY_HEADING[activeNav] ?? activeNav} <span className="pos-skeleton pos-skeleton--label" />
               </h2>
+              <div className="pos-search" style={{ maxWidth: 320, marginLeft: "auto" }}>
+                <Icon.Search className="pos-search__icon" />
+                <input type="text" placeholder="ค้นหาเมนู (Search menu)..."
+                       value={searchText} onChange={(e) => setSearchText(e.target.value)} />
+              </div>
             </div>
 
             {loadError && <p style={{ color: "#c0392b", padding: "0 24px" }}>{loadError}</p>}

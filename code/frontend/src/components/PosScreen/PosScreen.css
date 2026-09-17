@@ -24,14 +24,22 @@
 
 .pos {
   display: flex;
+  flex-direction: column; /* ให้เรียงจากบนลงล่าง (Header อยู่บนสุด) */
   width: 100%;
-  height: 100%;
+  height: 100vh; /* ใช้ 100vh เพื่อให้เต็มจอพอดี */
   min-height: 640px;
   background: var(--bg);
   color: var(--gray-900);
   border-radius: 22px;
   overflow: hidden;
   border: 1px solid var(--gray-200);
+}
+
+/* ---------------- Layout คลุม Sidebar และ Main column ---------------- */
+.pos-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
 }
 
 /* ---------------- Sidebar ---------------- */
@@ -61,19 +69,20 @@
   gap: 6px;
   width: 72px;
   padding: 10px 4px;
-  border: none;
+  border: 1px solid transparent; /* ใช้ขอบโปร่งใส เพื่อกันปุ่มขยับตอน active */
   background: transparent;
   border-radius: var(--radius-md);
   color: var(--gray-600);
   font-size: 12px;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .pos-navitem:hover { background: var(--gray-100); }
 
 .pos-navitem.is-active {
   background: var(--green-100);
+  border-color: var(--green-700); /* เส้นขอบสีเขียวตามแบบ */
   color: var(--green-700);
 }
 
@@ -188,7 +197,7 @@
 .pos-menu__head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   margin-bottom: 16px;
 }
 
@@ -234,15 +243,19 @@
 }
 
 .pos-card {
+  height: 320px; /* <--- กำหนดความสูงของกล่องตรงนี้เลย (ลองปรับเลขขึ้นลงได้ครับ) */
   background: var(--white);
   border: 1px solid var(--gray-200);
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column; /* ให้เนื้อหาข้างในเรียงจากบนลงล่าง */
 }
 
 .pos-card__image {
-  height: 118px;
+  height: 160px; /* <--- กำหนดความสูงรูป (ถ้ากล่อง 280px รูป 160px จะเหลือที่ให้ข้อความ 120px) */
+  flex-shrink: 0;
   background: var(--gray-200);
   display: flex;
   align-items: center;
@@ -259,61 +272,86 @@
   box-shadow: 0 0 0 4px #d9d9d9 inset;
 }
 
-.pos-card__body { padding: 12px 14px 14px; }
+.pos-real-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; 
+  border-radius: 17px 17px 0 0; 
+}
+
+.pos-card__body {
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  flex: 1; /* ใช้พื้นที่ที่เหลือจากรูปภาพให้เต็ม */
+  justify-content: space-between; /* ช่วยดันให้ชื่อเมนูอยู่ชิดบน และราคา/ปุ่มกด ไปอยู่ชิดล่าง */
+}
 
 .pos-card__body h3 {
-  font-size: 13px;
+  font-size: 18px;
   font-weight: 700;
   letter-spacing: 0.2px;
   margin: 0 0 10px;
   text-transform: uppercase;
 }
 
-.pos-card__row { display: flex; align-items: center; justify-content: space-between; }
+.pos-card__row { display: flex; align-items: flex-end; justify-content: space-between; }
 
 .pos-card__price { display: flex; flex-direction: column; gap: 2px; }
-.pos-card__pricelabel { font-size: 11px; color: var(--gray-600); }
-.pos-card__pricevalue { font-size: 14px; font-weight: 700; color: var(--orange-500); }
+.pos-card__pricelabel { font-size: 14px; color: var(--gray-600); }
+.pos-card__pricevalue { font-size: 16px; font-weight: 700; color: var(--orange-500); }
 
+/* ---------------- Stepper (ปุ่มบวก-ลบสี่เหลี่ยม) ---------------- */
 .pos-stepper {
   display: flex;
   align-items: center;
-  gap: 6px;
-  background: var(--gray-100);
-  border-radius: 999px;
-  padding: 3px;
+  gap: 8px;
 }
 
 .pos-stepper button {
-  width: 22px;
-  height: 22px;
-  border: none;
-  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
   background: var(--white);
-  color: var(--gray-600);
+  color: var(--orange-500);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: all 0.15s ease;
 }
-.pos-stepper button svg { width: 11px; height: 11px; }
+
+.pos-stepper button:focus,
+.pos-stepper button:active {
+  border-color: #3b82f6; 
+  outline: none;
+}
+
+.pos-stepper button svg { 
+  width: 14px; 
+  height: 14px; 
+}
 
 .pos-stepper span {
-  min-width: 20px;
-  text-align: center;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--gray-600);
+  min-width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--gray-900);
+  background: var(--white);
+  border-radius: 6px;
 }
 
 .pos-stepper span.is-active {
   background: var(--orange-500);
   color: var(--white);
-  border-radius: 50%;
-  padding: 3px 0;
 }
 
-/* Skeleton loading placeholders (for menu items without data yet) */
+/* Skeleton loading placeholders */
 .pos-skeleton { background: var(--gray-200); border-radius: 6px; display: inline-block; }
 .pos-skeleton--label { width: 70px; height: 14px; margin-left: 4px; }
 .pos-skeleton--title { width: 80%; height: 12px; margin-bottom: 10px; }
@@ -428,8 +466,6 @@
 
 .pos-orderitem__footer { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 
-.pos-stepper--panel { background: var(--white); }
-
 .pos-iconbtn {
   width: 26px;
   height: 26px;
@@ -502,4 +538,141 @@
   .pos-body { flex-direction: column; overflow: auto; }
   .pos-order { width: 100%; }
   .pos-menu__grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* =========================================
+   Custom Scrollbar
+   ========================================= */
+::-webkit-scrollbar {
+  width: 6px; 
+}
+
+::-webkit-scrollbar-track {
+  background: transparent; 
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--gray-200);
+  border-radius: 10px; 
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-400); 
+}
+
+/* แต่ง Search Bar ตามเวอร์ชันต้นฉบับที่คุณต้องการ */
+.pos-search--inline {
+  flex: 1;               
+  max-width: 340px;      
+  margin-left: 24px;     /* 👉 เว้นระยะห่างจากคำว่าหมวดกาแฟ */
+  margin-right: auto;    /* 👉 ดันพื้นที่ด้านขวาที่เหลือให้ว่าง */
+  background: var(--white);
+  border: 1px solid var(--gray-200);   
+  border-radius: 999px;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04); 
+}
+
+/* จัดระเบียบหัวข้อหมวดหมู่ให้อยู่แถวเดียวกัน */
+.pos-menu__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+/* แต่ง Search Bar ให้อยู่ระดับเดียวกันและปรับพื้นหลังให้เป็นสีขาวสว่างเด่นขึ้น */
+.pos-search--inline {
+  flex: 1;               
+  max-width: 340px;      
+  margin: 0 16px;        
+  background: var(--white);            /* 👉 เปลี่ยนเป็นสีขาวสว่าง */
+  border: 1px solid var(--gray-200);   /* 👉 เพิ่มเส้นขอบบางๆ ให้ตัดกับพื้นหลังเว็บ */
+  border-radius: 999px;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04); /* 👉 เพิ่มเงาจางๆ ให้ดูลอยเด่นขึ้นมา */
+}
+
+.pos-search--inline .pos-search__icon { 
+  width: 16px; 
+  height: 16px; 
+  color: var(--gray-400); 
+  flex-shrink: 0; 
+}
+
+.pos-search--inline input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 13px;
+  width: 100%;
+  color: var(--gray-900);
+}
+
+.pos-search--inline input::placeholder { 
+  color: var(--gray-400); 
+}
+
+/* การ์ดสำหรับเพิ่มเมนูใหม่ */
+.pos-card--add {
+  border: 2px dashed var(--green-600);
+  background-color: var(--white);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: none; 
+}
+
+.pos-card--add:hover {
+  background-color: var(--green-100);
+  border-style: solid;
+}
+
+.pos-card__add-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--green-700);
+}
+
+.pos-card__add-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px dashed var(--green-600);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  transition: all 0.2s ease;
+}
+
+.pos-card--add:hover .pos-card__add-icon {
+  background: var(--green-600);
+  color: white;
+  border-style: solid;
+}
+
+.pos-card__add-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.pos-card__add-text {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.pos-card__add-subtext {
+  font-size: 12px;
+  color: var(--gray-400);
 }

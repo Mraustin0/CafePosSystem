@@ -37,10 +37,11 @@ const MENU_CONFIG = {
 };
 
 export function AddNewItemModal({ activeCategory = "coffee", onClose }) {
-  const currentCategoryLabel = CATEGORY_MAP[activeCategory] || CATEGORY_MAP.coffee;
-  const currentConfig = MENU_CONFIG[activeCategory] || MENU_CONFIG.coffee;
-  
-  const currentPlaceholder = PLACEHOLDER_MAP[activeCategory] || PLACEHOLDER_MAP.coffee;
+  // สร้าง State เก็บหมวดหมู่ เพื่อให้ตอนแก้ Dropdown แล้วค่าอื่นๆ หรือ Placeholder เปลี่ยนตามด้วย
+  const [selectedCategory, setSelectedCategory] = useState(activeCategory === 'all' ? 'coffee' : activeCategory);
+
+  const currentConfig = MENU_CONFIG[selectedCategory] || MENU_CONFIG.coffee;
+  const currentPlaceholder = PLACEHOLDER_MAP[selectedCategory] || PLACEHOLDER_MAP.coffee;
 
   const [serving, setServing] = useState({});
   const [fileName, setFileName] = useState(null);
@@ -51,7 +52,7 @@ export function AddNewItemModal({ activeCategory = "coffee", onClose }) {
     const initServing = {};
     currentConfig.serving.forEach(s => initServing[s.id] = true);
     setServing(initServing);
-  }, [activeCategory, currentConfig]);
+  }, [selectedCategory, currentConfig]);
 
   function handleFile(e) {
     const file = e.target.files?.[0];
@@ -70,9 +71,7 @@ export function AddNewItemModal({ activeCategory = "coffee", onClose }) {
               </svg>
             </span>
             <div>
-              <h2 className="add-modal__title">
-                
-                 เพิ่มเมนูใหม่ (Add New Item)</h2>
+              <h2 className="add-modal__title">เพิ่มเมนูใหม่ (Add New Item)</h2>
               <p className="add-modal__subtitle">
                 บันทึกรายการสินค้าและปรับแต่งตัวเลือกเข้าสู่ระบบ POS
               </p>
@@ -107,13 +106,25 @@ export function AddNewItemModal({ activeCategory = "coffee", onClose }) {
 
           {/* Row 2: category + price */}
           <div className="add-modal__row">
-            <Field label="หมวดหมู่ (Category) *" required>
-              <div className="add-select-wrapper is-disabled">
-                <select value={currentCategoryLabel} disabled className="add-input add-select">
-                  <option value={currentCategoryLabel}>{currentCategoryLabel}</option>
+            
+            {/* 👉 5. เปลี่ยนหมวดหมู่เป็น Select Dropdown ตามดีไซน์ */}
+            <Field label="หมวดหมู่ (Category)" required>
+              <div className="add-select-wrapper">
+                <select 
+                  className="add-input add-select" 
+                  value={selectedCategory} 
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                >
+                  <option value="coffee"> กาแฟ (Coffee)</option>
+                  <option value="tea"> ชา (Tea)</option>
+                  <option value="snack"> ขนม (Snacks)</option>
                 </select>
+                <svg className="add-select-icon" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                </svg>
               </div>
             </Field>
+
             <Field label="ราคาขายปกติ (฿)" required>
               <div className="add-price-wrapper">
                 <span className="add-price-symbol">฿</span>
@@ -182,7 +193,7 @@ function Field({ label, required, children }) {
   return (
     <label className="add-field">
       <span className="add-field__label">
-        {label} {required && <span className="add-field__required">*</span>}
+        {label} {required && <span className="add-field__required" style={{ color: '#10b981' }}>*</span>}
       </span>
       {children}
     </label>

@@ -5,6 +5,8 @@ import TeaModal from "./TeaModal";
 import { AddNewItemModal } from "./AddNewItemModal";
 import PromotionView from "./PromotionView";
 import { AddPromotionModal } from "./AddPromotionModal";
+import MenuManagementView from "./MenuManagementView";
+import { SelectPromotionModal } from "./SelectPromotionModal";
 
 /* ---------------------------------------------------------
    Icons
@@ -176,6 +178,10 @@ export default function PosScreen() {
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
 
   const [isAddPromoModalOpen, setIsAddPromoModalOpen] = useState(false);
+  const [isSelectPromoModalOpen, setIsSelectPromoModalOpen] = useState(false);
+
+  // 👉 State เก็บข้อมูลโปรโมชั่นที่ลูกค้าเลือก
+  const [appliedPromo, setAppliedPromo] = useState(null);
 
   const changeMenuQty = (id, delta) => {
     setMenu((prev) =>
@@ -257,9 +263,9 @@ export default function PosScreen() {
 
         {/* -------- Main column -------- */}
         <div className="pos-main">
-          <div className="pos-body">
+          <div className="pos-body" style={{ flexDirection: (activeNav === "promo" || activeNav === "manage") ? "column" : "row" }}>
 
-            {/* 👉 สลับหน้าจอ: PromotionView ขยายเต็มพื้นที่ฝั่งซ้ายเหมือน pos-menu */}
+            {/* โชว์หน้าโปรโมชั่น (เต็มจอ) */}
             {activeNav === "promo" ? (
               <PromotionView
                 onOpenAddPromoModal={() => setIsAddPromoModalOpen(true)}
@@ -268,12 +274,26 @@ export default function PosScreen() {
                   setIsAddPromoModalOpen(true);
                 }}
               />
-            ) : (
+            ) : 
+
+            /* โชว์หน้าจัดการเมนู (เต็มจอ โชว์ทุกหมวด) */
+            activeNav === "manage" ? (
+              <MenuManagementView 
+                menuItems={INITIAL_MENU} 
+                onOpenAddMenuModal={() => setIsAddMenuOpen(true)}
+                onEditMenu={(item) => {
+                  console.log("Edit Menu:", item);
+                  setIsAddMenuOpen(true);
+                }}
+              />
+            ) : 
+            
+            /* โชว์หน้าแคชเชียร์ขายของปกติ (โชว์เฉพาะหมวดที่เลือก + มีใบเสร็จ) */
+            (
               <>
                 <section className="pos-menu">
                   <div className="pos-menu__head" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
 
-                    {/* 👉 ฝั่งซ้าย: ชื่อหมวดหมู่และคำอธิบาย (ดีไซน์เดียวกับหน้าโปรโมชั่น) */}
                     <div className="pos-menu__header-info">
                       <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 4px 0', color: 'var(--gray-900)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         หมวด{currentNavLabel}
@@ -286,7 +306,6 @@ export default function PosScreen() {
                       </p>
                     </div>
 
-                    {/* 👉 ฝั่งขวา: Search bar (ดันไปชิดขวาและจัดขนาดให้เท่าหน้าโปรโมชั่น) */}
                     <div className="pos-search pos-search--inline" style={{ margin: 0, maxWidth: '340px', width: '340px' }}>
                       <Icon.Search className="pos-search__icon" />
                       <input type="text" placeholder="ค้นหาเมนู (Search menu)..." />
@@ -295,14 +314,6 @@ export default function PosScreen() {
                   </div>
 
                   <div className="pos-menu__grid">
-                    <article className="pos-card pos-card--add" onClick={() => setIsAddMenuOpen(true)}>
-                      <div className="pos-card__add-content">
-                        <div className="pos-card__add-icon"><Icon.Plus /></div>
-                        <span className="pos-card__add-text">เพิ่มเมนูใหม่</span>
-                        <span className="pos-card__add-subtext">(คลิกเพื่อเปิดฟอร์ม)</span>
-                      </div>
-                    </article>
-
                     {menu
                       .filter((item) => item.category === activeNav)
                       .map((item) => (
@@ -341,7 +352,6 @@ export default function PosScreen() {
                   </div>
                 </section>
 
-                {/* 👉 ซ่อนบิลรายการสินค้าเมื่ออยู่หน้าโปรโมชั่น */}
                 <aside className="pos-order">
                   <div className="pos-order__meta">
                     <div>
@@ -395,21 +405,45 @@ export default function PosScreen() {
 
                   <div className="pos-promo">
                     <div className="pos-promo__head">
-                      <Icon.Tag className="pos-promo__icon" />
-                      <span>โปรโมชั่น (Promotion)</span>
-                      <span className="pos-pill pos-pill--green">ประหยัด ฿8.68</span>
-                    </div>
-                    <div className="pos-promo__row">
-                      <div className="pos-promo__label">
-                        <span className="pos-dot pos-dot--green" />
-                        ส่วนลด Member 10%
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Icon.Tag className="pos-promo__icon" />
+                        <span>โปรโมชั่น (Promotion)</span>
                       </div>
-                      <div className="pos-promo__value">-$8.68</div>
+                      
+                      {/* 👉 ถ้ามีโปรโมชั่นถูกเลือก ให้แสดงป้ายสีเขียวที่เขียนว่า "ประหยัด..." */}
+                      {appliedPromo ? (
+                        <span className="pos-pill pos-pill--green">ประหยัด {appliedPromo.value.replace('-', '')}</span>
+                      ) : (
+                        <span 
+                          className="pos-pill pos-pill--green" 
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => setIsSelectPromoModalOpen(true)}
+                        >
+                          + เพิ่มส่วนลด
+                        </span>
+                      )}
                     </div>
-                    <div className="pos-promo__row pos-promo__row--sub">
-                      <span>โค้ด: MEMBER10</span>
-                      <button className="pos-linkbtn">ยกเลิกส่วนลด</button>
-                    </div>
+
+                    {/* 👉 ดึงข้อมูลจริงจาก State `appliedPromo` มาแสดงแทนข้อความเดิมที่โดนล็อก */}
+                    {appliedPromo ? (
+                      <>
+                        <div className="pos-promo__row">
+                          <div className="pos-promo__label">
+                            <span className="pos-dot pos-dot--green" />
+                            {appliedPromo.title}
+                          </div>
+                          <div className="pos-promo__value" style={{ color: 'var(--green-600)', fontWeight: 'bold' }}>{appliedPromo.value}</div>
+                        </div>
+                        <div className="pos-promo__row pos-promo__row--sub">
+                          <span>โค้ด: {appliedPromo.code}</span>
+                          <button className="pos-linkbtn" onClick={() => setAppliedPromo(null)}>ยกเลิกส่วนลด</button>
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ padding: '16px 0 8px', textAlign: 'center', color: '#9ca3af', fontSize: '13px' }}>
+                        ยังไม่มีการเลือกโปรโมชั่น
+                      </div>
+                    )}
                   </div>
 
                   <div className="pos-total">
@@ -466,6 +500,17 @@ export default function PosScreen() {
 
       {isAddPromoModalOpen && (
         <AddPromotionModal onClose={() => setIsAddPromoModalOpen(false)} />
+      )}
+
+      {/* 👉 ส่ง onSelectPromotion ให้ Modal เพื่อเอาข้อมูลกลับมาเซ็ตเข้า State `appliedPromo` */}
+      {isSelectPromoModalOpen && (
+        <SelectPromotionModal 
+          onClose={() => setIsSelectPromoModalOpen(false)} 
+          onSelectPromotion={(promo) => {
+            setAppliedPromo(promo); // เซ็ตโปรที่เลือกลง State
+            setIsSelectPromoModalOpen(false); // ปิด Modal
+          }} 
+        />
       )}
 
     </div>

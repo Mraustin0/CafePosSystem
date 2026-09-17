@@ -263,7 +263,7 @@ export default function PosScreen() {
               <h2>
                 {CATEGORY_HEADING[activeNav] ?? activeNav} <span className="pos-skeleton pos-skeleton--label" />
               </h2>
-              <div className="pos-search" style={{ maxWidth: 320, marginLeft: "auto" }}>
+              <div className="pos-search pos-search--inline" style={{ marginLeft: "auto", marginRight: 0, flex: "0 1 320px" }}>
                 <Icon.Search className="pos-search__icon" />
                 <input type="text" placeholder="ค้นหาเมนู (Search menu)..."
                        value={searchText} onChange={(e) => setSearchText(e.target.value)} />

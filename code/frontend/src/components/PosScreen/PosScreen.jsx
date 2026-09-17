@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import "./PosScreen.css";
 import { AddNewItemModal } from "./AddNewItemModal";
+import { AddPromotionModal } from "./AddPromotionModal";
 import CoffeeModal from "./CoffeeModal";
 import TeaModal from "./TeaModal";
+import PromotionView from "./PromotionView";
 import { listProducts, createProduct } from "../../api/products";
 import { getCategories } from "../../api/categories";
+import { createPromotion, updatePromotion } from "../../api/promotions";
 import { useAuth } from "../../auth/useAuth";
 
 // Nav key -> backend category name (must match seed data in V2__seed_demo_data.sql)
@@ -111,7 +114,6 @@ const Icon = {
 const NAV_ITEMS = [
   { key: "coffee", label: "กาแฟ", icon: Icon.Coffee },
   { key: "tea", label: "ชา", icon: Icon.Tea },
-  { key: "milk", label: "เมนูนม", icon: Icon.Milk },
   { key: "snack", label: "ขนม", icon: Icon.Snack },
   { key: "promo", label: "โปรโมชั่น", icon: Icon.Tag },
 ];
@@ -130,6 +132,8 @@ export default function PosScreen() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedItemForModal, setSelectedItemForModal] = useState(null);
   const [selectedTeaForModal, setSelectedTeaForModal] = useState(null);
+  const [isAddPromoModalOpen, setIsAddPromoModalOpen] = useState(false);
+  const [editingPromo, setEditingPromo] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [searchText, setSearchText] = useState("");
 
@@ -165,9 +169,33 @@ export default function PosScreen() {
   const handleAddSubmit = async ({ name, price }) => {
     const categoryName = NAV_TO_CATEGORY_NAME[activeNav];
     if (!categoryName) throw new Error(`หมวด "${activeNav}" ยังไม่ผูกกับ backend`);
-    const category = categories.find((c) => c.name === categoryName);
-    if (!category) throw new Error(`ไม่พบหมวด "${categoryName}" ในฐานข้อมูล`);
-    await createProduct({ categoryId: category.id, name, price, imageUrl: null, addOnIds: [] });
+
+    // Refetch categories if initial silent-fetch failed (e.g. Render cold start).
+    let cats = categories;
+    if (!cats || cats.length === 0) {
+      try {
+        cats = await getCategories();
+        setCategories(cats);
+      } catch (err) {
+        console.error("getCategories failed:", err);
+        throw new Error(`โหลดหมวดหมู่ไม่สำเร็จ (${err?.status ?? "no status"}): ${err?.message ?? err}`);
+      }
+    }
+
+    const category = cats.find((c) => c.name === categoryName);
+    if (!category) {
+      throw new Error(`ไม่พบหมวด "${categoryName}" ใน DB — มี: ${cats.map((c) => c.name).join(", ") || "(ว่าง)"}`);
+    }
+
+    try {
+      await createProduct({ categoryId: category.id, name, price, imageUrl: null, addOnIds: [] });
+    } catch (err) {
+      console.error("createProduct failed:", err);
+      if (err?.status === 403) throw new Error("ไม่มีสิทธิ์เพิ่มเมนู — ต้อง login เป็น ADMIN (admin/cafe1234)");
+      if (err?.status === 401) throw new Error("Session หมดอายุ — logout แล้ว login ใหม่");
+      if (err?.status === 409) throw new Error(`ชื่อเมนูซ้ำ: "${name}"`);
+      throw new Error(`บันทึกไม่สำเร็จ (${err?.status ?? "no status"}): ${err?.message ?? err}`);
+    }
     await loadProducts();
   };
 
@@ -257,6 +285,13 @@ export default function PosScreen() {
         <div className="pos-main">
           {/* Body: menu grid + order panel */}
           <div className="pos-body">
+          {activeNav === "promo" ? (
+            <PromotionView
+              onOpenAddPromoModal={() => { setEditingPromo(null); setIsAddPromoModalOpen(true); }}
+              onEditPromo={(promo) => { setEditingPromo(promo); setIsAddPromoModalOpen(true); }}
+            />
+          ) : (
+          <>
           {/* -------- Menu grid -------- */}
           <section className="pos-menu">
             <div className="pos-menu__head">
@@ -416,9 +451,37 @@ export default function PosScreen() {
               </button>
             </div>
           </aside>
+          </>
+          )}
         </div>
         </div>
       </div>
+      {isAddPromoModalOpen && (
+        <AddPromotionModal
+          initial={editingPromo}
+          onClose={() => { setIsAddPromoModalOpen(false); setEditingPromo(null); }}
+          onSubmit={async (form) => {
+            const body = {
+              code: form.code,
+              name: form.name,
+              discountType: form.discountType,
+              discountValue: form.discountValue,
+              minOrderAmount: form.minOrderAmount,
+              active: form.active,
+            };
+            try {
+              if (form.id) await updatePromotion(form.id, body);
+              else await createPromotion(body);
+              window.dispatchEvent(new Event("promotions:reload"));
+            } catch (err) {
+              console.error("save promotion failed:", err);
+              if (err?.status === 403) throw new Error("ต้อง login เป็น ADMIN");
+              if (err?.status === 409) throw new Error(`โค้ดซ้ำ: "${form.code}"`);
+              throw new Error(`บันทึกไม่สำเร็จ (${err?.status ?? "no status"}): ${err?.message ?? err}`);
+            }
+          }}
+        />
+      )}
       {selectedItemForModal && (
         <CoffeeModal
           item={selectedItemForModal}

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import "./PosScreen.css";
 import { AddNewItemModal } from "./AddNewItemModal";
+import CoffeeModal from "./CoffeeModal";
+import TeaModal from "./TeaModal";
 import { listProducts, createProduct } from "../../api/products";
 import { getCategories } from "../../api/categories";
 import { useAuth } from "../../auth/useAuth";
@@ -126,6 +128,8 @@ export default function PosScreen() {
   const [cart, setCart] = useState([]);
   const [categories, setCategories] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedItemForModal, setSelectedItemForModal] = useState(null);
+  const [selectedTeaForModal, setSelectedTeaForModal] = useState(null);
   const [loadError, setLoadError] = useState(null);
 
   const loadProducts = useCallback(async () => {
@@ -135,6 +139,7 @@ export default function PosScreen() {
         id: p.id,
         name: p.name,
         price: p.price != null ? Number(p.price) : 0,
+        qty: 1,
         image: !!p.imageUrl,
         categoryId: p.category?.id ?? null,
         categoryName: p.category?.name ?? null,
@@ -164,19 +169,20 @@ export default function PosScreen() {
     await loadProducts();
   };
 
-  const addToCart = (product) => {
-    setCart((prev) => {
-      const existing = prev.find((c) => c.id === product.id);
-      if (existing) return prev.map((c) => c.id === product.id ? { ...c, qty: c.qty + 1 } : c);
-      return [...prev, { id: product.id, name: product.name, price: product.price, qty: 1 }];
-    });
+  const addCustomizedToCart = (customized) => {
+    setCart((prev) => [...prev, { ...customized, cartId: Date.now() + Math.random() }]);
   };
-  const decFromCart = (id) => setCart((prev) => prev.flatMap((c) => c.id === id ? (c.qty > 1 ? [{ ...c, qty: c.qty - 1 }] : []) : [c]));
-  const changeCartQty = (id, delta) => {
-    setCart((prev) => prev.map((item) => item.id === id ? { ...item, qty: Math.max(1, item.qty + delta) } : item));
+  const changeCartQty = (cartId, delta) => {
+    setCart((prev) => prev.map((item) => item.cartId === cartId ? { ...item, qty: Math.max(1, item.qty + delta) } : item));
   };
-  const removeCartItem = (id) => setCart((prev) => prev.filter((item) => item.id !== id));
-  const cartQty = (id) => cart.find((c) => c.id === id)?.qty ?? 0;
+  const removeCartItem = (cartId) => setCart((prev) => prev.filter((item) => item.cartId !== cartId));
+  const changeMenuQty = (id, delta) => {
+    setMenu((prev) => prev.map((item) => item.id === id ? { ...item, qty: Math.max(0, item.qty + delta) } : item));
+  };
+  const openItemModal = (item) => {
+    if (activeNav === "tea") setSelectedTeaForModal(item);
+    else setSelectedItemForModal(item);
+  };
   const clearCart = () => setCart([]);
 
   const subtotal = useMemo(() => cart.reduce((s, i) => s + i.price * i.qty, 0), [cart]);
@@ -257,39 +263,31 @@ export default function PosScreen() {
               <h2>
                 {CATEGORY_HEADING[activeNav] ?? activeNav} <span className="pos-skeleton pos-skeleton--label" />
               </h2>
-              <div className="pos-menu__actions">
-                <button className="pos-btn pos-btn--ghost-danger" onClick={clearCart}
-                        disabled={cart.length === 0} title={cart.length === 0 ? "ตะกร้าว่าง" : "ล้างตะกร้า"}>
-                  <Icon.Trash />
-                  ลบเมนู
-                </button>
-                <button className="pos-btn pos-btn--solid" onClick={() => setShowAddModal(true)}
-                        disabled={!NAV_TO_CATEGORY_NAME[activeNav]}
-                        title={NAV_TO_CATEGORY_NAME[activeNav] ? "" : `หมวด ${activeNav} ยังไม่ผูก backend`}>
-                  <Icon.Plus />
-                  เพิ่มเมนู
-                </button>
-              </div>
             </div>
 
             {loadError && <p style={{ color: "#c0392b", padding: "0 24px" }}>{loadError}</p>}
             <div className="pos-menu__grid">
+              {NAV_TO_CATEGORY_NAME[activeNav] && (
+                <article className="pos-card pos-card--add" onClick={() => setShowAddModal(true)}>
+                  <div className="pos-card__add-content">
+                    <div className="pos-card__add-icon"><Icon.Plus /></div>
+                    <span className="pos-card__add-text">เพิ่มเมนูใหม่</span>
+                    <span className="pos-card__add-subtext">(คลิกเพื่อเปิดฟอร์ม)</span>
+                  </div>
+                </article>
+              )}
               {visibleMenu.length === 0 && !loadError && (
                 <div style={{ padding: 32, color: "#888", gridColumn: "1 / -1", textAlign: "center" }}>
                   {NAV_TO_CATEGORY_NAME[activeNav]
-                    ? "ยังไม่มีเมนูในหมวดนี้ — กด \"เพิ่มเมนู\" เพื่อสร้าง"
+                    ? "ยังไม่มีเมนูในหมวดนี้ — กดการ์ด \"เพิ่มเมนูใหม่\" เพื่อสร้าง"
                     : `หมวด "${activeNav}" ยังไม่ผูกกับ backend`}
                 </div>
               )}
               {visibleMenu.map((item) => {
-                const inCart = cartQty(item.id);
                 const kind = item.name.match(/espresso/i) ? "espresso"
                             : item.name.match(/americano/i) ? "americano" : "";
                 return (
-                  <article className="pos-card" key={item.id}
-                           onClick={() => addToCart(item)}
-                           style={{ cursor: "pointer" }}
-                           title="คลิกเพื่อเพิ่มลงตะกร้า">
+                  <article className="pos-card" key={item.id}>
                     <div className={`pos-card__image ${kind ? `is-${kind}` : ""}`}>
                       {kind === "espresso" && <div className="pos-cup" />}
                     </div>
@@ -300,12 +298,12 @@ export default function PosScreen() {
                           <span className="pos-card__pricelabel">ราคา</span>
                           <span className="pos-card__pricevalue">฿ {item.price.toFixed(2)}</span>
                         </div>
-                        <div className="pos-stepper" onClick={(e) => e.stopPropagation()}>
-                          <button onClick={() => decFromCart(item.id)} aria-label="ลดจำนวน" disabled={inCart === 0}>
+                        <div className="pos-stepper">
+                          <button onClick={() => changeMenuQty(item.id, -1)} aria-label="ลดจำนวน">
                             <Icon.Minus />
                           </button>
-                          <span className={inCart > 0 ? "is-active" : ""}>{inCart}</span>
-                          <button onClick={() => addToCart(item)} aria-label="เพิ่มจำนวน">
+                          <span className={item.qty > 0 ? "is-active" : ""}>{item.qty}</span>
+                          <button onClick={() => openItemModal(item)} aria-label="เพิ่มลงตะกร้า">
                             <Icon.Plus />
                           </button>
                         </div>
@@ -336,26 +334,32 @@ export default function PosScreen() {
             </div>
 
             <div className="pos-order__items">
-              {cart.length === 0 && <div className="pos-order__empty">ยังไม่มีรายการ — คลิกเมนูซ้ายมือเพื่อเพิ่ม</div>}
+              {cart.length === 0 && <div className="pos-order__empty">ยังไม่มีรายการ — กด + บนเมนูเพื่อเปิดฟอร์ม</div>}
               {cart.map((item) => (
-                <div className="pos-orderitem" key={item.id}>
+                <div className="pos-orderitem" key={item.cartId}>
                   <div className="pos-orderitem__icon"><Icon.Coffee /></div>
                   <div className="pos-orderitem__body">
                     <div className="pos-orderitem__row">
-                      <div className="pos-orderitem__name">{item.name}</div>
+                      <div className="pos-orderitem__name">
+                        {item.name}
+                        {item.isNew && <span className="pos-badge">ใหม่</span>}
+                      </div>
                       <div className="pos-orderitem__price">฿{(item.price * item.qty).toFixed(2)}</div>
                     </div>
+                    {item.detail && <div className="pos-orderitem__detail">{item.detail}</div>}
+                    {item.extras && <div className="pos-orderitem__extras">{item.extras}</div>}
+                    {item.note && <div className="pos-orderitem__note">{item.note}</div>}
                     <div className="pos-orderitem__footer">
                       <div className="pos-stepper pos-stepper--panel">
-                        <button onClick={() => changeCartQty(item.id, -1)} aria-label="ลดจำนวน">
+                        <button onClick={() => changeCartQty(item.cartId, -1)} aria-label="ลดจำนวน">
                           <Icon.Minus />
                         </button>
                         <span>{item.qty}</span>
-                        <button onClick={() => changeCartQty(item.id, 1)} aria-label="เพิ่มจำนวน">
+                        <button onClick={() => changeCartQty(item.cartId, 1)} aria-label="เพิ่มจำนวน">
                           <Icon.Plus />
                         </button>
                       </div>
-                      <button className="pos-iconbtn" onClick={() => removeCartItem(item.id)} aria-label="ลบรายการ">
+                      <button className="pos-iconbtn" onClick={() => removeCartItem(item.cartId)} aria-label="ลบรายการ">
                         <Icon.Trash />
                       </button>
                     </div>
@@ -409,6 +413,20 @@ export default function PosScreen() {
           </aside>
         </div>
       </div>
+      {selectedItemForModal && (
+        <CoffeeModal
+          item={selectedItemForModal}
+          onClose={() => setSelectedItemForModal(null)}
+          onAddToCart={(customized) => addCustomizedToCart(customized)}
+        />
+      )}
+      {selectedTeaForModal && (
+        <TeaModal
+          item={selectedTeaForModal}
+          onClose={() => setSelectedTeaForModal(null)}
+          onAddToCart={(customized) => addCustomizedToCart(customized)}
+        />
+      )}
       {showAddModal && (
         <AddNewItemModal
           activeCategory={activeNav}

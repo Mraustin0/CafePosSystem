@@ -61,9 +61,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/users", "/api/v1/users/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/reports/**").hasRole("ADMIN")
 
-                        // Menu: cashiers read it for the POS, only admins change it.
-                        .requestMatchers(HttpMethod.GET, "/api/v1/categories/**", "/api/v1/add-ons/**", "/api/v1/products/**").authenticated()
-                        .requestMatchers("/api/v1/categories/**", "/api/v1/add-ons/**", "/api/v1/products/**").hasRole("ADMIN")
+                        // Menu + promotions: cashiers read them for the POS, only admins change them.
+                        .requestMatchers(HttpMethod.GET, "/api/v1/categories/**", "/api/v1/add-ons/**", "/api/v1/products/**", "/api/v1/promotions/**").authenticated()
+                        .requestMatchers("/api/v1/categories/**", "/api/v1/add-ons/**", "/api/v1/products/**", "/api/v1/promotions/**").hasRole("ADMIN")
 
                         .requestMatchers("/api/**").authenticated()
                         // Swagger UI, API docs and the React app (static files + client routes).

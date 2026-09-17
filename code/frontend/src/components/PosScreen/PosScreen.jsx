@@ -2,12 +2,16 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import "./PosScreen.css";
 import { AddNewItemModal } from "./AddNewItemModal";
 import { AddPromotionModal } from "./AddPromotionModal";
+import { SelectPromotionModal } from "./SelectPromotionModal";
 import CoffeeModal from "./CoffeeModal";
 import TeaModal from "./TeaModal";
 import PromotionView from "./PromotionView";
+import MenuManagementView from "./MenuManagementView";
 import { listProducts, createProduct } from "../../api/products";
 import { getCategories } from "../../api/categories";
 import { createPromotion, updatePromotion } from "../../api/promotions";
+import { createOrder } from "../../api/orders";
+import { payOrder } from "../../api/payment";
 import { useAuth } from "../../auth/useAuth";
 
 // Nav key -> backend category name (must match seed data in V2__seed_demo_data.sql)
@@ -106,6 +110,12 @@ const Icon = {
       <path d="M2.5 10h19" />
     </svg>
   ),
+  Edit: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}>
+      <path d="M12 20h9" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
 };
 
 /* ---------------------------------------------------------
@@ -115,10 +125,11 @@ const NAV_ITEMS = [
   { key: "coffee", label: "กาแฟ", icon: Icon.Coffee },
   { key: "tea", label: "ชา", icon: Icon.Tea },
   { key: "snack", label: "ขนม", icon: Icon.Snack },
-  { key: "promo", label: "โปรโมชั่น", icon: Icon.Tag },
 ];
 
 const NAV_FOOTER = [
+  { key: "manage", label: "จัดการเมนู", icon: Icon.Edit },
+  { key: "promo", label: "โปรโมชั่น", icon: Icon.Tag },
   { key: "dashboard", label: "Dashboard", icon: Icon.Grid },
   { key: "settings", label: "ตั้งค่า", icon: Icon.Gear },
 ];
@@ -136,6 +147,10 @@ export default function PosScreen() {
   const [editingPromo, setEditingPromo] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [searchText, setSearchText] = useState("");
+  const [currentOrder, setCurrentOrder] = useState(null); // populated after checkout: { id, orderNumber, total, payment }
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
+  const [isSelectPromoModalOpen, setIsSelectPromoModalOpen] = useState(false);
+  const [appliedPromo, setAppliedPromo] = useState(null);
 
   const loadProducts = useCallback(async () => {
     try {
@@ -167,8 +182,9 @@ export default function PosScreen() {
     : [];
 
   const handleAddSubmit = async ({ name, price }) => {
-    const categoryName = NAV_TO_CATEGORY_NAME[activeNav];
-    if (!categoryName) throw new Error(`หมวด "${activeNav}" ยังไม่ผูกกับ backend`);
+    // From the "จัดการเมนู" tab there's no active category — default to Coffee. From the menu tabs
+    // use whatever the cashier is currently browsing.
+    const categoryName = NAV_TO_CATEGORY_NAME[activeNav] ?? "Coffee";
 
     // Refetch categories if initial silent-fetch failed (e.g. Render cold start).
     let cats = categories;
@@ -197,6 +213,7 @@ export default function PosScreen() {
       throw new Error(`บันทึกไม่สำเร็จ (${err?.status ?? "no status"}): ${err?.message ?? err}`);
     }
     await loadProducts();
+    window.dispatchEvent(new Event("products:reload"));
   };
 
   const addCustomizedToCart = (customized) => {
@@ -216,12 +233,61 @@ export default function PosScreen() {
   const clearCart = () => setCart([]);
 
   const subtotal = useMemo(() => cart.reduce((s, i) => s + i.price * i.qty, 0), [cart]);
-  const memberDiscount = subtotal * 0.10; // ponytail: visual placeholder, wire to applyDiscount API later
+  // Discount comes from the promotion the cashier selected (SelectPromotionModal). No promo -> 0.
+  const memberDiscount = appliedPromo
+    ? (appliedPromo.discountType === "PERCENT"
+        ? Math.min(subtotal * Number(appliedPromo.discountValue) / 100, subtotal)
+        : Math.min(Number(appliedPromo.discountValue), subtotal))
+    : 0;
   const total = subtotal - memberDiscount;
+  const promoMinNotMet = appliedPromo && appliedPromo.minOrderAmount != null && subtotal < Number(appliedPromo.minOrderAmount);
   const itemCount = cart.length;
   const quantityCount = cart.reduce((sum, item) => sum + item.qty, 0);
-  const invoiceNo = useMemo(() => Math.floor(100000 + Math.random() * 900000), []);
-  const orderNo = useMemo(() => String(Math.floor(1 + Math.random() * 999)).padStart(4, "0"), []);
+  // Real invoice / order number come from the backend after checkout — until then we say "new order".
+  const invoiceLabel = currentOrder ? `Invoice No: ${currentOrder.id}` : "New Order";
+  const orderPill = currentOrder ? `Order: ${currentOrder.orderNumber}` : "รอสร้างออเดอร์";
+
+  const handleCheckout = async () => {
+    if (cart.length === 0) return;
+    const methodInput = window.prompt("วิธีชำระเงิน (CASH / QR_CODE / CARD)", "CASH");
+    if (!methodInput) return;
+    const method = methodInput.trim().toUpperCase().replace(" ", "_").replace("QR", "QR_CODE").replace("QR_CODE_CODE", "QR_CODE");
+    if (!["CASH", "QR_CODE", "CARD"].includes(method)) {
+      alert(`วิธีชำระเงินไม่ถูกต้อง: ${methodInput}`);
+      return;
+    }
+    const defaultAmt = method === "CASH" ? String(Math.ceil(subtotal)) : subtotal.toFixed(2);
+    const amtInput = window.prompt(
+      method === "CASH"
+        ? `รับเงิน (บาท) — total ฿${subtotal.toFixed(2)}`
+        : `จำนวนเงินต้องเท่ากับ ฿${subtotal.toFixed(2)}`,
+      defaultAmt
+    );
+    if (amtInput == null) return;
+    const amountReceived = Number(amtInput);
+    if (Number.isNaN(amountReceived) || amountReceived < 0) {
+      alert("จำนวนเงินไม่ถูกต้อง");
+      return;
+    }
+    setCheckoutBusy(true);
+    try {
+      const items = cart.map((c) => ({ productId: c.id, quantity: c.qty, addOnIds: [] }));
+      const order = await createOrder(items);
+      const payment = await payOrder(order.id, { method, amountReceived });
+      setCurrentOrder({ ...order, payment });
+      setCart([]);
+      setAppliedPromo(null);
+    } catch (err) {
+      console.error("checkout failed:", err);
+      if (err?.status === 403) alert("ต้อง login ก่อน (Cashier หรือ Admin)");
+      else if (err?.status === 400) alert(`บันทึกไม่สำเร็จ: ${err?.message ?? "invalid request"}`);
+      else alert(`Checkout ล้มเหลว (${err?.status ?? "no status"}): ${err?.message ?? err}`);
+    } finally {
+      setCheckoutBusy(false);
+    }
+  };
+
+  const newOrder = () => setCurrentOrder(null);
 
   const now = new Date();
   const dateStr = now.toLocaleString("th-TH", { dateStyle: "short", timeStyle: "medium" });
@@ -284,11 +350,16 @@ export default function PosScreen() {
         {/* ---------------- Main column ---------------- */}
         <div className="pos-main">
           {/* Body: menu grid + order panel */}
-          <div className="pos-body">
+          <div className="pos-body" style={{ flexDirection: (activeNav === "promo" || activeNav === "manage") ? "column" : "row" }}>
           {activeNav === "promo" ? (
             <PromotionView
               onOpenAddPromoModal={() => { setEditingPromo(null); setIsAddPromoModalOpen(true); }}
               onEditPromo={(promo) => { setEditingPromo(promo); setIsAddPromoModalOpen(true); }}
+            />
+          ) : activeNav === "manage" ? (
+            <MenuManagementView
+              onOpenAddMenuModal={() => setShowAddModal(true)}
+              onEditMenu={(item) => alert(`แก้ไข "${item.name}" — ยังไม่ได้ port edit modal (F-17)`)}
             />
           ) : (
           <>
@@ -359,9 +430,9 @@ export default function PosScreen() {
           <aside className="pos-order">
             <div className="pos-order__meta">
               <div>
-                <div className="pos-order__invoice">Invoice No: {invoiceNo}</div>
+                <div className="pos-order__invoice">{invoiceLabel}</div>
               </div>
-              <div className="pos-order__date">{dateStr}</div>
+              <div className="pos-order__date">{currentOrder ? new Date(currentOrder.createdAt).toLocaleString("th-TH") : dateStr}</div>
             </div>
 
             <div className="pos-order__shop">
@@ -370,11 +441,25 @@ export default function PosScreen() {
                 <div className="pos-order__shopname">WongNok POS</div>
                 <div className="pos-order__shopemail">easypos@gmail.com</div>
               </div>
-              <div className="pos-pill">Order: #{orderNo}</div>
+              <div className="pos-pill">{orderPill}</div>
             </div>
 
+            {currentOrder && (
+              <div style={{ padding: "12px 16px", background: "#ecfdf5", borderRadius: 8, margin: "0 16px 8px", fontSize: 13 }}>
+                <div style={{ fontWeight: 700, color: "#059669" }}>✓ ชำระเงินสำเร็จ ({currentOrder.payment.method})</div>
+                <div>Total ฿{Number(currentOrder.total).toFixed(2)}</div>
+                {currentOrder.payment.method === "CASH" && (
+                  <div>รับเงิน ฿{Number(currentOrder.payment.amountReceived).toFixed(2)} · ทอน ฿{Number(currentOrder.payment.change).toFixed(2)}</div>
+                )}
+                <button onClick={newOrder} style={{ marginTop: 8, padding: "6px 12px", background: "#10b981", color: "white", border: "none", borderRadius: 6, cursor: "pointer" }}>
+                  เริ่มออเดอร์ใหม่
+                </button>
+              </div>
+            )}
+
             <div className="pos-order__items">
-              {cart.length === 0 && <div className="pos-order__empty">ยังไม่มีรายการ — กด + บนเมนูเพื่อเปิดฟอร์ม</div>}
+              {cart.length === 0 && !currentOrder && <div className="pos-order__empty">ยังไม่มีรายการ — กด + บนเมนูเพื่อเปิดฟอร์ม</div>}
+              {cart.length === 0 && currentOrder && <div className="pos-order__empty">ตะกร้าว่าง — กด "เริ่มออเดอร์ใหม่" เพื่อเริ่มขายอันต่อไป</div>}
               {cart.map((item) => (
                 <div className="pos-orderitem" key={item.cartId}>
                   <div className="pos-orderitem__icon"><Icon.Coffee /></div>
@@ -413,19 +498,33 @@ export default function PosScreen() {
                 <div className="pos-promo__head">
                   <Icon.Tag className="pos-promo__icon" />
                   <span>โปรโมชั่น (Promotion)</span>
-                  <span className="pos-pill pos-pill--green">ประหยัด ฿{memberDiscount.toFixed(2)}</span>
+                  {appliedPromo ? (
+                    <span className="pos-pill pos-pill--green">ประหยัด ฿{memberDiscount.toFixed(2)}</span>
+                  ) : (
+                    <span className="pos-pill pos-pill--green" style={{ cursor: "pointer" }}
+                          onClick={() => setIsSelectPromoModalOpen(true)}>
+                      + เลือกโปรโมชั่น
+                    </span>
+                  )}
                 </div>
-                <div className="pos-promo__row">
-                  <div className="pos-promo__label">
-                    <span className="pos-dot pos-dot--green" />
-                    ส่วนลด Member 10%
-                  </div>
-                  <div className="pos-promo__value">-฿{memberDiscount.toFixed(2)}</div>
-                </div>
-                <div className="pos-promo__row pos-promo__row--sub">
-                  <span>โค้ด: MEMBER10</span>
-                  <button className="pos-linkbtn" disabled title="ยังไม่เชื่อม applyDiscount API">ยกเลิกส่วนลด</button>
-                </div>
+                {appliedPromo ? (
+                  <>
+                    <div className="pos-promo__row">
+                      <div className="pos-promo__label">
+                        <span className="pos-dot pos-dot--green" />
+                        {appliedPromo.name}
+                      </div>
+                      <div className="pos-promo__value">-฿{memberDiscount.toFixed(2)}</div>
+                    </div>
+                    <div className="pos-promo__row pos-promo__row--sub">
+                      <span>
+                        โค้ด: {appliedPromo.code}
+                        {promoMinNotMet && <span style={{ color: "#c0392b", marginLeft: 8 }}> — ยอดต่ำกว่าขั้นต่ำ ฿{Number(appliedPromo.minOrderAmount).toFixed(2)}</span>}
+                      </span>
+                      <button className="pos-linkbtn" onClick={() => setAppliedPromo(null)}>ยกเลิกส่วนลด</button>
+                    </div>
+                  </>
+                ) : null}
               </div>
             )}
 
@@ -440,14 +539,19 @@ export default function PosScreen() {
             </div>
 
             <div className="pos-order__buttons">
-              <button className="pos-btn pos-btn--outline" disabled title="ยังไม่พร้อม — จะทำหลังชำระเงินได้">
+              <button className="pos-btn pos-btn--outline"
+                      disabled={!currentOrder}
+                      onClick={() => window.print()}
+                      title={currentOrder ? "พิมพ์ใบเสร็จ" : "ต้องชำระเงินก่อน"}>
                 <Icon.Print />
                 Print Invoice
               </button>
-              <button className="pos-btn pos-btn--solid pos-btn--full" disabled={cart.length === 0}
-                      title={cart.length === 0 ? "ตะกร้าว่าง" : "ยังไม่เชื่อมกับ API ชำระเงิน"}>
+              <button className="pos-btn pos-btn--solid pos-btn--full"
+                      disabled={cart.length === 0 || checkoutBusy}
+                      onClick={handleCheckout}
+                      title={cart.length === 0 ? "ตะกร้าว่าง" : "สร้างออเดอร์ + ชำระเงิน"}>
                 <Icon.Card />
-                Payments
+                {checkoutBusy ? "กำลังบันทึก..." : "Payments"}
               </button>
             </div>
           </aside>
@@ -456,6 +560,15 @@ export default function PosScreen() {
         </div>
         </div>
       </div>
+      {isSelectPromoModalOpen && (
+        <SelectPromotionModal
+          onClose={() => setIsSelectPromoModalOpen(false)}
+          onSelectPromotion={(promo) => {
+            setAppliedPromo(promo);
+            setIsSelectPromoModalOpen(false);
+          }}
+        />
+      )}
       {isAddPromoModalOpen && (
         <AddPromotionModal
           initial={editingPromo}

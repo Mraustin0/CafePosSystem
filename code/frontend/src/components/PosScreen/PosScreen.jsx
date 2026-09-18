@@ -1,25 +1,15 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState } from "react";
 import "./PosScreen.css";
-import { AddNewItemModal } from "./AddNewItemModal";
-import { AddPromotionModal } from "./AddPromotionModal";
-import { SelectPromotionModal } from "./SelectPromotionModal";
 import CoffeeModal from "./CoffeeModal";
 import TeaModal from "./TeaModal";
+import { AddNewItemModal } from "./AddNewItemModal";
 import PromotionView from "./PromotionView";
+import { AddPromotionModal } from "./AddPromotionModal";
 import MenuManagementView from "./MenuManagementView";
-import { listProducts, createProduct } from "../../api/products";
-import { getCategories } from "../../api/categories";
-import { createPromotion, updatePromotion } from "../../api/promotions";
-import { createOrder } from "../../api/orders";
-import { payOrder } from "../../api/payment";
-import { useAuth } from "../../auth/useAuth";
-
-// Nav key -> backend category name (must match seed data in V2__seed_demo_data.sql)
-const NAV_TO_CATEGORY_NAME = { coffee: "Coffee", tea: "Tea", snack: "Bakery" };
-const CATEGORY_HEADING = { coffee: "หมวดกาแฟ", tea: "หมวดชา", snack: "หมวดขนม", milk: "เมนูนม", promo: "โปรโมชั่น" };
+import { SelectPromotionModal } from "./SelectPromotionModal";
 
 /* ---------------------------------------------------------
-   Icons — small inline SVGs, no external icon library needed
+   Icons
 --------------------------------------------------------- */
 const Icon = {
   Coffee: (p) => (
@@ -119,7 +109,7 @@ const Icon = {
 };
 
 /* ---------------------------------------------------------
-   Static data — in the real project this comes from the API
+   Static data
 --------------------------------------------------------- */
 const NAV_ITEMS = [
   { key: "coffee", label: "กาแฟ", icon: Icon.Coffee },
@@ -134,185 +124,105 @@ const NAV_FOOTER = [
   { key: "settings", label: "ตั้งค่า", icon: Icon.Gear },
 ];
 
+const INITIAL_MENU = [
+  // ☕️ --- หมวดกาแฟ (coffee) ---
+  {
+    id: 1, category: "coffee", name: "ESPRESSO SHOT", price: 55, qty: 0,
+    imgSrc: "https://placehold.co/400x300/e2e8f0/64748b?text=Espresso", kind: "espresso"
+  },
+  {
+    id: 2, category: "coffee", name: "ICED AMERICANO", price: 55, qty: 0,
+    imgSrc: "https://images.unsplash.com/photo-1497935586351-b67a49e012bf?w=400&h=300&fit=crop", kind: "americano"
+  },
+
+  // 🍵 --- หมวดชา (tea) ---
+  {
+    id: 3, category: "tea", name: "ชาไทยพรีเมียม", price: 65, qty: 0,
+    imgSrc: "https://placehold.co/400x300/fed7aa/c2410c?text=Thai+Tea", kind: "tea"
+  },
+  {
+    id: 4, category: "tea", name: "ชาเขียวมัทฉะ", price: 75, qty: 0,
+    imgSrc: "https://placehold.co/400x300/bbf7d0/15803d?text=Matcha", kind: "tea"
+  },
+
+  // 🥐 --- หมวดขนม (snack) ---
+  {
+    id: 5, category: "snack", name: "คุกกี้ช็อกโกแลต", price: 45, qty: 0,
+    imgSrc: "https://placehold.co/400x300/fef08a/a16207?text=Cookie", kind: "snack"
+  },
+  {
+    id: 6, category: "snack", name: "ครัวซองต์เนยสด", price: 65, qty: 0,
+    imgSrc: "https://placehold.co/400x300/fef08a/a16207?text=Croissant", kind: "snack"
+  },
+];
+
+const INITIAL_CART = [
+  {
+    id: 101,
+    name: "คาปูซิโน่ / Cappuccino",
+    isNew: true,
+    price: 9.75,
+    qty: 1,
+    detail: "เย็น (Iced) • หัวกลาง • หวาน 100%",
+    extras: "+ เพิ่มช็อตกาแฟ (+Extra Shot), + วิปครีม",
+    note: "โน้ต: แยกน้ำแข็ง",
+  },
+];
+
 export default function PosScreen() {
-  const { user } = useAuth();
   const [activeNav, setActiveNav] = useState("coffee");
-  const [menu, setMenu] = useState([]);
-  const [cart, setCart] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [menu, setMenu] = useState(INITIAL_MENU);
+  const [cart, setCart] = useState(INITIAL_CART);
   const [selectedItemForModal, setSelectedItemForModal] = useState(null);
   const [selectedTeaForModal, setSelectedTeaForModal] = useState(null);
+  const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
+
   const [isAddPromoModalOpen, setIsAddPromoModalOpen] = useState(false);
-  const [editingPromo, setEditingPromo] = useState(null);
-  const [loadError, setLoadError] = useState(null);
-  const [searchText, setSearchText] = useState("");
-  const [currentOrder, setCurrentOrder] = useState(null); // populated after checkout: { id, orderNumber, total, payment }
-  const [checkoutBusy, setCheckoutBusy] = useState(false);
   const [isSelectPromoModalOpen, setIsSelectPromoModalOpen] = useState(false);
+
+  // 👉 State เก็บข้อมูลโปรโมชั่นที่ลูกค้าเลือก
   const [appliedPromo, setAppliedPromo] = useState(null);
 
-  const loadProducts = useCallback(async () => {
-    try {
-      const page = await listProducts({ active: true, size: 100 });
-      const items = (page?.content ?? []).map((p) => ({
-        id: p.id,
-        name: p.name,
-        price: p.price != null ? Number(p.price) : 0,
-        qty: 1,
-        image: !!p.imageUrl,
-        categoryId: p.category?.id ?? null,
-        categoryName: p.category?.name ?? null,
-      }));
-      setMenu(items);
-    } catch (err) {
-      setLoadError(err?.message ?? "โหลดเมนูไม่สำเร็จ");
-    }
-  }, []);
-
-  useEffect(() => {
-    getCategories().then(setCategories).catch(() => {});
-    loadProducts();
-  }, [loadProducts]);
-
-  const currentCategoryName = NAV_TO_CATEGORY_NAME[activeNav];
-  const search = searchText.trim().toLowerCase();
-  const visibleMenu = currentCategoryName
-    ? menu.filter((m) => m.categoryName === currentCategoryName && (!search || m.name.toLowerCase().includes(search)))
-    : [];
-
-  const handleAddSubmit = async ({ name, price }) => {
-    // From the "จัดการเมนู" tab there's no active category — default to Coffee. From the menu tabs
-    // use whatever the cashier is currently browsing.
-    const categoryName = NAV_TO_CATEGORY_NAME[activeNav] ?? "Coffee";
-
-    // Refetch categories if initial silent-fetch failed (e.g. Render cold start).
-    let cats = categories;
-    if (!cats || cats.length === 0) {
-      try {
-        cats = await getCategories();
-        setCategories(cats);
-      } catch (err) {
-        console.error("getCategories failed:", err);
-        throw new Error(`โหลดหมวดหมู่ไม่สำเร็จ (${err?.status ?? "no status"}): ${err?.message ?? err}`);
-      }
-    }
-
-    const category = cats.find((c) => c.name === categoryName);
-    if (!category) {
-      throw new Error(`ไม่พบหมวด "${categoryName}" ใน DB — มี: ${cats.map((c) => c.name).join(", ") || "(ว่าง)"}`);
-    }
-
-    try {
-      await createProduct({ categoryId: category.id, name, price, imageUrl: null, addOnIds: [] });
-    } catch (err) {
-      console.error("createProduct failed:", err);
-      if (err?.status === 403) throw new Error("ไม่มีสิทธิ์เพิ่มเมนู — ต้อง login เป็น ADMIN (admin/cafe1234)");
-      if (err?.status === 401) throw new Error("Session หมดอายุ — logout แล้ว login ใหม่");
-      if (err?.status === 409) throw new Error(`ชื่อเมนูซ้ำ: "${name}"`);
-      throw new Error(`บันทึกไม่สำเร็จ (${err?.status ?? "no status"}): ${err?.message ?? err}`);
-    }
-    await loadProducts();
-    window.dispatchEvent(new Event("products:reload"));
-  };
-
-  const addCustomizedToCart = (customized) => {
-    setCart((prev) => [...prev, { ...customized, cartId: Date.now() + Math.random() }]);
-  };
-  const changeCartQty = (cartId, delta) => {
-    setCart((prev) => prev.map((item) => item.cartId === cartId ? { ...item, qty: Math.max(1, item.qty + delta) } : item));
-  };
-  const removeCartItem = (cartId) => setCart((prev) => prev.filter((item) => item.cartId !== cartId));
   const changeMenuQty = (id, delta) => {
-    setMenu((prev) => prev.map((item) => item.id === id ? { ...item, qty: Math.max(0, item.qty + delta) } : item));
+    setMenu((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, qty: Math.max(0, item.qty + delta) } : item
+      )
+    );
   };
-  const openItemModal = (item) => {
-    if (activeNav === "tea") setSelectedTeaForModal(item);
-    else setSelectedItemForModal(item);
-  };
-  const clearCart = () => setCart([]);
 
-  const subtotal = useMemo(() => cart.reduce((s, i) => s + i.price * i.qty, 0), [cart]);
-  // Discount comes from the promotion the cashier selected (SelectPromotionModal). No promo -> 0.
-  const memberDiscount = appliedPromo
-    ? (appliedPromo.discountType === "PERCENT"
-        ? Math.min(subtotal * Number(appliedPromo.discountValue) / 100, subtotal)
-        : Math.min(Number(appliedPromo.discountValue), subtotal))
-    : 0;
-  const total = subtotal - memberDiscount;
-  const promoMinNotMet = appliedPromo && appliedPromo.minOrderAmount != null && subtotal < Number(appliedPromo.minOrderAmount);
+  const changeCartQty = (id, delta) => {
+    setCart((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, qty: Math.max(1, item.qty + delta) } : item
+      )
+    );
+  };
+
+  const removeCartItem = (id) => setCart((prev) => prev.filter((item) => item.id !== id));
+
   const itemCount = cart.length;
   const quantityCount = cart.reduce((sum, item) => sum + item.qty, 0);
-  // Real invoice / order number come from the backend after checkout — until then we say "new order".
-  const invoiceLabel = currentOrder ? `Invoice No: ${currentOrder.id}` : "New Order";
-  const orderPill = currentOrder ? `Order: ${currentOrder.orderNumber}` : "รอสร้างออเดอร์";
 
-  const handleCheckout = async () => {
-    if (cart.length === 0) return;
-    const methodInput = window.prompt("วิธีชำระเงิน (CASH / QR_CODE / CARD)", "CASH");
-    if (!methodInput) return;
-    const method = methodInput.trim().toUpperCase().replace(" ", "_").replace("QR", "QR_CODE").replace("QR_CODE_CODE", "QR_CODE");
-    if (!["CASH", "QR_CODE", "CARD"].includes(method)) {
-      alert(`วิธีชำระเงินไม่ถูกต้อง: ${methodInput}`);
-      return;
-    }
-    const defaultAmt = method === "CASH" ? String(Math.ceil(subtotal)) : subtotal.toFixed(2);
-    const amtInput = window.prompt(
-      method === "CASH"
-        ? `รับเงิน (บาท) — total ฿${subtotal.toFixed(2)}`
-        : `จำนวนเงินต้องเท่ากับ ฿${subtotal.toFixed(2)}`,
-      defaultAmt
-    );
-    if (amtInput == null) return;
-    const amountReceived = Number(amtInput);
-    if (Number.isNaN(amountReceived) || amountReceived < 0) {
-      alert("จำนวนเงินไม่ถูกต้อง");
-      return;
-    }
-    setCheckoutBusy(true);
-    try {
-      const items = cart.map((c) => ({ productId: c.id, quantity: c.qty, addOnIds: [] }));
-      const order = await createOrder(items);
-      const payment = await payOrder(order.id, { method, amountReceived });
-      setCurrentOrder({ ...order, payment });
-      setCart([]);
-      setAppliedPromo(null);
-    } catch (err) {
-      console.error("checkout failed:", err);
-      if (err?.status === 403) alert("ต้อง login ก่อน (Cashier หรือ Admin)");
-      else if (err?.status === 400) alert(`บันทึกไม่สำเร็จ: ${err?.message ?? "invalid request"}`);
-      else alert(`Checkout ล้มเหลว (${err?.status ?? "no status"}): ${err?.message ?? err}`);
-    } finally {
-      setCheckoutBusy(false);
-    }
-  };
-
-  const newOrder = () => setCurrentOrder(null);
-
-  const now = new Date();
-  const dateStr = now.toLocaleString("th-TH", { dateStyle: "short", timeStyle: "medium" });
-  const cashierName = user?.fullName || user?.username || "แคชเชียร์";
+  const currentNavLabel = NAV_ITEMS.find((nav) => nav.key === activeNav)?.label || "เมนู";
 
   return (
     <div className="pos">
-      {/* ---------------- Header (full width, above sidebar+main) ---------------- */}
       <header className="pos-header">
         <div className="pos-brand">
-          <div className="pos-brand__logo">WP</div>
+          <div className="pos-brand__logo">EP</div>
           <div>
-            <div className="pos-brand__title">WongNok POS Studio</div>
+            <div className="pos-brand__title">Easy POS Studio</div>
             <div className="pos-brand__subtitle">สาขาหลัก • Terminal 01</div>
           </div>
         </div>
 
-        <div style={{ flex: 1 }} />
-
         <div className="pos-cashier">
           <div className="pos-cashier__text">
-            <div className="pos-cashier__name">{cashierName}</div>
+            <div className="pos-cashier__name">แคชเชียร์ 01</div>
             <div className="pos-cashier__status">
               <span className="pos-dot pos-dot--online" />
-              {user?.role === "ADMIN" ? "แอดมิน" : "แคชเชียร์"} • ออนไลน์
+              ออนไลน์
             </div>
           </div>
           <div className="pos-cashier__avatar">
@@ -323,7 +233,6 @@ export default function PosScreen() {
       </header>
 
       <div className="pos-content">
-        {/* ---------------- Sidebar ---------------- */}
         <aside className="pos-sidebar">
           <nav className="pos-sidebar__nav">
             {NAV_ITEMS.map(({ key, label, icon: ItemIcon }) => (
@@ -337,9 +246,14 @@ export default function PosScreen() {
               </button>
             ))}
           </nav>
+
           <nav className="pos-sidebar__footer">
             {NAV_FOOTER.map(({ key, label, icon: ItemIcon }) => (
-              <button key={key} className="pos-navitem pos-navitem--muted">
+              <button
+                key={key}
+                className={`pos-navitem ${activeNav === key ? "is-active" : "pos-navitem--muted"}`}
+                onClick={() => setActiveNav(key)}
+              >
                 <ItemIcon className="pos-navitem__icon" />
                 <span>{label}</span>
               </button>
@@ -347,266 +261,258 @@ export default function PosScreen() {
           </nav>
         </aside>
 
-        {/* ---------------- Main column ---------------- */}
+        {/* -------- Main column -------- */}
         <div className="pos-main">
-          {/* Body: menu grid + order panel */}
           <div className="pos-body" style={{ flexDirection: (activeNav === "promo" || activeNav === "manage") ? "column" : "row" }}>
-          {activeNav === "promo" ? (
-            <PromotionView
-              onOpenAddPromoModal={() => { setEditingPromo(null); setIsAddPromoModalOpen(true); }}
-              onEditPromo={(promo) => { setEditingPromo(promo); setIsAddPromoModalOpen(true); }}
-            />
-          ) : activeNav === "manage" ? (
-            <MenuManagementView
-              onOpenAddMenuModal={() => setShowAddModal(true)}
-              onEditMenu={(item) => alert(`แก้ไข "${item.name}" — ยังไม่ได้ port edit modal (F-17)`)}
-            />
-          ) : (
-          <>
-          {/* -------- Menu grid -------- */}
-          <section className="pos-menu">
-            <div className="pos-menu__head">
-              <h2>
-                {CATEGORY_HEADING[activeNav] ?? activeNav} <span className="pos-skeleton pos-skeleton--label" />
-              </h2>
-              <div className="pos-search pos-search--inline" style={{ marginLeft: "auto", marginRight: 0, flex: "0 1 320px" }}>
-                <Icon.Search className="pos-search__icon" />
-                <input type="text" placeholder="ค้นหาเมนู (Search menu)..."
-                       value={searchText} onChange={(e) => setSearchText(e.target.value)} />
-              </div>
-            </div>
 
-            {loadError && <p style={{ color: "#c0392b", padding: "0 24px" }}>{loadError}</p>}
-            <div className="pos-menu__grid">
-              {visibleMenu.length === 0 && !loadError && (
-                <div style={{ padding: 32, color: "#888", gridColumn: "1 / -1", textAlign: "center" }}>
-                  {NAV_TO_CATEGORY_NAME[activeNav]
-                    ? "ยังไม่มีเมนูในหมวดนี้ — ไปที่ \"จัดการเมนู\" เพื่อเพิ่ม"
-                    : `หมวด "${activeNav}" ยังไม่ผูกกับ backend`}
-                </div>
-              )}
-              {visibleMenu.map((item) => {
-                const kind = item.name.match(/espresso/i) ? "espresso"
-                            : item.name.match(/americano/i) ? "americano" : "";
-                return (
-                  <article className="pos-card" key={item.id}>
-                    <div className={`pos-card__image ${kind ? `is-${kind}` : ""}`}>
-                      {kind === "espresso" && <div className="pos-cup" />}
+            {/* โชว์หน้าโปรโมชั่น (เต็มจอ) */}
+            {activeNav === "promo" ? (
+              <PromotionView
+                onOpenAddPromoModal={() => setIsAddPromoModalOpen(true)}
+                onEditPromo={(promo) => {
+                  console.log("Edit Promo:", promo);
+                  setIsAddPromoModalOpen(true);
+                }}
+              />
+            ) : 
+
+            /* โชว์หน้าจัดการเมนู (เต็มจอ โชว์ทุกหมวด) */
+            activeNav === "manage" ? (
+              <MenuManagementView 
+                menuItems={INITIAL_MENU} 
+                onOpenAddMenuModal={() => setIsAddMenuOpen(true)}
+                onEditMenu={(item) => {
+                  console.log("Edit Menu:", item);
+                  setIsAddMenuOpen(true);
+                }}
+              />
+            ) : 
+            
+            /* โชว์หน้าแคชเชียร์ขายของปกติ (โชว์เฉพาะหมวดที่เลือก + มีใบเสร็จ) */
+            (
+              <>
+                <section className="pos-menu">
+                  <div className="pos-menu__head" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+
+                    <div className="pos-menu__header-info">
+                      <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 4px 0', color: 'var(--gray-900)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        หมวด{currentNavLabel}
+                        <span style={{ fontWeight: 500, color: 'var(--gray-600)', fontSize: '16px' }}>
+                          ({activeNav === 'coffee' ? 'Coffee Menu' : activeNav === 'tea' ? 'Tea Menu' : 'Snacks & Bakery'})
+                        </span>
+                      </h2>
+                      <p style={{ fontSize: '13px', color: 'var(--gray-600)', margin: 0 }}>
+                        จัดการรายการสินค้า ค้นหาเมนู และเพิ่มลงในออเดอร์ของลูกค้า
+                      </p>
                     </div>
-                    <div className="pos-card__body">
-                      <h3>{item.name}</h3>
-                      <div className="pos-card__row">
-                        <div className="pos-card__price">
-                          <span className="pos-card__pricelabel">ราคา</span>
-                          <span className="pos-card__pricevalue">฿ {item.price.toFixed(2)}</span>
-                        </div>
-                        <div className="pos-stepper">
-                          <button onClick={() => changeMenuQty(item.id, -1)} aria-label="ลดจำนวน">
-                            <Icon.Minus />
-                          </button>
-                          <span className={item.qty > 0 ? "is-active" : ""}>{item.qty}</span>
-                          <button onClick={() => openItemModal(item)} aria-label="เพิ่มลงตะกร้า">
-                            <Icon.Plus />
-                          </button>
-                        </div>
-                      </div>
+
+                    <div className="pos-search pos-search--inline" style={{ margin: 0, maxWidth: '340px', width: '340px' }}>
+                      <Icon.Search className="pos-search__icon" />
+                      <input type="text" placeholder="ค้นหาเมนู (Search menu)..." />
                     </div>
-                  </article>
-                );
-              })}
-            </div>
-          </section>
 
-          {/* -------- Order / invoice panel -------- */}
-          <aside className="pos-order">
-            <div className="pos-order__meta">
-              <div>
-                <div className="pos-order__invoice">{invoiceLabel}</div>
-              </div>
-              <div className="pos-order__date">{currentOrder ? new Date(currentOrder.createdAt).toLocaleString("th-TH") : dateStr}</div>
-            </div>
-
-            <div className="pos-order__shop">
-              <div className="pos-order__shoplogo">WP</div>
-              <div className="pos-order__shopinfo">
-                <div className="pos-order__shopname">WongNok POS</div>
-                <div className="pos-order__shopemail">easypos@gmail.com</div>
-              </div>
-              <div className="pos-pill">{orderPill}</div>
-            </div>
-
-            {currentOrder && (
-              <div style={{ padding: "12px 16px", background: "#ecfdf5", borderRadius: 8, margin: "0 16px 8px", fontSize: 13 }}>
-                <div style={{ fontWeight: 700, color: "#059669" }}>✓ ชำระเงินสำเร็จ ({currentOrder.payment.method})</div>
-                <div>Total ฿{Number(currentOrder.total).toFixed(2)}</div>
-                {currentOrder.payment.method === "CASH" && (
-                  <div>รับเงิน ฿{Number(currentOrder.payment.amountReceived).toFixed(2)} · ทอน ฿{Number(currentOrder.payment.change).toFixed(2)}</div>
-                )}
-                <button onClick={newOrder} style={{ marginTop: 8, padding: "6px 12px", background: "#10b981", color: "white", border: "none", borderRadius: 6, cursor: "pointer" }}>
-                  เริ่มออเดอร์ใหม่
-                </button>
-              </div>
-            )}
-
-            <div className="pos-order__items">
-              {cart.length === 0 && !currentOrder && <div className="pos-order__empty">ยังไม่มีรายการ — กด + บนเมนูเพื่อเปิดฟอร์ม</div>}
-              {cart.length === 0 && currentOrder && <div className="pos-order__empty">ตะกร้าว่าง — กด "เริ่มออเดอร์ใหม่" เพื่อเริ่มขายอันต่อไป</div>}
-              {cart.map((item) => (
-                <div className="pos-orderitem" key={item.cartId}>
-                  <div className="pos-orderitem__icon"><Icon.Coffee /></div>
-                  <div className="pos-orderitem__body">
-                    <div className="pos-orderitem__row">
-                      <div className="pos-orderitem__name">
-                        {item.name}
-                        {item.isNew && <span className="pos-badge">ใหม่</span>}
-                      </div>
-                      <div className="pos-orderitem__price">฿{(item.price * item.qty).toFixed(2)}</div>
-                    </div>
-                    {item.detail && <div className="pos-orderitem__detail">{item.detail}</div>}
-                    {item.extras && <div className="pos-orderitem__extras">{item.extras}</div>}
-                    {item.note && <div className="pos-orderitem__note">{item.note}</div>}
-                    <div className="pos-orderitem__footer">
-                      <div className="pos-stepper pos-stepper--panel">
-                        <button onClick={() => changeCartQty(item.cartId, -1)} aria-label="ลดจำนวน">
-                          <Icon.Minus />
-                        </button>
-                        <span>{item.qty}</span>
-                        <button onClick={() => changeCartQty(item.cartId, 1)} aria-label="เพิ่มจำนวน">
-                          <Icon.Plus />
-                        </button>
-                      </div>
-                      <button className="pos-iconbtn" onClick={() => removeCartItem(item.cartId)} aria-label="ลบรายการ">
-                        <Icon.Trash />
-                      </button>
-                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
 
-            {cart.length > 0 && (
-              <div className="pos-promo">
-                <div className="pos-promo__head">
-                  <Icon.Tag className="pos-promo__icon" />
-                  <span>โปรโมชั่น (Promotion)</span>
-                  {appliedPromo ? (
-                    <span className="pos-pill pos-pill--green">ประหยัด ฿{memberDiscount.toFixed(2)}</span>
-                  ) : (
-                    <span className="pos-pill pos-pill--green" style={{ cursor: "pointer" }}
-                          onClick={() => setIsSelectPromoModalOpen(true)}>
-                      + เลือกโปรโมชั่น
-                    </span>
-                  )}
-                </div>
-                {appliedPromo ? (
-                  <>
-                    <div className="pos-promo__row">
-                      <div className="pos-promo__label">
-                        <span className="pos-dot pos-dot--green" />
-                        {appliedPromo.name}
+                  <div className="pos-menu__grid">
+                    {menu
+                      .filter((item) => item.category === activeNav)
+                      .map((item) => (
+                        <article className="pos-card" key={item.id}>
+                          <div className={`pos-card__image ${item.kind ? `is-${item.kind}` : ""}`}>
+                            {item.imgSrc ? (
+                              <img src={item.imgSrc} alt={item.name} className="pos-real-image" />
+                            ) : (
+                              item.kind === "espresso" && <div className="pos-cup" />
+                            )}
+                          </div>
+
+                          <div className="pos-card__body">
+                            {item.price !== null ? (<h3>{item.name}</h3>) : (<h3 className="pos-skeleton pos-skeleton--title" />)}
+                            <div className="pos-card__row">
+                              <div className="pos-card__price">
+                                <span className="pos-card__pricelabel">ราคา</span>
+                                {item.price !== null ? (
+                                  <span className="pos-card__pricevalue">฿ {item.price}</span>
+                                ) : (
+                                  <span className="pos-skeleton pos-skeleton--price" />
+                                )}
+                              </div>
+                              <div className="pos-stepper">
+                                <button onClick={() => changeMenuQty(item.id, -1)} aria-label="ลดจำนวน"><Icon.Minus /></button>
+                                <span className={item.qty > 0 ? "is-active" : ""}>{item.qty}</span>
+                                <button
+                                  onClick={() => activeNav === "tea" ? setSelectedTeaForModal(item) : setSelectedItemForModal(item)}
+                                  aria-label="เพิ่มจำนวน"
+                                ><Icon.Plus /></button>
+                              </div>
+                            </div>
+                          </div>
+                        </article>
+                      ))}
+                  </div>
+                </section>
+
+                <aside className="pos-order">
+                  <div className="pos-order__meta">
+                    <div>
+                      <div className="pos-order__invoice">Invoice No: 123454</div>
+                    </div>
+                    <div className="pos-order__date">23/01/2024 | 14:00:23</div>
+                  </div>
+
+                  <div className="pos-order__shop">
+                    <div className="pos-order__shoplogo">EP</div>
+                    <div className="pos-order__shopinfo">
+                      <div className="pos-order__shopname">Easy POS Studio</div>
+                      <div className="pos-order__shopemail">easypos@gmail.com</div>
+                    </div>
+                    <div className="pos-pill">Order: #0029</div>
+                  </div>
+
+                  <div className="pos-order__items">
+                    {cart.map((item) => (
+                      <div className="pos-orderitem" key={item.id}>
+                        <div className="pos-orderitem__icon">
+                          <Icon.Coffee />
+                        </div>
+                        <div className="pos-orderitem__body">
+                          <div className="pos-orderitem__row">
+                            <div className="pos-orderitem__name">
+                              {item.name}
+                              {item.isNew && <span className="pos-badge">ใหม่</span>}
+                            </div>
+                            <div className="pos-orderitem__price">${item.price.toFixed(2)}</div>
+                          </div>
+                          <div className="pos-orderitem__detail">{item.detail}</div>
+                          <div className="pos-orderitem__extras">{item.extras}</div>
+                          {item.note && <div className="pos-orderitem__note">{item.note}</div>}
+
+                          <div className="pos-orderitem__footer">
+                            <div className="pos-stepper pos-stepper--panel">
+                              <button onClick={() => changeCartQty(item.id, -1)} aria-label="ลดจำนวน"><Icon.Minus /></button>
+                              <span>{item.qty}</span>
+                              <button onClick={() => changeCartQty(item.id, 1)} aria-label="เพิ่มจำนวน"><Icon.Plus /></button>
+                            </div>
+                            <button className="pos-iconbtn" onClick={() => removeCartItem(item.id)} aria-label="ลบรายการ">
+                              <Icon.Trash />
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      <div className="pos-promo__value">-฿{memberDiscount.toFixed(2)}</div>
+                    ))}
+                    {cart.length === 0 && <div className="pos-order__empty">ยังไม่มีรายการสั่งซื้อ</div>}
+                  </div>
+
+                  <div className="pos-promo">
+                    <div className="pos-promo__head">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Icon.Tag className="pos-promo__icon" />
+                        <span>โปรโมชั่น (Promotion)</span>
+                      </div>
+                      
+                      {/* 👉 ถ้ามีโปรโมชั่นถูกเลือก ให้แสดงป้ายสีเขียวที่เขียนว่า "ประหยัด..." */}
+                      {appliedPromo ? (
+                        <span className="pos-pill pos-pill--green">ประหยัด {appliedPromo.value.replace('-', '')}</span>
+                      ) : (
+                        <span 
+                          className="pos-pill pos-pill--green" 
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => setIsSelectPromoModalOpen(true)}
+                        >
+                          + เพิ่มส่วนลด
+                        </span>
+                      )}
                     </div>
-                    <div className="pos-promo__row pos-promo__row--sub">
-                      <span>
-                        โค้ด: {appliedPromo.code}
-                        {promoMinNotMet && <span style={{ color: "#c0392b", marginLeft: 8 }}> — ยอดต่ำกว่าขั้นต่ำ ฿{Number(appliedPromo.minOrderAmount).toFixed(2)}</span>}
-                      </span>
-                      <button className="pos-linkbtn" onClick={() => setAppliedPromo(null)}>ยกเลิกส่วนลด</button>
+
+                    {/* 👉 ดึงข้อมูลจริงจาก State `appliedPromo` มาแสดงแทนข้อความเดิมที่โดนล็อก */}
+                    {appliedPromo ? (
+                      <>
+                        <div className="pos-promo__row">
+                          <div className="pos-promo__label">
+                            <span className="pos-dot pos-dot--green" />
+                            {appliedPromo.title}
+                          </div>
+                          <div className="pos-promo__value" style={{ color: 'var(--green-600)', fontWeight: 'bold' }}>{appliedPromo.value}</div>
+                        </div>
+                        <div className="pos-promo__row pos-promo__row--sub">
+                          <span>โค้ด: {appliedPromo.code}</span>
+                          <button className="pos-linkbtn" onClick={() => setAppliedPromo(null)}>ยกเลิกส่วนลด</button>
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ padding: '16px 0 8px', textAlign: 'center', color: '#9ca3af', fontSize: '13px' }}>
+                        ยังไม่มีการเลือกโปรโมชั่น
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pos-total">
+                    <div>
+                      <div className="pos-total__label">Total</div>
+                      <div className="pos-total__meta">
+                        Items: {itemCount}, Quantity: {quantityCount}
+                      </div>
                     </div>
-                  </>
-                ) : null}
-              </div>
+                    <div className="pos-total__value">$86.75</div>
+                  </div>
+
+                  <div className="pos-order__buttons">
+                    <button className="pos-btn pos-btn--outline">
+                      <Icon.Print />
+                      Print Invoice
+                    </button>
+                    <button className="pos-btn pos-btn--solid pos-btn--full">
+                      <Icon.Card />
+                      Payments
+                    </button>
+                  </div>
+                </aside>
+              </>
             )}
-
-            <div className="pos-total">
-              <div>
-                <div className="pos-total__label">Total</div>
-                <div className="pos-total__meta">
-                  Items: {itemCount}, Quantity: {quantityCount}
-                </div>
-              </div>
-              <div className="pos-total__value">฿{total.toFixed(2)}</div>
-            </div>
-
-            <div className="pos-order__buttons">
-              <button className="pos-btn pos-btn--outline"
-                      disabled={!currentOrder}
-                      onClick={() => window.print()}
-                      title={currentOrder ? "พิมพ์ใบเสร็จ" : "ต้องชำระเงินก่อน"}>
-                <Icon.Print />
-                Print Invoice
-              </button>
-              <button className="pos-btn pos-btn--solid pos-btn--full"
-                      disabled={cart.length === 0 || checkoutBusy}
-                      onClick={handleCheckout}
-                      title={cart.length === 0 ? "ตะกร้าว่าง" : "สร้างออเดอร์ + ชำระเงิน"}>
-                <Icon.Card />
-                {checkoutBusy ? "กำลังบันทึก..." : "Payments"}
-              </button>
-            </div>
-          </aside>
-          </>
-          )}
-        </div>
+          </div>
         </div>
       </div>
-      {isSelectPromoModalOpen && (
-        <SelectPromotionModal
-          onClose={() => setIsSelectPromoModalOpen(false)}
-          onSelectPromotion={(promo) => {
-            setAppliedPromo(promo);
-            setIsSelectPromoModalOpen(false);
-          }}
-        />
-      )}
-      {isAddPromoModalOpen && (
-        <AddPromotionModal
-          initial={editingPromo}
-          onClose={() => { setIsAddPromoModalOpen(false); setEditingPromo(null); }}
-          onSubmit={async (form) => {
-            const body = {
-              code: form.code,
-              name: form.name,
-              discountType: form.discountType,
-              discountValue: form.discountValue,
-              minOrderAmount: form.minOrderAmount,
-              active: form.active,
-            };
-            try {
-              if (form.id) await updatePromotion(form.id, body);
-              else await createPromotion(body);
-              window.dispatchEvent(new Event("promotions:reload"));
-            } catch (err) {
-              console.error("save promotion failed:", err);
-              if (err?.status === 403) throw new Error("ต้อง login เป็น ADMIN");
-              if (err?.status === 409) throw new Error(`โค้ดซ้ำ: "${form.code}"`);
-              throw new Error(`บันทึกไม่สำเร็จ (${err?.status ?? "no status"}): ${err?.message ?? err}`);
-            }
-          }}
-        />
-      )}
+
+      {/* ---------------- Modals ---------------- */}
+
       {selectedItemForModal && (
         <CoffeeModal
           item={selectedItemForModal}
           onClose={() => setSelectedItemForModal(null)}
-          onAddToCart={(customized) => addCustomizedToCart(customized)}
+          onAddToCart={(customizedItem) => { setCart((prev) => [...prev, { ...customizedItem, id: Date.now() }]); }}
         />
       )}
+
       {selectedTeaForModal && (
         <TeaModal
           item={selectedTeaForModal}
           onClose={() => setSelectedTeaForModal(null)}
-          onAddToCart={(customized) => addCustomizedToCart(customized)}
+          onAddToCart={(customizedItem) => { setCart((prev) => [...prev, { ...customizedItem, id: Date.now() }]); }}
         />
       )}
-      {showAddModal && (
+
+      {isAddMenuOpen && (
         <AddNewItemModal
           activeCategory={activeNav}
-          onClose={() => setShowAddModal(false)}
-          onSubmit={handleAddSubmit}
+          onClose={() => setIsAddMenuOpen(false)}
         />
       )}
+
+      {isAddPromoModalOpen && (
+        <AddPromotionModal onClose={() => setIsAddPromoModalOpen(false)} />
+      )}
+
+      {/* 👉 ส่ง onSelectPromotion ให้ Modal เพื่อเอาข้อมูลกลับมาเซ็ตเข้า State `appliedPromo` */}
+      {isSelectPromoModalOpen && (
+        <SelectPromotionModal 
+          onClose={() => setIsSelectPromoModalOpen(false)} 
+          onSelectPromotion={(promo) => {
+            setAppliedPromo(promo); // เซ็ตโปรที่เลือกลง State
+            setIsSelectPromoModalOpen(false); // ปิด Modal
+          }} 
+        />
+      )}
+
     </div>
   );
 }

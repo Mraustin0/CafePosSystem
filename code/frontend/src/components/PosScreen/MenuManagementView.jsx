@@ -1,18 +1,54 @@
-import React, { useState } from 'react';
-import './PromotionView.css'; 
+import React, { useState, useEffect, useCallback } from 'react';
+import './PromotionView.css';
+import { listProducts, setProductStatus } from '../../api/products';
 
-export default function MenuManagementView({ menuItems, onOpenAddMenuModal, onEditMenu }) {
-  const [menu, setMenu] = useState(menuItems.map(item => ({ ...item, isActive: true })));
-  
+const CATEGORY_TO_NAV = { Coffee: 'coffee', Tea: 'tea', Bakery: 'snack' };
+
+export default function MenuManagementView({ onOpenAddMenuModal, onEditMenu }) {
+  const [menu, setMenu] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [loadError, setLoadError] = useState(null);
+
   // 👉 1. สร้าง State สำหรับเก็บค่าหมวดหมู่ที่เลือก (ค่าเริ่มต้นคือ 'all' โชว์ทุกเมนู)
   const [categoryFilter, setCategoryFilter] = useState('all');
 
-  const toggleStatus = (id) => {
-    setMenu(prev => 
-      prev.map(item => 
-        item.id === id ? { ...item, isActive: !item.isActive } : item
-      )
-    );
+  const load = useCallback(async () => {
+    try {
+      const page = await listProducts({ size: 200 });
+      setMenu((page?.content ?? []).map((p) => ({
+        id: p.id,
+        category: CATEGORY_TO_NAV[p.category?.name] ?? 'coffee',
+        name: p.name,
+        price: p.price != null ? Number(p.price) : 0,
+        imgSrc: p.imageUrl ?? null,
+        kind: p.category?.name === 'Tea' ? 'tea' : p.category?.name === 'Bakery' ? 'snack' : '',
+        isActive: p.active,
+      })));
+      setLoadError(null);
+    } catch (err) {
+      console.error('listProducts failed:', err);
+      setLoadError(err?.message ?? 'โหลดเมนูไม่สำเร็จ');
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const reload = () => load();
+    window.addEventListener('products:reload', reload);
+    return () => window.removeEventListener('products:reload', reload);
+  }, [load]);
+
+  const toggleStatus = async (id) => {
+    const item = menu.find((m) => m.id === id);
+    if (!item) return;
+    setBusy(true);
+    try {
+      await setProductStatus(id, !item.isActive);
+      await load();
+    } catch (err) {
+      console.error('setProductStatus failed:', err);
+      alert(err?.message ?? 'เปลี่ยนสถานะไม่สำเร็จ');
+    } finally { setBusy(false); }
   };
 
   // 👉 2. กรองข้อมูลตามหมวดหมู่ที่เลือกก่อนนำไปแสดงผล

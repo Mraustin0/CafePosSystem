@@ -378,19 +378,10 @@ export default function PosScreen() {
 
             {loadError && <p style={{ color: "#c0392b", padding: "0 24px" }}>{loadError}</p>}
             <div className="pos-menu__grid">
-              {NAV_TO_CATEGORY_NAME[activeNav] && (
-                <article className="pos-card pos-card--add" onClick={() => setShowAddModal(true)}>
-                  <div className="pos-card__add-content">
-                    <div className="pos-card__add-icon"><Icon.Plus /></div>
-                    <span className="pos-card__add-text">เพิ่มเมนูใหม่</span>
-                    <span className="pos-card__add-subtext">(คลิกเพื่อเปิดฟอร์ม)</span>
-                  </div>
-                </article>
-              )}
               {visibleMenu.length === 0 && !loadError && (
                 <div style={{ padding: 32, color: "#888", gridColumn: "1 / -1", textAlign: "center" }}>
                   {NAV_TO_CATEGORY_NAME[activeNav]
-                    ? "ยังไม่มีเมนูในหมวดนี้ — กดการ์ด \"เพิ่มเมนูใหม่\" เพื่อสร้าง"
+                    ? "ยังไม่มีเมนูในหมวดนี้ — ไปที่ \"จัดการเมนู\" เพื่อเพิ่ม"
                     : `หมวด "${activeNav}" ยังไม่ผูกกับ backend`}
                 </div>
               )}

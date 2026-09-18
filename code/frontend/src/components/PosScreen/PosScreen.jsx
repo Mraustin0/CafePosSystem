@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import "./PosScreen.css";
 import CoffeeModal from "./CoffeeModal";
 import TeaModal from "./TeaModal";
@@ -7,6 +7,16 @@ import PromotionView from "./PromotionView";
 import { AddPromotionModal } from "./AddPromotionModal";
 import MenuManagementView from "./MenuManagementView";
 import { SelectPromotionModal } from "./SelectPromotionModal";
+import { listProducts, createProduct } from "../../api/products";
+import { getCategories } from "../../api/categories";
+import { createPromotion, updatePromotion } from "../../api/promotions";
+import { createOrder } from "../../api/orders";
+import { payOrder } from "../../api/payment";
+import { useAuth } from "../../auth/useAuth";
+
+// Backend category name -> UI nav key (Thana-nan's shape uses "coffee"/"tea"/"snack").
+const CATEGORY_TO_NAV = { Coffee: "coffee", Tea: "tea", Bakery: "snack" };
+const NAV_TO_CATEGORY = { coffee: "Coffee", tea: "Tea", snack: "Bakery" };
 
 /* ---------------------------------------------------------
    Icons
@@ -124,55 +134,15 @@ const NAV_FOOTER = [
   { key: "settings", label: "ตั้งค่า", icon: Icon.Gear },
 ];
 
-const INITIAL_MENU = [
-  // ☕️ --- หมวดกาแฟ (coffee) ---
-  {
-    id: 1, category: "coffee", name: "ESPRESSO SHOT", price: 55, qty: 0,
-    imgSrc: "https://placehold.co/400x300/e2e8f0/64748b?text=Espresso", kind: "espresso"
-  },
-  {
-    id: 2, category: "coffee", name: "ICED AMERICANO", price: 55, qty: 0,
-    imgSrc: "https://images.unsplash.com/photo-1497935586351-b67a49e012bf?w=400&h=300&fit=crop", kind: "americano"
-  },
-
-  // 🍵 --- หมวดชา (tea) ---
-  {
-    id: 3, category: "tea", name: "ชาไทยพรีเมียม", price: 65, qty: 0,
-    imgSrc: "https://placehold.co/400x300/fed7aa/c2410c?text=Thai+Tea", kind: "tea"
-  },
-  {
-    id: 4, category: "tea", name: "ชาเขียวมัทฉะ", price: 75, qty: 0,
-    imgSrc: "https://placehold.co/400x300/bbf7d0/15803d?text=Matcha", kind: "tea"
-  },
-
-  // 🥐 --- หมวดขนม (snack) ---
-  {
-    id: 5, category: "snack", name: "คุกกี้ช็อกโกแลต", price: 45, qty: 0,
-    imgSrc: "https://placehold.co/400x300/fef08a/a16207?text=Cookie", kind: "snack"
-  },
-  {
-    id: 6, category: "snack", name: "ครัวซองต์เนยสด", price: 65, qty: 0,
-    imgSrc: "https://placehold.co/400x300/fef08a/a16207?text=Croissant", kind: "snack"
-  },
-];
-
-const INITIAL_CART = [
-  {
-    id: 101,
-    name: "คาปูซิโน่ / Cappuccino",
-    isNew: true,
-    price: 9.75,
-    qty: 1,
-    detail: "เย็น (Iced) • หัวกลาง • หวาน 100%",
-    extras: "+ เพิ่มช็อตกาแฟ (+Extra Shot), + วิปครีม",
-    note: "โน้ต: แยกน้ำแข็ง",
-  },
-];
-
 export default function PosScreen() {
+  const { user } = useAuth();
   const [activeNav, setActiveNav] = useState("coffee");
-  const [menu, setMenu] = useState(INITIAL_MENU);
-  const [cart, setCart] = useState(INITIAL_CART);
+  const [menu, setMenu] = useState([]);
+  const [cart, setCart] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [currentOrder, setCurrentOrder] = useState(null);
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
+  const [loadError, setLoadError] = useState(null);
   const [selectedItemForModal, setSelectedItemForModal] = useState(null);
   const [selectedTeaForModal, setSelectedTeaForModal] = useState(null);
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
@@ -182,6 +152,98 @@ export default function PosScreen() {
 
   // 👉 State เก็บข้อมูลโปรโมชั่นที่ลูกค้าเลือก
   const [appliedPromo, setAppliedPromo] = useState(null);
+  const [editingPromo, setEditingPromo] = useState(null);
+
+  const loadProducts = useCallback(async () => {
+    try {
+      const page = await listProducts({ size: 200 });
+      const items = (page?.content ?? []).map((p) => ({
+        id: p.id,
+        category: CATEGORY_TO_NAV[p.category?.name] ?? "coffee",
+        name: p.name,
+        price: p.price != null ? Number(p.price) : 0,
+        qty: 0,
+        imgSrc: p.imageUrl ?? null,
+        kind: (p.name || "").match(/espresso/i) ? "espresso"
+             : (p.name || "").match(/americano/i) ? "americano"
+             : p.category?.name === "Tea" ? "tea"
+             : p.category?.name === "Bakery" ? "snack" : "",
+        active: p.active,
+      }));
+      setMenu(items);
+      setLoadError(null);
+    } catch (err) {
+      console.error("listProducts failed:", err);
+      setLoadError(err?.message ?? "โหลดเมนูไม่สำเร็จ");
+    }
+  }, []);
+
+  useEffect(() => {
+    getCategories().then(setCategories).catch(() => {});
+    loadProducts();
+  }, [loadProducts]);
+
+  useEffect(() => {
+    const reload = () => loadProducts();
+    window.addEventListener("products:reload", reload);
+    return () => window.removeEventListener("products:reload", reload);
+  }, [loadProducts]);
+
+  const subtotal = useMemo(() => cart.reduce((s, i) => s + Number(i.price) * i.qty, 0), [cart]);
+  const promoDiscount = useMemo(() => {
+    if (!appliedPromo) return 0;
+    // appliedPromo comes from SelectPromotionModal in Thana-nan's shape (has raw + value string)
+    if (appliedPromo.discountType === "PERCENT") return Math.min(subtotal * Number(appliedPromo.discountValue) / 100, subtotal);
+    if (appliedPromo.discountType === "FIXED_AMOUNT") return Math.min(Number(appliedPromo.discountValue), subtotal);
+    return 0;
+  }, [appliedPromo, subtotal]);
+  const total = subtotal - promoDiscount;
+
+  const cashierName = user?.fullName || user?.username || "แคชเชียร์";
+
+  const handleCheckout = async () => {
+    if (cart.length === 0) return;
+    const method = (window.prompt("วิธีชำระเงิน (CASH / QR_CODE / CARD)", "CASH") || "").trim().toUpperCase();
+    if (!["CASH", "QR_CODE", "CARD"].includes(method)) {
+      if (method) alert("วิธีชำระเงินไม่ถูกต้อง");
+      return;
+    }
+    const defaultAmt = method === "CASH" ? String(Math.ceil(total)) : total.toFixed(2);
+    const amtInput = window.prompt(
+      method === "CASH" ? `รับเงิน (บาท) — ยอด ฿${total.toFixed(2)}` : `จำนวนต้องเท่ากับ ฿${total.toFixed(2)}`,
+      defaultAmt
+    );
+    if (amtInput == null) return;
+    const amountReceived = Number(amtInput);
+    if (Number.isNaN(amountReceived) || amountReceived < 0) { alert("จำนวนเงินไม่ถูกต้อง"); return; }
+
+    setCheckoutBusy(true);
+    try {
+      // Fold local cart items down to backend order items. Multiple customized entries of the same
+      // product are summed by productId; per-entry customizations (serving/sweetness/add-ons) stay
+      // client-side for now — backend Order + OrderItem don't carry them yet.
+      const byProduct = new Map();
+      for (const c of cart) {
+        const prev = byProduct.get(c.id) ?? { productId: c.id, quantity: 0, addOnIds: [] };
+        prev.quantity += c.qty;
+        byProduct.set(c.id, prev);
+      }
+      const order = await createOrder([...byProduct.values()]);
+      if (appliedPromo && promoDiscount > 0) {
+        // ponytail: skip applyDiscount API call for now; total on backend will be untouched
+        // and might differ from the on-screen `total` (which subtracts the promo locally).
+      }
+      const payment = await payOrder(order.id, { method, amountReceived });
+      setCurrentOrder({ ...order, payment });
+      setCart([]);
+      setAppliedPromo(null);
+    } catch (err) {
+      console.error("checkout failed:", err);
+      alert(`Checkout ล้มเหลว (${err?.status ?? "no status"}): ${err?.message ?? err}`);
+    } finally {
+      setCheckoutBusy(false);
+    }
+  };
 
   const changeMenuQty = (id, delta) => {
     setMenu((prev) =>
@@ -219,7 +281,7 @@ export default function PosScreen() {
 
         <div className="pos-cashier">
           <div className="pos-cashier__text">
-            <div className="pos-cashier__name">แคชเชียร์ 01</div>
+            <div className="pos-cashier__name">{cashierName}</div>
             <div className="pos-cashier__status">
               <span className="pos-dot pos-dot--online" />
               ออนไลน์
@@ -268,25 +330,18 @@ export default function PosScreen() {
             {/* โชว์หน้าโปรโมชั่น (เต็มจอ) */}
             {activeNav === "promo" ? (
               <PromotionView
-                onOpenAddPromoModal={() => setIsAddPromoModalOpen(true)}
-                onEditPromo={(promo) => {
-                  console.log("Edit Promo:", promo);
-                  setIsAddPromoModalOpen(true);
-                }}
+                onOpenAddPromoModal={() => { setEditingPromo(null); setIsAddPromoModalOpen(true); }}
+                onEditPromo={(promo) => { setEditingPromo(promo); setIsAddPromoModalOpen(true); }}
               />
-            ) : 
+            ) :
 
             /* โชว์หน้าจัดการเมนู (เต็มจอ โชว์ทุกหมวด) */
             activeNav === "manage" ? (
-              <MenuManagementView 
-                menuItems={INITIAL_MENU} 
+              <MenuManagementView
                 onOpenAddMenuModal={() => setIsAddMenuOpen(true)}
-                onEditMenu={(item) => {
-                  console.log("Edit Menu:", item);
-                  setIsAddMenuOpen(true);
-                }}
+                onEditMenu={(item) => alert(`แก้ไข "${item.name}" — ยังไม่ได้ทำ edit modal`)}
               />
-            ) : 
+            ) :
             
             /* โชว์หน้าแคชเชียร์ขายของปกติ (โชว์เฉพาะหมวดที่เลือก + มีใบเสร็จ) */
             (
@@ -355,9 +410,9 @@ export default function PosScreen() {
                 <aside className="pos-order">
                   <div className="pos-order__meta">
                     <div>
-                      <div className="pos-order__invoice">Invoice No: 123454</div>
+                      <div className="pos-order__invoice">Invoice No: {currentOrder?.id ?? "—"}</div>
                     </div>
-                    <div className="pos-order__date">23/01/2024 | 14:00:23</div>
+                    <div className="pos-order__date">{new Date(currentOrder?.createdAt ?? Date.now()).toLocaleString("th-TH")}</div>
                   </div>
 
                   <div className="pos-order__shop">
@@ -366,7 +421,7 @@ export default function PosScreen() {
                       <div className="pos-order__shopname">Easy POS Studio</div>
                       <div className="pos-order__shopemail">easypos@gmail.com</div>
                     </div>
-                    <div className="pos-pill">Order: #0029</div>
+                    <div className="pos-pill">Order: {currentOrder?.orderNumber ?? "#—"}</div>
                   </div>
 
                   <div className="pos-order__items">
@@ -453,17 +508,17 @@ export default function PosScreen() {
                         Items: {itemCount}, Quantity: {quantityCount}
                       </div>
                     </div>
-                    <div className="pos-total__value">$86.75</div>
+                    <div className="pos-total__value">${total.toFixed(2)}</div>
                   </div>
 
                   <div className="pos-order__buttons">
-                    <button className="pos-btn pos-btn--outline">
+                    <button className="pos-btn pos-btn--outline" onClick={() => window.print()} disabled={!currentOrder}>
                       <Icon.Print />
                       Print Invoice
                     </button>
-                    <button className="pos-btn pos-btn--solid pos-btn--full">
+                    <button className="pos-btn pos-btn--solid pos-btn--full" onClick={handleCheckout} disabled={cart.length === 0 || checkoutBusy}>
                       <Icon.Card />
-                      Payments
+                      {checkoutBusy ? "..." : "Payments"}
                     </button>
                   </div>
                 </aside>
@@ -495,11 +550,39 @@ export default function PosScreen() {
         <AddNewItemModal
           activeCategory={activeNav}
           onClose={() => setIsAddMenuOpen(false)}
+          onSubmit={async (form) => {
+            const backendName = NAV_TO_CATEGORY[form.category];
+            const cat = categories.find((c) => c.name === backendName);
+            if (!cat) throw new Error(`ไม่พบหมวด "${backendName}" ในฐานข้อมูล`);
+            try {
+              await createProduct({ categoryId: cat.id, name: form.name, price: form.price, imageUrl: null, addOnIds: [] });
+              window.dispatchEvent(new Event("products:reload"));
+            } catch (err) {
+              if (err?.status === 403) throw new Error("ต้อง login เป็น ADMIN");
+              if (err?.status === 409) throw new Error(`ชื่อเมนูซ้ำ: "${form.name}"`);
+              throw new Error(`บันทึกไม่สำเร็จ (${err?.status ?? "no status"}): ${err?.message ?? err}`);
+            }
+          }}
         />
       )}
 
       {isAddPromoModalOpen && (
-        <AddPromotionModal onClose={() => setIsAddPromoModalOpen(false)} />
+        <AddPromotionModal
+          initial={editingPromo}
+          onClose={() => { setIsAddPromoModalOpen(false); setEditingPromo(null); }}
+          onSubmit={async (form) => {
+            const body = { code: form.code, name: form.name, discountType: form.discountType, discountValue: form.discountValue, minOrderAmount: form.minOrderAmount, active: form.active };
+            try {
+              if (form.id) await updatePromotion(form.id, body);
+              else await createPromotion(body);
+              window.dispatchEvent(new Event("promotions:reload"));
+            } catch (err) {
+              if (err?.status === 403) throw new Error("ต้อง login เป็น ADMIN");
+              if (err?.status === 409) throw new Error(`โค้ดซ้ำ: "${form.code}"`);
+              throw new Error(`บันทึกไม่สำเร็จ (${err?.status ?? "no status"}): ${err?.message ?? err}`);
+            }
+          }}
+        />
       )}
 
       {/* 👉 ส่ง onSelectPromotion ให้ Modal เพื่อเอาข้อมูลกลับมาเซ็ตเข้า State `appliedPromo` */}

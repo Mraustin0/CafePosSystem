@@ -85,15 +85,75 @@ const INITIAL_PROMOTIONS = [
   }
 ];
 
-export default function PromotionView({ onOpenAddPromoModal, onEditPromo }) {
-  const [promotions, setPromotions] = useState(INITIAL_PROMOTIONS);
+import { useEffect, useCallback } from 'react';
+import { listPromotions, setPromotionStatus, deletePromotion } from '../../api/promotions';
 
-  const toggleStatus = (id) => {
-    setPromotions(prev => 
-      prev.map(promo => 
-        promo.id === id ? { ...promo, isActive: !promo.isActive } : promo
-      )
-    );
+const STAR_ICON = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+  </svg>
+);
+function apiToPromo(p) {
+  const v = Number(p.discountValue);
+  const value = p.discountType === 'PERCENT' ? `${v}%` : `฿${v.toFixed(2)}`;
+  const cond = p.minOrderAmount != null ? `ยอดขั้นต่ำ ฿${Number(p.minOrderAmount).toFixed(2)}` : 'ไม่มีขั้นต่ำ';
+  const tag = p.discountType === 'PERCENT' ? `% ลด ${v}%` : `฿ ลด ฿${v.toFixed(2)}`;
+  return {
+    id: p.id,
+    title: p.name,
+    code: p.code,
+    typeTag: tag,
+    tagColor: p.discountType === 'PERCENT' ? 'dark' : 'green',
+    discountValue: value,
+    condition: cond,
+    isActive: p.active,
+    icon: STAR_ICON,
+    // wire fields for edit
+    _discountType: p.discountType,
+    _discountValue: p.discountValue,
+    _minOrderAmount: p.minOrderAmount,
+    _active: p.active,
+  };
+}
+
+export default function PromotionView({ onOpenAddPromoModal, onEditPromo }) {
+  const [promotions, setPromotions] = useState([]);
+
+  const load = useCallback(async () => {
+    try {
+      const rows = await listPromotions();
+      setPromotions(rows.map(apiToPromo));
+    } catch (err) {
+      console.error('listPromotions failed:', err);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const reload = () => load();
+    window.addEventListener('promotions:reload', reload);
+    return () => window.removeEventListener('promotions:reload', reload);
+  }, [load]);
+
+  const toggleStatus = async (id) => {
+    const promo = promotions.find((p) => p.id === id);
+    if (!promo) return;
+    try {
+      await setPromotionStatus(id, !promo.isActive);
+      await load();
+    } catch (err) {
+      console.error('setPromotionStatus failed:', err);
+      alert(err?.message ?? 'เปลี่ยนสถานะไม่สำเร็จ');
+    }
+  };
+
+  const handleEdit = (promo) => {
+    // Hand back an object shaped for AddPromotionModal's `initial` prop (see PosScreen wiring).
+    if (onEditPromo) onEditPromo({
+      id: promo.id, name: promo.title, code: promo.code,
+      discountType: promo._discountType, discountValue: promo._discountValue,
+      minOrderAmount: promo._minOrderAmount, active: promo._active,
+    });
   };
 
   return (
@@ -179,7 +239,7 @@ export default function PromotionView({ onOpenAddPromoModal, onEditPromo }) {
                 </span>
               </div>
               <div className="promo-actions">
-                <button className="icon-btn" onClick={() => onEditPromo && onEditPromo(promo)} title="แก้ไขโปรโมชั่น">
+                <button className="icon-btn" onClick={() => handleEdit(promo)} title="แก้ไขโปรโมชั่น">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                 </button>
               </div>

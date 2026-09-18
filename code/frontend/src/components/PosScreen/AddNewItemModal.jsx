@@ -36,7 +36,7 @@ const MENU_CONFIG = {
   }
 };
 
-export function AddNewItemModal({ activeCategory = "coffee", onClose }) {
+export function AddNewItemModal({ activeCategory = "coffee", onClose, onSubmit }) {
   // สร้าง State เก็บหมวดหมู่ เพื่อให้ตอนแก้ Dropdown แล้วค่าอื่นๆ หรือ Placeholder เปลี่ยนตามด้วย
   const [selectedCategory, setSelectedCategory] = useState(activeCategory === 'all' ? 'coffee' : activeCategory);
 
@@ -45,6 +45,11 @@ export function AddNewItemModal({ activeCategory = "coffee", onClose }) {
 
   const [serving, setServing] = useState({});
   const [fileName, setFileName] = useState(null);
+  const [thaiName, setThaiName] = useState("");
+  const [engName, setEngName] = useState("");
+  const [price, setPrice] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
   const fileInputRef = useRef(null);
 
   // รีเซ็ตตัวเลือก Serving ให้ติ๊กถูกทั้งหมดทุกครั้งที่เปลี่ยนหมวดหมู่
@@ -57,6 +62,21 @@ export function AddNewItemModal({ activeCategory = "coffee", onClose }) {
   function handleFile(e) {
     const file = e.target.files?.[0];
     if (file) setFileName(file.name);
+  }
+
+  async function handleSave() {
+    setSaveError(null);
+    const priceNum = Number(price);
+    if (!thaiName.trim()) { setSaveError("กรุณากรอกชื่อเมนูภาษาไทย"); return; }
+    if (!price || Number.isNaN(priceNum) || priceNum < 0) { setSaveError("กรุณากรอกราคาที่ถูกต้อง"); return; }
+    if (!onSubmit) { setSaveError("save handler not wired"); return; }
+    setSaving(true);
+    try {
+      await onSubmit({ category: selectedCategory, name: thaiName.trim(), englishName: engName.trim(), price: priceNum });
+      onClose();
+    } catch (err) {
+      setSaveError(err?.message ?? "บันทึกไม่สำเร็จ");
+    } finally { setSaving(false); }
   }
 
   return (
@@ -89,17 +109,21 @@ export function AddNewItemModal({ activeCategory = "coffee", onClose }) {
           {/* Row 1: names */}
           <div className="add-modal__row">
             <Field label="ชื่อเมนูภาษาไทย (Thai Name)" required>
-              <input 
-                type="text" 
-                placeholder={currentPlaceholder.th} 
-                className="add-input" 
+              <input
+                type="text"
+                placeholder={currentPlaceholder.th}
+                className="add-input"
+                value={thaiName}
+                onChange={(e) => setThaiName(e.target.value)}
               />
             </Field>
             <Field label="ชื่อภาษาอังกฤษ (English Name)" required>
-              <input 
-                type="text" 
-                placeholder={currentPlaceholder.en} 
-                className="add-input" 
+              <input
+                type="text"
+                placeholder={currentPlaceholder.en}
+                className="add-input"
+                value={engName}
+                onChange={(e) => setEngName(e.target.value)}
               />
             </Field>
           </div>
@@ -128,7 +152,8 @@ export function AddNewItemModal({ activeCategory = "coffee", onClose }) {
             <Field label="ราคาขายปกติ (฿)" required>
               <div className="add-price-wrapper">
                 <span className="add-price-symbol">฿</span>
-                <input type="number" placeholder="85" className="add-input add-input--price" />
+                <input type="number" placeholder="85" className="add-input add-input--price"
+                       value={price} onChange={(e) => setPrice(e.target.value)} min="0" step="0.01" />
               </div>
             </Field>
           </div>
@@ -173,13 +198,15 @@ export function AddNewItemModal({ activeCategory = "coffee", onClose }) {
           )}
         </div>
 
+        {saveError && <p style={{ color: "#c0392b", padding: "0 24px" }}>{saveError}</p>}
+
         {/* Footer */}
         <footer className="add-modal__footer">
-          <button type="button" onClick={onClose} className="add-btn add-btn--ghost">
+          <button type="button" onClick={onClose} className="add-btn add-btn--ghost" disabled={saving}>
             ยกเลิก
           </button>
-          <button type="button" className="add-btn add-btn--solid">
-            บันทึกเมนูใหม่
+          <button type="button" className="add-btn add-btn--solid" onClick={handleSave} disabled={saving}>
+            {saving ? "กำลังบันทึก..." : "บันทึกเมนูใหม่"}
           </button>
         </footer>
       </div>

@@ -1,73 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './AddNewItemModal.css';
+import { listPromotions } from '../../api/promotions';
+
+// Cycle through Thana-nan's icon palette so API-loaded promos still look varied.
+const PALETTES = [
+  { iconBg: '#fef3c7', iconColor: '#d97706' },
+  { iconBg: '#ecfdf5', iconColor: '#059669' },
+  { iconBg: '#ffedd5', iconColor: '#ea580c' },
+  { iconBg: '#f3f4f6', iconColor: '#10b981' },
+];
+const STAR_ICON = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+  </svg>
+);
+function mapApiPromo(p, i) {
+  const v = Number(p.discountValue);
+  const value = p.discountType === 'PERCENT' ? `-${v}%` : `-฿${v.toFixed(2)}`;
+  const subtitle = p.minOrderAmount != null ? `ยอดขั้นต่ำ ฿${Number(p.minOrderAmount).toFixed(2)}` : 'ไม่มีขั้นต่ำ';
+  const palette = PALETTES[i % PALETTES.length];
+  return {
+    // Thana-nan display shape
+    id: p.id, title: p.name, subtitle, value, code: p.code,
+    iconBg: palette.iconBg, iconColor: palette.iconColor, icon: STAR_ICON,
+    // wire fields (used by PosScreen to compute the discount)
+    discountType: p.discountType, discountValue: p.discountValue, minOrderAmount: p.minOrderAmount,
+  };
+}
 
 export function SelectPromotionModal({ onClose, onSelectPromotion }) {
   const [selectedPromoId, setSelectedPromoId] = useState(null);
   const [manualCode, setManualCode] = useState('');
+  const [promotions, setPromotions] = useState([]);
 
-  const promotions = [
-    {
-      id: 'p1',
-      title: 'ส่วนลดสมาชิก (Member Special)',
-      subtitle: 'ยอดขั้นต่ำ ฿200 • สมาชิกสะสมแต้ม',
-      value: '-10%',
-      code: 'MEMBER10', 
-      iconBg: '#fef3c7',
-      iconColor: '#d97706',
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-        </svg>
-      )
-    },
-    {
-      id: 'p2',
-      title: 'คูปองลดบิลใหญ่ (Big Bill Voucher)',
-      subtitle: 'ยอดบิลขั้นต่ำ ฿500 ขึ้นไป',
-      value: '-฿50',
-      code: 'SAVE50',
-      iconBg: '#ecfdf5',
-      iconColor: '#059669',
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
-          <line x1="7" y1="7" x2="7.01" y2="7" />
-        </svg>
-      )
-    },
-    {
-      id: 'p3',
-      title: 'ซื้อ 1 แถม 1 ชาหรือกาแฟ (Buy 1 Get 1)',
-      subtitle: 'เฉพาะเครื่องดื่มหมวดชา & กาแฟ ไซส์ L',
-      value: 'ฟรี 1 แก้ว',
-      code: 'B1G1',
-      iconBg: '#ffedd5',
-      iconColor: '#ea580c',
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="20 12 20 22 4 22 4 12" />
-          <rect x="2" y="7" width="20" height="5" />
-          <line x1="12" y1="22" x2="12" y2="7" />
-          <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
-          <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
-        </svg>
-      )
-    },
-    {
-      id: 'p4',
-      title: 'ต้อนรับลูกค้าใหม่ (First Order)',
-      subtitle: 'ไม่มีขั้นต่ำ (เฉพาะบิลเปิดโต๊ะแรก)',
-      value: '-20%',
-      code: 'WELCOME20',
-      iconBg: '#f3f4f6',
-      iconColor: '#10b981',
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-        </svg>
-      )
-    }
-  ];
+  useEffect(() => {
+    listPromotions({ active: true })
+      .then((rows) => setPromotions(rows.map(mapApiPromo)))
+      .catch((err) => console.error('listPromotions failed:', err));
+  }, []);
 
   const handleApplyPromo = (promo) => {
     setSelectedPromoId(promo.id);
@@ -125,7 +95,7 @@ export function SelectPromotionModal({ onClose, onSelectPromotion }) {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <span style={{ fontSize: '13px', fontWeight: 700, color: '#4b5563' }}>โปรโมชั่นที่ใช้ได้ (Available Promotions)</span>
-              <span style={{ fontSize: '12px', fontWeight: 600, color: '#10b981', background: '#ecfdf5', padding: '2px 8px', borderRadius: '6px' }}>4 Active</span>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: '#10b981', background: '#ecfdf5', padding: '2px 8px', borderRadius: '6px' }}>{promotions.length} Active</span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

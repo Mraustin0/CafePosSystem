@@ -123,7 +123,6 @@ export default function PosScreen() {
     ));
   };
 
-  // 👉 แก้ไขฟังก์ชันนี้เพื่อรับ "name" ที่อัปเดตมาจาก MenuConfigModal
   const handleSaveMenuConfig = (id, data) => {
     setMenu(prevMenu => prevMenu.map(item => 
       item.id === id ? { ...item, config: data.config, price: data.price, name: data.name } : item
@@ -143,29 +142,28 @@ export default function PosScreen() {
 
   return (
     <div className="pos">
-      <header className="pos-header">
-        <div className="pos-brand">
-          <div className="pos-brand__logo">EP</div>
-          <div>
-            <div className="pos-brand__title">Easy POS Studio</div>
-            <div className="pos-brand__subtitle">สาขาหลัก • Terminal 01</div>
-          </div>
-        </div>
+      
+      <style>{`
+        .clean-search-input {
+          background-color: transparent !important;
+          color: #111827 !important;
+        }
+        .clean-search-input:focus {
+          background-color: transparent !important;
+          -webkit-box-shadow: none !important;
+        }
+        .clean-search-input::placeholder {
+          color: #9ca3af !important;
+        }
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus, 
+        input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px white inset !important;
+        }
+      `}</style>
 
-        <div className="pos-cashier">
-          <div className="pos-cashier__text">
-            <div className="pos-cashier__name">แคชเชียร์ 01</div>
-            <div className="pos-cashier__status">
-              <span className="pos-dot pos-dot--online" />
-              ออนไลน์
-            </div>
-          </div>
-          <div className="pos-cashier__avatar">
-            <Icon.User />
-          </div>
-          <Icon.Chevron className="pos-cashier__chevron" />
-        </div>
-      </header>
+      {/* เอา <header className="pos-header"> ออกแล้ว */}
 
       <div className="pos-content">
         <aside className="pos-sidebar">
@@ -225,7 +223,6 @@ export default function PosScreen() {
                   setIsAddMenuOpen(true);
                 }}
                 onEditMenu={(item) => {
-                  // 👉 ให้ปุ่มดินสอเปิดหน้าต่าง Config เสมอ
                   setEditingConfigItem(item); 
                 }}
                 onUpdateStock={handleUpdateMenuStock} 
@@ -250,7 +247,13 @@ export default function PosScreen() {
 
                     <div className="pos-search pos-search--inline" style={{ margin: 0, maxWidth: '340px', width: '340px' }}>
                       <Icon.Search className="pos-search__icon" />
-                      <input type="text" placeholder="ค้นหาเมนู (Search menu)..." />
+                      
+                      <input 
+                        type="text" 
+                        placeholder="ค้นหาเมนู (Search menu)..." 
+                        className="clean-search-input" 
+                        autoComplete="off"
+                      />
                     </div>
                   </div>
 
@@ -440,7 +443,6 @@ export default function PosScreen() {
         />
       )}
       
-      {/* สำหรับสร้างเมนูใหม่เท่านั้น จะไม่มีโหมดแก้ไขแล้ว เพราะให้ไปแก้ในหน้า Config แทน */}
       {isAddMenuOpen && (
         <AddNewItemModal 
           activeCategory={activeNav} 

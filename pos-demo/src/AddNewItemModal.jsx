@@ -1,21 +1,18 @@
 import React, { useRef, useState, useEffect } from "react";
 import "./AddNewItemModal.css";
 
-// 1. แมปปิ้งชื่อหมวดหมู่
 const CATEGORY_MAP = {
   coffee: "กาแฟ (Coffee)",
   tea: "ชา (Tea)",
   snack: "ขนม (Dessert)",
 };
 
-// 2. แมปปิ้ง Placeholder ให้เปลี่ยนตามหมวดหมู่
 const PLACEHOLDER_MAP = {
   coffee: { th: "เช่น คาราเมล มัคคิอาโต้", en: "เช่น Caramel Macchiato" },
   tea: { th: "เช่น ชาไทย", en: "เช่น Thai Tea" },
   snack: { th: "เช่น คุกกี้", en: "เช่น Cookie" }
 };
 
-// 3. ฐานข้อมูลตัวเลือก
 const MENU_CONFIG = {
   coffee: {
     serving: [
@@ -36,9 +33,13 @@ const MENU_CONFIG = {
   }
 };
 
-export function AddNewItemModal({ activeCategory = "coffee", onClose }) {
-  // สร้าง State เก็บหมวดหมู่ เพื่อให้ตอนแก้ Dropdown แล้วค่าอื่นๆ หรือ Placeholder เปลี่ยนตามด้วย
-  const [selectedCategory, setSelectedCategory] = useState(activeCategory === 'all' ? 'coffee' : activeCategory);
+// 👉 เพิ่ม props 'editingItem' เพื่อรองรับการกดแก้ไขจากปุ่มดินสอ
+export function AddNewItemModal({ activeCategory = "coffee", onClose, onSave, editingItem }) {
+  
+  // 👉 ถ้าเป็นการแก้ไข ให้ดึงข้อมูลเก่ามาแสดง ถ้าไม่ใช่ก็ใช้ค่าเริ่มต้น
+  const [selectedCategory, setSelectedCategory] = useState(editingItem ? editingItem.category : (activeCategory === 'all' ? 'coffee' : activeCategory));
+  const [menuNameTh, setMenuNameTh] = useState(editingItem ? editingItem.name : '');
+  const [menuPrice, setMenuPrice] = useState(editingItem ? editingItem.price : '');
 
   const currentConfig = MENU_CONFIG[selectedCategory] || MENU_CONFIG.coffee;
   const currentPlaceholder = PLACEHOLDER_MAP[selectedCategory] || PLACEHOLDER_MAP.coffee;
@@ -47,7 +48,6 @@ export function AddNewItemModal({ activeCategory = "coffee", onClose }) {
   const [fileName, setFileName] = useState(null);
   const fileInputRef = useRef(null);
 
-  // รีเซ็ตตัวเลือก Serving ให้ติ๊กถูกทั้งหมดทุกครั้งที่เปลี่ยนหมวดหมู่
   useEffect(() => {
     const initServing = {};
     currentConfig.serving.forEach(s => initServing[s.id] = true);
@@ -59,10 +59,26 @@ export function AddNewItemModal({ activeCategory = "coffee", onClose }) {
     if (file) setFileName(file.name);
   }
 
+  const handleSubmit = () => {
+    if (!menuNameTh || !menuPrice) {
+      alert("กรุณากรอกชื่อเมนูและราคาให้ครบถ้วน");
+      return;
+    }
+
+    if (onSave) {
+      onSave({
+        name: menuNameTh,
+        price: menuPrice,
+        category: selectedCategory,
+        // 👉 ถ้าสร้างเมนูใหม่ สต็อกจะเป็น null (ไม่จำกัด) แต่ถ้าแก้ไขเมนูเดิม ให้คงค่าสต็อกเดิมเอาไว้
+        stock: editingItem ? editingItem.stock : null
+      });
+    }
+  };
+
   return (
     <div className="add-modal-overlay">
       <div className="add-modal">
-        {/* Header */}
         <header className="add-modal__header">
           <div className="add-modal__header-left">
             <span className="add-modal__icon">
@@ -71,7 +87,8 @@ export function AddNewItemModal({ activeCategory = "coffee", onClose }) {
               </svg>
             </span>
             <div>
-              <h2 className="add-modal__title">เพิ่มเมนูใหม่ (Add New Item)</h2>
+              {/* เปลี่ยนหัวข้ออัตโนมัติตามโหมดที่เปิดใช้งาน */}
+              <h2 className="add-modal__title">{editingItem ? "แก้ไขเมนู (Edit Item)" : "เพิ่มเมนูใหม่ (Add New Item)"}</h2>
               <p className="add-modal__subtitle">
                 บันทึกรายการสินค้าและปรับแต่งตัวเลือกเข้าสู่ระบบ POS
               </p>
@@ -84,13 +101,13 @@ export function AddNewItemModal({ activeCategory = "coffee", onClose }) {
           </button>
         </header>
 
-        {/* Body */}
         <div className="add-modal__body">
-          {/* Row 1: names */}
           <div className="add-modal__row">
             <Field label="ชื่อเมนูภาษาไทย (Thai Name)" required>
               <input 
                 type="text" 
+                value={menuNameTh}
+                onChange={(e) => setMenuNameTh(e.target.value)}
                 placeholder={currentPlaceholder.th} 
                 className="add-input" 
               />
@@ -104,10 +121,7 @@ export function AddNewItemModal({ activeCategory = "coffee", onClose }) {
             </Field>
           </div>
 
-          {/* Row 2: category + price */}
           <div className="add-modal__row">
-            
-            {/* 👉 5. เปลี่ยนหมวดหมู่เป็น Select Dropdown ตามดีไซน์ */}
             <Field label="หมวดหมู่ (Category)" required>
               <div className="add-select-wrapper">
                 <select 
@@ -128,12 +142,19 @@ export function AddNewItemModal({ activeCategory = "coffee", onClose }) {
             <Field label="ราคาขายปกติ (฿)" required>
               <div className="add-price-wrapper">
                 <span className="add-price-symbol">฿</span>
-                <input type="number" placeholder="85" className="add-input add-input--price" />
+                <input 
+                  type="number" 
+                  value={menuPrice}
+                  onChange={(e) => setMenuPrice(e.target.value)}
+                  placeholder="85" 
+                  className="add-input add-input--price" 
+                />
               </div>
             </Field>
           </div>
 
-          {/* Upload box */}
+          {/* 👉 นำช่องกรอกสต็อกที่เคยอยู่ตรงนี้ออกไปแล้วครับ */}
+
           <div>
             <p className="add-section-title">อัปโหลดรูปภาพเมนู (Upload Box)</p>
             <button type="button" onClick={() => fileInputRef.current?.click()} className="add-upload">
@@ -155,7 +176,6 @@ export function AddNewItemModal({ activeCategory = "coffee", onClose }) {
             <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" className="add-file-hidden" onChange={handleFile} />
           </div>
 
-          {/* Serving options (แสดงเฉพาะตอนที่มีข้อมูลตามหมวดหมู่) */}
           {currentConfig.serving.length > 0 && (
             <div>
               <p className="add-section-title">ตัวเลือกประเภทการเสิร์ฟ (Serving Options)</p>
@@ -173,21 +193,19 @@ export function AddNewItemModal({ activeCategory = "coffee", onClose }) {
           )}
         </div>
 
-        {/* Footer */}
         <footer className="add-modal__footer">
           <button type="button" onClick={onClose} className="add-btn add-btn--ghost">
             ยกเลิก
           </button>
-          <button type="button" className="add-btn add-btn--solid">
-            บันทึกเมนูใหม่
+          <button type="button" className="add-btn add-btn--solid" onClick={handleSubmit}>
+             {/* เปลี่ยนข้อความปุ่มอัตโนมัติ */}
+            {editingItem ? "บันทึกการแก้ไข" : "บันทึกเมนูใหม่"}
           </button>
         </footer>
       </div>
     </div>
   );
 }
-
-// ---- Sub Components ----
 
 function Field({ label, required, children }) {
   return (

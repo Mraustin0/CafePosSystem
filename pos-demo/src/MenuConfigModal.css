@@ -1,0 +1,405 @@
+/* MenuConfigModal.css */
+.config-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  font-family: 'Prompt', sans-serif;
+}
+
+.config-modal {
+  background-color: #ffffff;
+  width: 100%;
+  max-width: 56rem;
+  border-radius: 1.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  max-height: 92vh;
+  overflow: hidden;
+  text-align: left;
+}
+
+/* --- Header --- */
+.config-header {
+  padding: 1.25rem 1.75rem;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  background-color: #ffffff;
+}
+
+.config-header-info {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.config-img-box {
+  width: 5rem;
+  height: 5rem;
+  border-radius: 1rem;
+  background-color: #f1f5f9;
+  border: 2px solid #a7f3d0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.config-img-box img {
+  width: 100%;
+  height: 65%;
+  object-fit: cover;
+}
+
+.config-img-fallback {
+  height: 65%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #475569;
+  background-color: #e2e8f0;
+}
+
+.config-img-badge {
+  height: 35%;
+  background-color: #ecfdf5;
+  color: #047857;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.config-close-btn {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background-color: #f3f4f6;
+  border: none;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.config-close-btn:hover { background-color: #e5e7eb; color: #111827; }
+
+/* --- Body --- */
+.config-body {
+  overflow-y: auto;
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  background-color: #fcfcfc;
+}
+
+.config-body::-webkit-scrollbar { width: 6px; }
+.config-body::-webkit-scrollbar-track { background: transparent; }
+.config-body::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 99px; }
+
+.config-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.875rem;
+}
+
+.config-label {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #4b5563;
+  text-transform: uppercase;
+}
+
+.config-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #047857;
+  background-color: #ecfdf5;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid #a7f3d0;
+}
+
+.config-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.config-flex-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+/* --- Buttons & Inputs --- */
+.config-toggle-btn {
+  padding: 0.875rem 1rem;
+  border-radius: 0.75rem;
+  border: 2px solid #e5e7eb;
+  background-color: #ffffff;
+  color: #9ca3af;
+  font-weight: 700;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.config-toggle-btn:hover { border-color: #a7f3d0; color: #4b5563; }
+.config-toggle-btn.active {
+  border-color: #059669;
+  background-color: #ecfdf5;
+  color: #065f46;
+}
+
+.config-roast-card {
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.config-roast-card .roast-desc {
+  font-size: 0.6875rem;
+  font-weight: 400;
+  padding-left: 1.75rem;
+  line-height: 1.2;
+}
+
+.config-roast-card.active .roast-desc { color: #047857; opacity: 0.8; }
+
+.config-add-btn {
+  border: 2px dashed #d1d5db;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-height: 104px;
+}
+
+.config-add-btn:hover {
+  border-color: #059669;
+  background-color: #f0fdf4;
+  color: #047857;
+}
+
+/* 👉 Checkbox แบบเดียวกันทั้งเว็บ (คั่วกาแฟ & Add-ons) */
+.config-checkbox {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 2px solid #d1d5db;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.config-checkbox.checked {
+  background-color: #059669;
+  border-color: #059669;
+}
+
+.config-checkbox svg {
+  color: #ffffff;
+  width: 14px;
+  height: 14px;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: all 0.2s;
+}
+
+.config-checkbox.checked svg {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* --- Add-on Cards --- */
+.config-addon-card {
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 2px solid #e5e7eb;
+  background-color: #f9fafb;
+  opacity: 0.8;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.2s;
+}
+
+.config-addon-card.active {
+  border-color: #10b981;
+  background-color: rgba(236, 253, 245, 0.6);
+  opacity: 1;
+}
+
+.config-addon-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.config-addon-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #9ca3af;
+  line-height: 1.2;
+  /* 👉 เอา text-decoration: line-through ออกตามที่คุณเต้ยสั่ง */
+}
+
+.config-addon-card.active .config-addon-title { color: #111827; }
+.config-addon-desc { font-size: 0.75rem; color: #9ca3af; margin-top: 0.25rem; }
+.config-addon-card.active .config-addon-desc { color: #6b7280; }
+
+.config-addon-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e5e7eb;
+}
+.config-addon-card.active .config-addon-footer { border-top-color: #a7f3d0; }
+
+
+/* --- Footer --- */
+.config-footer {
+  padding: 1.25rem 1.75rem;
+  background-color: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.config-btn-cancel {
+  padding: 0.75rem 1.5rem;
+  border-radius: 1rem;
+  color: #4b5563;
+  font-weight: 600;
+  font-size: 0.875rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.config-btn-cancel:hover { background-color: #e5e7eb; color: #1f2937; }
+
+.config-btn-save {
+  padding: 0.875rem 2rem;
+  border-radius: 1rem;
+  background-color: #065f46;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.875rem;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  box-shadow: 0 4px 6px -1px rgba(6, 95, 70, 0.3);
+}
+
+.config-btn-save:hover { background-color: #022c22; }
+
+/* --- Custom Inner Prompt Modal --- */
+.prompt-overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1010;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  border-radius: 1.5rem; 
+}
+
+.prompt-modal {
+  background-color: #fff;
+  width: 100%;
+  max-width: 24rem;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+}
+
+.prompt-title {
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: #111827;
+  margin-bottom: 1rem;
+}
+
+.prompt-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-bottom: 1rem;
+}
+
+.prompt-field label {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #4b5563;
+}
+
+/* 👉 บังคับช่องกรอกพื้นหลังขาวและตัวหนังสือเข้ม */
+.prompt-field input {
+  padding: 0.75rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  outline: none;
+  font-family: inherit;
+  background-color: #ffffff; 
+  color: #111827; 
+}
+
+.prompt-field input::placeholder {
+  color: #9ca3af;
+}
+
+.prompt-field input:focus { border-color: #059669; }
+
+.prompt-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.prompt-actions button {
+  padding: 0.5rem 1.25rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+
+.prompt-btn-close { background: #f3f4f6; color: #4b5563; }
+.prompt-btn-submit { background: #065f46; color: #fff; }

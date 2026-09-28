@@ -28,7 +28,7 @@ function mapApiPromo(p, i) {
   };
 }
 
-export function SelectPromotionModal({ onClose, onSelectPromotion }) {
+export function SelectPromotionModal({ onClose, onSelectPromotion, subtotal = 0 }) {
   const [selectedPromoId, setSelectedPromoId] = useState(null);
   const [manualCode, setManualCode] = useState('');
   const [promotions, setPromotions] = useState([]);
@@ -40,6 +40,8 @@ export function SelectPromotionModal({ onClose, onSelectPromotion }) {
   }, []);
 
   const handleApplyPromo = (promo) => {
+    // Ticket-03: block selection if the current cart subtotal does not meet the promo's minimum.
+    if (promo.minOrderAmount != null && subtotal < Number(promo.minOrderAmount)) return;
     setSelectedPromoId(promo.id);
     if (onSelectPromotion) {
       onSelectPromotion(promo);
@@ -101,22 +103,25 @@ export function SelectPromotionModal({ onClose, onSelectPromotion }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {promotions.map(promo => {
                 const isSelected = selectedPromoId === promo.id;
+                const notEligible = promo.minOrderAmount != null && subtotal < Number(promo.minOrderAmount);
                 
                 return (
                   <div 
                     key={promo.id}
-                    style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'space-between', 
-                      padding: '16px', 
-                      borderRadius: '12px', 
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '16px',
+                      borderRadius: '12px',
                       border: isSelected ? '2px solid #10b981' : '1px solid #e5e7eb',
                       background: isSelected ? '#f0fdf4' : '#fff',
                       transition: 'all 0.2s',
-                      cursor: 'pointer'
+                      cursor: notEligible ? 'not-allowed' : 'pointer',
+                      opacity: notEligible ? 0.5 : 1,
                     }}
                     onClick={() => handleApplyPromo(promo)}
+                    title={notEligible ? `ยอดปัจจุบัน ฿${subtotal.toFixed(2)} ต่ำกว่าขั้นต่ำ ฿${Number(promo.minOrderAmount).toFixed(2)}` : ''}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                       <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: promo.iconBg, color: promo.iconColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -124,7 +129,9 @@ export function SelectPromotionModal({ onClose, onSelectPromotion }) {
                       </div>
                       <div>
                         <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827', marginBottom: '2px' }}>{promo.title}</div>
-                        <div style={{ fontSize: '12px', color: '#6b7280' }}>{promo.subtitle}</div>
+                        <div style={{ fontSize: '12px', color: notEligible ? '#c0392b' : '#6b7280' }}>
+                          {promo.subtitle}{notEligible ? ' — ยังไม่ถึงยอดขั้นต่ำ' : ''}
+                        </div>
                       </div>
                     </div>
 
@@ -135,7 +142,7 @@ export function SelectPromotionModal({ onClose, onSelectPromotion }) {
                           เลือกแล้ว
                         </button>
                       ) : (
-                        <button style={{ background: '#f3f4f6', color: '#4b5563', border: 'none', padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
+                        <button disabled={notEligible} style={{ background: '#f3f4f6', color: '#4b5563', border: 'none', padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, cursor: notEligible ? 'not-allowed' : 'pointer' }}>
                           เลือก (Select)
                         </button>
                       )}

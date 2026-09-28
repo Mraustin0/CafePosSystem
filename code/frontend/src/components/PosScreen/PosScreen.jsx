@@ -10,7 +10,7 @@ import { SelectPromotionModal } from "./SelectPromotionModal";
 import { listProducts, createProduct } from "../../api/products";
 import { getCategories } from "../../api/categories";
 import { createPromotion, updatePromotion } from "../../api/promotions";
-import { createOrder } from "../../api/orders";
+import { createOrder, applyDiscount } from "../../api/orders";
 import { payOrder } from "../../api/payment";
 import { useAuth } from "../../auth/useAuth";
 
@@ -192,6 +192,8 @@ export default function PosScreen() {
   const subtotal = useMemo(() => cart.reduce((s, i) => s + Number(i.price) * i.qty, 0), [cart]);
   const promoDiscount = useMemo(() => {
     if (!appliedPromo) return 0;
+    // Ticket-03: enforce minimum-order rule before computing the discount amount.
+    if (appliedPromo.minOrderAmount != null && subtotal < Number(appliedPromo.minOrderAmount)) return 0;
     // appliedPromo comes from SelectPromotionModal in Thana-nan's shape (has raw + value string)
     if (appliedPromo.discountType === "PERCENT") return Math.min(subtotal * Number(appliedPromo.discountValue) / 100, subtotal);
     if (appliedPromo.discountType === "FIXED_AMOUNT") return Math.min(Number(appliedPromo.discountValue), subtotal);
@@ -222,16 +224,24 @@ export default function PosScreen() {
       // Fold local cart items down to backend order items. Multiple customized entries of the same
       // product are summed by productId; per-entry customizations (serving/sweetness/add-ons) stay
       // client-side for now — backend Order + OrderItem don't carry them yet.
+      // Ticket-01: cart entries carry the local unique `id` (Date.now-based) so React can key them,
+      // but the real product id lives in `productId`. Use it here or the order fails validation.
       const byProduct = new Map();
       for (const c of cart) {
-        const prev = byProduct.get(c.id) ?? { productId: c.id, quantity: 0, addOnIds: [] };
+        const pId = c.productId ?? c.id;
+        const prev = byProduct.get(pId) ?? { productId: pId, quantity: 0, addOnIds: [] };
         prev.quantity += c.qty;
-        byProduct.set(c.id, prev);
+        byProduct.set(pId, prev);
       }
-      const order = await createOrder([...byProduct.values()]);
+      let order = await createOrder([...byProduct.values()]);
+      // Ticket-03: sync the on-screen discount to the backend so the persisted total matches the
+      // amount the cashier actually collected. Only send when the discount actually applies
+      // (promoDiscount > 0 means the min-order rule passed too).
       if (appliedPromo && promoDiscount > 0) {
-        // ponytail: skip applyDiscount API call for now; total on backend will be untouched
-        // and might differ from the on-screen `total` (which subtracts the promo locally).
+        order = await applyDiscount(order.id, {
+          type: appliedPromo.discountType,
+          value: Number(appliedPromo.discountValue),
+        });
       }
       const payment = await payOrder(order.id, { method, amountReceived });
       setCurrentOrder({ ...order, payment });
@@ -534,7 +544,7 @@ export default function PosScreen() {
         <CoffeeModal
           item={selectedItemForModal}
           onClose={() => setSelectedItemForModal(null)}
-          onAddToCart={(customizedItem) => { setCart((prev) => [...prev, { ...customizedItem, id: Date.now() }]); }}
+          onAddToCart={(customizedItem) => { setCart((prev) => [...prev, { ...customizedItem, productId: customizedItem.id, id: Date.now() + Math.random() }]); }}
         />
       )}
 
@@ -542,13 +552,13 @@ export default function PosScreen() {
         <TeaModal
           item={selectedTeaForModal}
           onClose={() => setSelectedTeaForModal(null)}
-          onAddToCart={(customizedItem) => { setCart((prev) => [...prev, { ...customizedItem, id: Date.now() }]); }}
+          onAddToCart={(customizedItem) => { setCart((prev) => [...prev, { ...customizedItem, productId: customizedItem.id, id: Date.now() + Math.random() }]); }}
         />
       )}
 
       {isAddMenuOpen && (
         <AddNewItemModal
-          activeCategory={activeNav}
+          activeCategory={NAV_TO_CATEGORY[activeNav] ? activeNav : "coffee"}
           onClose={() => setIsAddMenuOpen(false)}
           onSubmit={async (form) => {
             const backendName = NAV_TO_CATEGORY[form.category];
@@ -587,12 +597,13 @@ export default function PosScreen() {
 
       {/* 👉 ส่ง onSelectPromotion ให้ Modal เพื่อเอาข้อมูลกลับมาเซ็ตเข้า State `appliedPromo` */}
       {isSelectPromoModalOpen && (
-        <SelectPromotionModal 
-          onClose={() => setIsSelectPromoModalOpen(false)} 
+        <SelectPromotionModal
+          subtotal={subtotal}
+          onClose={() => setIsSelectPromoModalOpen(false)}
           onSelectPromotion={(promo) => {
             setAppliedPromo(promo); // เซ็ตโปรที่เลือกลง State
             setIsSelectPromoModalOpen(false); // ปิด Modal
-          }} 
+          }}
         />
       )}
 

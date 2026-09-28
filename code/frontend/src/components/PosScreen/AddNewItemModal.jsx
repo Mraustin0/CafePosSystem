@@ -36,9 +36,13 @@ const MENU_CONFIG = {
   }
 };
 
+const VALID_CATEGORIES = ['coffee', 'tea', 'snack'];
+
 export function AddNewItemModal({ activeCategory = "coffee", onClose, onSubmit }) {
-  // สร้าง State เก็บหมวดหมู่ เพื่อให้ตอนแก้ Dropdown แล้วค่าอื่นๆ หรือ Placeholder เปลี่ยนตามด้วย
-  const [selectedCategory, setSelectedCategory] = useState(activeCategory === 'all' ? 'coffee' : activeCategory);
+  // Ticket-02: reject non-menu tabs (e.g. "manage", "promo", "all") — fall back to coffee so the
+  // dropdown default matches an entry actually present in the <option> list.
+  const initialCategory = VALID_CATEGORIES.includes(activeCategory) ? activeCategory : 'coffee';
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
 
   const currentConfig = MENU_CONFIG[selectedCategory] || MENU_CONFIG.coffee;
   const currentPlaceholder = PLACEHOLDER_MAP[selectedCategory] || PLACEHOLDER_MAP.coffee;

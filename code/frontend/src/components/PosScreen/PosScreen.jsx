@@ -9,6 +9,8 @@ import MenuManagementView from "./MenuManagementView";
 import { SelectPromotionModal } from "./SelectPromotionModal";
 import AddonManagementView from "./AddonManagementView";
 import MenuConfigModal from "./MenuConfigModal";
+import PaymentModal from "./PaymentModal";
+import PaymentSuccessModal from "./PaymentSuccessModal";
 import { listProducts, createProduct, updateProduct } from "../../api/products";
 import { listAddOns, createAddOn, setAddOnStatus } from "../../api/addOns";
 import { getCategories } from "../../api/categories";
@@ -162,6 +164,8 @@ export default function PosScreen() {
 
   const [isAddPromoModalOpen, setIsAddPromoModalOpen] = useState(false);
   const [isSelectPromoModalOpen, setIsSelectPromoModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [completedPaymentData, setCompletedPaymentData] = useState(null);
 
   // 👉 State เก็บข้อมูลโปรโมชั่นที่ลูกค้าเลือก
   const [appliedPromo, setAppliedPromo] = useState(null);
@@ -234,29 +238,16 @@ export default function PosScreen() {
 
   const cashierName = user?.fullName || user?.username || "แคชเชียร์";
 
-  const handleCheckout = async () => {
+  // Called from PaymentModal after user picks method + confirms. Wires PaymentModal UI to backend
+  // (createOrder + applyDiscount + payOrder), then opens PaymentSuccessModal on success.
+  // paymentData shape from PaymentModal: { method: 'cash'|'promptpay', totalAmount, cashGiven, changeAmount }
+  const handleConfirmPayment = async (paymentData) => {
     if (cart.length === 0) return;
-    const method = (window.prompt("วิธีชำระเงิน (CASH / QR_CODE / CARD)", "CASH") || "").trim().toUpperCase();
-    if (!["CASH", "QR_CODE", "CARD"].includes(method)) {
-      if (method) alert("วิธีชำระเงินไม่ถูกต้อง");
-      return;
-    }
-    const defaultAmt = method === "CASH" ? String(Math.ceil(total)) : total.toFixed(2);
-    const amtInput = window.prompt(
-      method === "CASH" ? `รับเงิน (บาท) — ยอด ฿${total.toFixed(2)}` : `จำนวนต้องเท่ากับ ฿${total.toFixed(2)}`,
-      defaultAmt
-    );
-    if (amtInput == null) return;
-    const amountReceived = Number(amtInput);
-    if (Number.isNaN(amountReceived) || amountReceived < 0) { alert("จำนวนเงินไม่ถูกต้อง"); return; }
+    const method = paymentData.method === "promptpay" ? "QR_CODE" : "CASH";
+    const amountReceived = method === "CASH" ? Number(paymentData.cashGiven) : Number(paymentData.totalAmount);
 
     setCheckoutBusy(true);
     try {
-      // Fold local cart items down to backend order items. Multiple customized entries of the same
-      // product are summed by productId; per-entry customizations (serving/sweetness/add-ons) stay
-      // client-side for now — backend Order + OrderItem don't carry them yet.
-      // Ticket-01: cart entries carry the local unique `id` (Date.now-based) so React can key them,
-      // but the real product id lives in `productId`. Use it here or the order fails validation.
       const byProduct = new Map();
       for (const c of cart) {
         const pId = c.productId ?? c.id;
@@ -265,9 +256,6 @@ export default function PosScreen() {
         byProduct.set(pId, prev);
       }
       let order = await createOrder([...byProduct.values()]);
-      // Ticket-03: sync the on-screen discount to the backend so the persisted total matches the
-      // amount the cashier actually collected. Only send when the discount actually applies
-      // (promoDiscount > 0 means the min-order rule passed too).
       if (appliedPromo && promoDiscount > 0) {
         order = await applyDiscount(order.id, {
           type: appliedPromo.discountType,
@@ -276,8 +264,8 @@ export default function PosScreen() {
       }
       const payment = await payOrder(order.id, { method, amountReceived });
       setCurrentOrder({ ...order, payment });
-      setCart([]);
-      setAppliedPromo(null);
+      setIsPaymentModalOpen(false);
+      setCompletedPaymentData({ ...paymentData, cart, order, payment });
     } catch (err) {
       console.error("checkout failed:", err);
       alert(`Checkout ล้มเหลว (${err?.status ?? "no status"}): ${err?.message ?? err}`);
@@ -287,15 +275,22 @@ export default function PosScreen() {
   };
 
   const handleSaveMenuConfig = async (id, data) => {
+    const existing = menu.find((m) => m.id === id);
+    const backendCategoryName = NAV_TO_CATEGORY[existing?.category];
+    const cat = categories.find((c) => c.name === backendCategoryName);
     try {
-      await updateProduct(id, { name: data.name, price: data.price });
+      await updateProduct(id, {
+        categoryId: cat?.id,
+        name: data.name,
+        price: data.price,
+        imageUrl: null,
+        addOnIds: data.config?.addonIds ?? [],
+      });
+      await loadProducts();
     } catch (err) {
       alert(err?.message ?? 'บันทึกเมนูไม่สำเร็จ');
       return;
     }
-    setMenu((prev) => prev.map((item) =>
-      item.id === id ? { ...item, config: data.config, price: data.price, name: data.name } : item
-    ));
     setEditingConfigItem(null);
   };
 
@@ -566,7 +561,7 @@ export default function PosScreen() {
                       <Icon.Print />
                       Print Invoice
                     </button>
-                    <button className="pos-btn pos-btn--solid pos-btn--full" onClick={handleCheckout} disabled={cart.length === 0 || checkoutBusy}>
+                    <button className="pos-btn pos-btn--solid pos-btn--full" onClick={() => { if (cart.length > 0) setIsPaymentModalOpen(true); else alert("กรุณาเพิ่มรายการสั่งซื้อก่อนชำระเงิน"); }} disabled={cart.length === 0 || checkoutBusy}>
                       <Icon.Card />
                       {checkoutBusy ? "..." : "Payments"}
                     </button>
@@ -657,6 +652,26 @@ export default function PosScreen() {
           onSelectPromotion={(promo) => {
             setAppliedPromo(promo); // เซ็ตโปรที่เลือกลง State
             setIsSelectPromoModalOpen(false); // ปิด Modal
+          }}
+        />
+      )}
+
+      {isPaymentModalOpen && (
+        <PaymentModal
+          cart={cart}
+          onClose={() => setIsPaymentModalOpen(false)}
+          onConfirmPayment={handleConfirmPayment}
+        />
+      )}
+
+      {completedPaymentData && (
+        <PaymentSuccessModal
+          paymentData={completedPaymentData}
+          onClose={() => setCompletedPaymentData(null)}
+          onNewOrder={() => {
+            setCart([]);
+            setAppliedPromo(null);
+            setCompletedPaymentData(null);
           }}
         />
       )}

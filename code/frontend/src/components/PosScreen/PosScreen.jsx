@@ -12,6 +12,7 @@ import MenuConfigModal from "./MenuConfigModal";
 import PaymentModal from "./PaymentModal";
 import PaymentSuccessModal from "./PaymentSuccessModal";
 import BillManagementView from "./BillManagementView";
+import DashboardView from "./DashboardView";
 import { listProducts, createProduct, updateProduct } from "../../api/products";
 import { listAddOns, createAddOn, setAddOnStatus } from "../../api/addOns";
 import { getCategories } from "../../api/categories";
@@ -430,9 +431,13 @@ export default function PosScreen() {
 
         {/* -------- Main column -------- */}
         <div className="pos-main">
-          <div className="pos-body" style={{ flexDirection: (activeNav === "promo" || activeNav === "manage" || activeNav === "manage_addon" || activeNav === "bill_mgmt") ? "column" : "row" }}>
+          <div className="pos-body" style={{ flexDirection: (activeNav === "promo" || activeNav === "manage" || activeNav === "manage_addon" || activeNav === "bill_mgmt" || activeNav === "dashboard") ? "column" : "row" }}>
 
-            {activeNav === "bill_mgmt" ? (
+            {activeNav === "dashboard" ? (
+              <DashboardView />
+            ) :
+
+            activeNav === "bill_mgmt" ? (
               <BillManagementView />
             ) :
 

@@ -13,9 +13,9 @@ export default function MenuManagementView({ menuItems, onToggleStatus, onDelete
 
   const getCategoryStyle = (cat) => {
     switch(cat) {
-      case 'coffee': return { bg: '#fef3c7', color: '#92400e', label: '☕️ กาแฟ' };
-      case 'tea': return { bg: '#ecfdf5', color: '#059669', label: '🍵 ชา' };
-      case 'snack': return { bg: '#ffedd5', color: '#c2410c', label: '🥐 ขนม' };
+      case 'coffee': return { bg: '#fef3c7', color: '#92400e', label: 'กาแฟ' };
+      case 'tea': return { bg: '#ecfdf5', color: '#059669', label: ' ชา' };
+      case 'snack': return { bg: '#ffedd5', color: '#c2410c', label: ' ขนม' };
       default: return { bg: '#f3f4f6', color: '#4b5563', label: 'ทั่วไป' };
     }
   };
@@ -87,9 +87,9 @@ export default function MenuManagementView({ menuItems, onToggleStatus, onDelete
         <div style={{ display: 'flex', gap: '8px' }}>
           {[
             { id: 'all', label: 'ทั้งหมด (All)' },
-            { id: 'coffee', label: '☕️ กาแฟ' },
-            { id: 'tea', label: '🍵 ชา' },
-            { id: 'snack', label: '🥐 ขนม' }
+            { id: 'coffee', label: 'กาแฟ' },
+            { id: 'tea', label: 'ชา' },
+            { id: 'snack', label: 'ขนม' }
           ].map(tab => (
             <button 
               key={tab.id}

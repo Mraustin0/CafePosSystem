@@ -1,13 +1,64 @@
 <!doctype html>
-<html lang="en">
+<html lang="th" class="h-full">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<<<<<<< Updated upstream
     <title>Cafe POS</title>
+=======
+    <title>Cafe Management System - เข้าสู่ระบบ POS</title>
+
+    <!-- Google Fonts: Prompt & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: '#ecfdf5',
+                100: '#d1fae5',
+                400: '#34d399',
+                500: '#10B981',
+                600: '#059669',
+                700: '#047857',
+              },
+              coral: {
+                50: '#fff5f2',
+                100: '#ffe8e2',
+                500: '#FF5733',
+                600: '#ea4622',
+                700: '#c53818',
+              }
+            },
+            fontFamily: {
+              sans: ['Prompt', 'Inter', 'sans-serif'],
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      html, body, #root { height: 100%; margin: 0; }
+      body { font-family: 'Prompt', 'Inter', sans-serif; }
+      .pos-pattern-bg {
+        background-color: #f8fafc;
+        background-image: radial-gradient(rgba(16, 185, 129, 0.08) 1.5px, transparent 1.5px),
+                          radial-gradient(rgba(100, 116, 139, 0.08) 1.5px, #f8fafc 1.5px);
+        background-size: 36px 36px;
+        background-position: 0 0, 18px 18px;
+      }
+    </style>
+>>>>>>> Stashed changes
   </head>
-  <body>
-    <div id="root"></div>
+  <body class="h-full pos-pattern-bg">
+    <div id="root" class="h-full"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

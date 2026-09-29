@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserPlus, Eye, EyeOff, Info, Check } from 'lucide-react';
+import { UserPlus, Eye, EyeOff, Info, Check, Coffee, Store } from 'lucide-react';
 
 export default function App() {
   const [formData, setFormData] = useState({
@@ -24,32 +24,46 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen w-screen bg-white flex flex-col font-sans text-gray-800">
-      {/* Top Navbar */}
-      <header className="bg-white border-b border-gray-200 px-6 py-2.5 flex items-center justify-between text-xs text-gray-600 shrink-0">
+    <div className="min-h-screen w-full bg-white flex flex-col font-['Prompt',sans-serif] text-gray-800 antialiased overflow-x-hidden">
+      {/* Top Navbar - พื้นขาวชิดซ้ายเต็มความกว้าง */}
+      <header className="w-full bg-white border-b border-gray-200/80 px-6 py-2.5 flex items-center justify-between shrink-0 shadow-sm">
         <div className="flex items-center space-x-3">
-          <span className="font-bold text-gray-900 text-sm">Cafe Management System</span>
+          {/* Coffee Logo Icon Box */}
+          <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center text-white shadow-sm shadow-emerald-200 shrink-0">
+            <Coffee className="w-4 h-4" />
+          </div>
+          {/* Title & Branch Info */}
+          <div>
+            <h1 className="font-bold text-gray-900 text-sm tracking-tight leading-none mb-1">
+              Cafe Management System
+            </h1>
+            <div className="flex items-center space-x-1 text-[11px] text-gray-500 font-normal">
+              <Store className="w-3 h-3 text-gray-400 shrink-0" />
+              <span>สาขาหลัก - Terminal POS 01</span>
+            </div>
+          </div>
         </div>
       </header>
 
-      {/* Main Content Area (จัดกลาง + รองรับ Scroll บนหน้าจอเล็ก) */}
-      <main className="flex-1 overflow-y-auto px-4">
+      {/* Main Content Area */}
+      <main className="flex-1 w-full bg-white overflow-y-auto px-4">
         <div className="min-h-full flex items-center justify-center py-6">
-          <div className="w-full max-w-md bg-white rounded-2xl border border-gray-200 p-5 md:p-6 space-y-3.5 text-left shadow-sm">
+          {/* กล่องแบบฟอร์มขนาดกระชับพอดี */}
+          <div className="w-full max-w-[380px] bg-white rounded-2xl border border-gray-200/80 p-5 space-y-3.5 text-left shadow-xl shadow-gray-100/50">
             
-            {/* Header Section (อยู่ตรงกลางอันเดียว) */}
-            <div className="text-center space-y-1 pb-1 border-b border-gray-100">
-              <div className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-emerald-100 text-emerald-600 mb-0.5">
+            {/* Header Section */}
+            <div className="text-center space-y-1 pb-2 border-b border-gray-100">
+              <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 mb-0.5 border border-emerald-100">
                 <UserPlus className="w-4 h-4" />
               </div>
-              <h1 className="text-lg font-bold text-gray-900">เพิ่มผู้ใช้งานใหม่</h1>
+              <h2 className="text-base font-semibold text-gray-900 tracking-tight">เพิ่มผู้ใช้งานใหม่</h2>
             </div>
 
-            {/* Form Content (ชิดซ้ายทั้งหมด) */}
-            <form onSubmit={handleSubmit} className="space-y-3 text-left">
+            {/* Form Content */}
+            <form onSubmit={handleSubmit} className="space-y-2.5 text-left">
               {/* ชื่อ-นามสกุล */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                <label className="block text-[11px] font-medium text-gray-700 mb-1">
                   ชื่อ-นามสกุล <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -58,14 +72,14 @@ export default function App() {
                   value={formData.fullName}
                   onChange={handleChange}
                   placeholder="นายสมชาย ใจดี"
-                  className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                  className="w-full px-3 py-1.5 text-xs bg-gray-50/50 border border-gray-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-gray-400"
                   required
                 />
               </div>
 
               {/* ชื่อสำหรับเข้าสู่ระบบ */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                <label className="block text-[11px] font-medium text-gray-700 mb-1">
                   ชื่อสำหรับเข้าสู่ระบบ <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -74,18 +88,18 @@ export default function App() {
                   value={formData.username}
                   onChange={handleChange}
                   placeholder="Somchai.j"
-                  className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                  className="w-full px-3 py-1.5 text-xs bg-gray-50/50 border border-gray-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-gray-400"
                   required
                 />
-                <p className="mt-0.5 text-[10px] text-gray-500 flex items-center gap-1">
-                  <Info className="w-3 h-3 text-emerald-600 shrink-0" />
+                <p className="mt-1 text-[10px] text-gray-400 flex items-center gap-1 font-light">
+                  <Info className="w-3 h-3 text-emerald-500 shrink-0" />
                   ใช้สำหรับล็อกอินเข้าเครื่อง POS และระบุชื่อในใบเสร็จ
                 </p>
               </div>
 
               {/* รหัสผ่าน */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                <label className="block text-[11px] font-medium text-gray-700 mb-1">
                   รหัสผ่าน <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
@@ -95,13 +109,13 @@ export default function App() {
                     value={formData.password}
                     onChange={handleChange}
                     placeholder="อย่างน้อย 8 ตัวอักษร"
-                    className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all pr-8"
+                    className="w-full px-3 py-1.5 text-xs bg-gray-50/50 border border-gray-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all pr-8 placeholder:text-gray-400"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                   >
                     {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   </button>
@@ -110,16 +124,16 @@ export default function App() {
 
               {/* สิทธิ์การใช้งาน */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                <label className="block text-[11px] font-medium text-gray-700 mb-1">
                   สิทธิ์การใช้งาน <span className="text-rose-500">*</span>
                 </label>
-                <div className="grid grid-cols-2 gap-1.5 p-1 bg-gray-100 rounded-lg border border-gray-200">
+                <div className="grid grid-cols-2 gap-1.5 p-1 bg-gray-100/70 rounded-lg border border-gray-200/60">
                   <button
                     type="button"
                     onClick={() => setFormData((p) => ({ ...p, role: 'CASHIER' }))}
-                    className={`py-1.5 text-xs font-bold rounded-md flex items-center justify-center space-x-1 transition-all ${
+                    className={`py-1.5 text-xs font-medium rounded-md flex items-center justify-center space-x-1 transition-all ${
                       formData.role === 'CASHIER'
-                        ? 'bg-emerald-500 text-white shadow-sm'
+                        ? 'bg-emerald-500 text-white shadow-sm font-semibold'
                         : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
@@ -129,9 +143,9 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setFormData((p) => ({ ...p, role: 'ADMIN' }))}
-                    className={`py-1.5 text-xs font-bold rounded-md flex items-center justify-center space-x-1 transition-all ${
+                    className={`py-1.5 text-xs font-medium rounded-md flex items-center justify-center space-x-1 transition-all ${
                       formData.role === 'ADMIN'
-                        ? 'bg-emerald-500 text-white shadow-sm'
+                        ? 'bg-emerald-500 text-white shadow-sm font-semibold'
                         : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
@@ -139,7 +153,7 @@ export default function App() {
                     <span>ADMIN</span>
                   </button>
                 </div>
-                <p className="mt-0.5 text-[10px] text-gray-500">
+                <p className="mt-1 text-[10px] text-gray-400 font-light">
                   {formData.role === 'CASHIER'
                     ? 'สิทธิ์พนักงานคิดเงิน: เปิดบิล, รับชำระ, และพิมพ์ใบเสร็จ'
                     : 'สิทธิ์ผู้ดูแลระบบ: เข้าถึงรายงาน, จัดการเมนู และตั้งค่าระบบทั้งหมด'}
@@ -148,7 +162,7 @@ export default function App() {
 
               {/* เบอร์โทรศัพท์ */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                <label className="block text-[11px] font-medium text-gray-700 mb-1">
                   เบอร์โทรศัพท์ <span className="font-normal text-gray-400">(ไม่บังคับ)</span>
                 </label>
                 <input
@@ -157,13 +171,13 @@ export default function App() {
                   value={formData.phone}
                   onChange={handleChange}
                   placeholder="08X-XXX-XXXX"
-                  className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                  className="w-full px-3 py-1.5 text-xs bg-gray-50/50 border border-gray-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-gray-400"
                 />
               </div>
 
               {/* อีเมล */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                <label className="block text-[11px] font-medium text-gray-700 mb-1">
                   อีเมล <span className="font-normal text-gray-400">(ไม่บังคับ)</span>
                 </label>
                 <input
@@ -172,21 +186,21 @@ export default function App() {
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="Somchai.j@example.com"
-                  className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                  className="w-full px-3 py-1.5 text-xs bg-gray-50/50 border border-gray-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-gray-400"
                 />
               </div>
 
               {/* Buttons */}
-              <div className="grid grid-cols-2 gap-2.5 pt-2">
+              <div className="grid grid-cols-2 gap-2 pt-2">
                 <button
                   type="button"
-                  className="py-2 border border-rose-300 text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-semibold transition-colors"
+                  className="py-2 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg text-xs font-medium transition-colors"
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
-                  className="py-2 bg-[#ff5722] hover:bg-[#f4511e] text-white rounded-lg text-xs font-semibold transition-colors flex items-center justify-center space-x-1 shadow-sm"
+                  className="py-2 bg-[#ff5722] hover:bg-[#f4511e] text-white rounded-lg text-xs font-medium transition-colors flex items-center justify-center space-x-1 shadow-sm shadow-orange-200"
                 >
                   <UserPlus className="w-3.5 h-3.5" />
                   <span>สร้างบัญชี</span>
@@ -198,7 +212,7 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 px-6 py-2 flex items-center justify-between text-[10px] text-gray-400 shrink-0">
+      <footer className="w-full bg-white border-t border-gray-200/80 px-6 py-2 flex items-center justify-between text-[10px] text-gray-400 shrink-0">
         <div>
           Cafe POS System &nbsp;|&nbsp; Build POS-v2.1.0 [Production] &nbsp;|&nbsp; Database Status: <span className="text-emerald-600 font-medium">Connected</span>
         </div>

@@ -81,6 +81,7 @@ export default function CoffeeModal({ item, onClose, onAddToCart, globalAddons =
     const ad = activeAddons.find(a => a.id === id);
     if (ad) currentAddonPrice += ad.price;
   });
+  const currentTotalPrice = (currentBasePrice + currentServingPrice + currentAddonPrice) * quantity;
 
   return (
     <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '16px' }}>

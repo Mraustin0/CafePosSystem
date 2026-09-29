@@ -75,6 +75,7 @@ export default function TeaModal({ item, onClose, onAddToCart, globalAddons = []
     const ad = activeAddons.find(a => a.id === id);
     if (ad) currentAddonPrice += ad.price;
   });
+  const currentTotalPrice = (currentBasePrice + currentServingPrice + currentAddonPrice) * quantity;
 
   return (
     <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '16px' }}>
@@ -99,16 +100,16 @@ export default function TeaModal({ item, onClose, onAddToCart, globalAddons = []
           flex: 1;
         }
 
-        .tea-section-title {
+        .section-title {
           font-size: 14px;
           font-weight: 700;
           color: #4b5563;
           margin: 0 0 12px 0;
           letter-spacing: 0.02em;
         }
-        .tea-req-star { color: #10b981; margin-left: 4px; }
+        .req-star { color: #10b981; margin-left: 4px; }
 
-        .tea-opt-btn {
+        .opt-btn {
           background: #ffffff;
           border: 1px solid #d1d5db;
           border-radius: 12px;
@@ -124,15 +125,15 @@ export default function TeaModal({ item, onClose, onAddToCart, globalAddons = []
           text-align: center;
           flex: 1;
         }
-        .tea-opt-btn.active {
+        .opt-btn.active {
           background: #ecfdf5;
           border-color: #10b981;
           color: #059669;
           box-shadow: 0 0 0 1px #10b981;
         }
-        .tea-opt-btn:hover:not(.active) { background: #f9fafb; }
+        .opt-btn:hover:not(.active) { background: #f9fafb; }
 
-        .tea-card-btn {
+        .card-btn {
           background: #ffffff;
           border: 1px solid #d1d5db;
           border-radius: 12px;
@@ -143,14 +144,14 @@ export default function TeaModal({ item, onClose, onAddToCart, globalAddons = []
           display: flex;
           flex-direction: column;
         }
-        .tea-card-btn.active {
+        .card-btn.active {
           background: #ecfdf5;
           border-color: #10b981;
           box-shadow: 0 0 0 1px #10b981;
         }
-        .tea-card-btn:hover:not(.active) { background: #f9fafb; }
+        .card-btn:hover:not(.active) { background: #f9fafb; }
 
-        .tea-checkbox-square {
+        .checkbox-square {
           width: 22px;
           height: 22px;
           border-radius: 6px;
@@ -162,12 +163,12 @@ export default function TeaModal({ item, onClose, onAddToCart, globalAddons = []
           transition: 0.2s;
           flex-shrink: 0;
         }
-        .tea-addon-card.active .tea-checkbox-square {
+        .addon-card.active .checkbox-square {
           background: #10b981;
           border-color: #10b981;
         }
 
-        .tea-note-input {
+        .note-input {
           width: 100%;
           padding: 16px;
           border-radius: 12px;
@@ -181,12 +182,12 @@ export default function TeaModal({ item, onClose, onAddToCart, globalAddons = []
           background-color: #ffffff !important;
           color: #111827 !important;
         }
-        .tea-note-input:focus {
+        .note-input:focus {
           border-color: #10b981;
           box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
         }
 
-        .tea-stepper-container {
+        .stepper-container {
           display: flex;
           align-items: center;
           background: #f3f4f6;
@@ -194,7 +195,7 @@ export default function TeaModal({ item, onClose, onAddToCart, globalAddons = []
           padding: 4px;
           height: 52px;
         }
-        .tea-step-btn {
+        .step-btn {
           width: 44px;
           height: 44px;
           border: none;
@@ -208,8 +209,8 @@ export default function TeaModal({ item, onClose, onAddToCart, globalAddons = []
           box-shadow: 0 1px 2px rgba(0,0,0,0.05);
           transition: 0.1s;
         }
-        .tea-step-btn:active { transform: scale(0.95); }
-        .tea-step-val {
+        .step-btn:active { transform: scale(0.95); }
+        .step-val {
           width: 40px;
           text-align: center;
           font-size: 18px;
@@ -242,13 +243,13 @@ export default function TeaModal({ item, onClose, onAddToCart, globalAddons = []
 
           {activeServing.length > 0 && (
             <div style={{ marginBottom: '32px' }}>
-              <h3 className="tea-section-title">1. รูปแบบเครื่องดื่ม / SERVING TYPE <span className="tea-req-star">*</span></h3>
+              <h3 className="section-title">1. รูปแบบเครื่องดื่ม / SERVING TYPE <span className="req-star">*</span></h3>
               <div style={{ display: 'flex', gap: '12px' }}>
                 {activeServing.map(s => (
                   <button
                     key={s.id}
                     onClick={() => setSelectedServing(s.id)}
-                    className={`tea-opt-btn ${s.id === selectedServing ? 'active' : ''}`}
+                    className={`opt-btn ${s.id === selectedServing ? 'active' : ''}`}
                   >
                     {s.label}
                   </button>
@@ -260,7 +261,7 @@ export default function TeaModal({ item, onClose, onAddToCart, globalAddons = []
           {activeSweetness.length > 0 && (
             <div style={{ marginBottom: '32px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h3 className="tea-section-title" style={{ margin: 0 }}>2. ระดับความหวาน / SWEETNESS LEVEL</h3>
+                <h3 className="section-title" style={{ margin: 0 }}>2. ระดับความหวาน / SWEETNESS LEVEL</h3>
                 <span style={{ fontSize: '13px', fontWeight: 700, color: '#059669' }}>
                   {selectedSweetness === '100%' ? 'หวานปกติ (100%)' : selectedSweetness}
                 </span>
@@ -270,7 +271,7 @@ export default function TeaModal({ item, onClose, onAddToCart, globalAddons = []
                   <button
                     key={s.label}
                     onClick={() => setSelectedSweetness(s.label)}
-                    className={`tea-opt-btn ${s.label === selectedSweetness ? 'active' : ''}`}
+                    className={`opt-btn ${s.label === selectedSweetness ? 'active' : ''}`}
                     style={{ padding: '12px 0' }}
                   >
                     {s.label}
@@ -282,7 +283,7 @@ export default function TeaModal({ item, onClose, onAddToCart, globalAddons = []
 
           {activeAddons.length > 0 && (
             <div style={{ marginBottom: '32px' }}>
-              <h3 className="tea-section-title">3. ตัวเลือกเพิ่มเติม / ADD-ONS</h3>
+              <h3 className="section-title">3. ตัวเลือกเพิ่มเติม / ADD-ONS</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {activeAddons.map(ad => {
                   const isSelected = selectedAddons.includes(ad.id);
@@ -290,11 +291,11 @@ export default function TeaModal({ item, onClose, onAddToCart, globalAddons = []
                     <div
                       key={ad.id}
                       onClick={() => toggleAddon(ad.id)}
-                      className={`tea-card-btn tea-addon-card ${isSelected ? 'active' : ''}`}
+                      className={`card-btn addon-card ${isSelected ? 'active' : ''}`}
                       style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: '16px' }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <div className="tea-checkbox-square">
+                        <div className="checkbox-square">
                           {isSelected && <svg width="14" height="14" fill="none" stroke="#fff" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"></path></svg>}
                         </div>
                         <div>
@@ -313,9 +314,9 @@ export default function TeaModal({ item, onClose, onAddToCart, globalAddons = []
           )}
 
           <div>
-            <h3 className="tea-section-title">4. โน้ตพิเศษ / SPECIAL REQUESTS</h3>
+            <h3 className="section-title">4. โน้ตพิเศษ / SPECIAL REQUESTS</h3>
             <textarea
-              className="tea-note-input"
+              className="note-input"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="ระบุข้อความเพิ่มเติมถึงบาริสต้า (เช่น แยกน้ำแข็ง, ขอแก้วสองชั้น)..."
@@ -327,12 +328,12 @@ export default function TeaModal({ item, onClose, onAddToCart, globalAddons = []
 
         <div style={{ padding: '24px', borderTop: '1px solid #f3f4f6', background: '#fff', display: 'flex', gap: '16px', alignItems: 'center' }}>
 
-          <div className="tea-stepper-container">
-            <button className="tea-step-btn" onClick={() => setQuantity(Math.max(1, quantity - 1))}>
+          <div className="stepper-container">
+            <button className="step-btn" onClick={() => setQuantity(Math.max(1, quantity - 1))}>
               <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" /></svg>
             </button>
-            <span className="tea-step-val">{quantity}</span>
-            <button className="tea-step-btn" onClick={() => setQuantity(quantity + 1)}>
+            <span className="step-val">{quantity}</span>
+            <button className="step-btn" onClick={() => setQuantity(quantity + 1)}>
               <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14m-7-7h14" /></svg>
             </button>
           </div>

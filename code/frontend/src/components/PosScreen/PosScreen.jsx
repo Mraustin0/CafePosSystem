@@ -331,6 +331,17 @@ export default function PosScreen() {
         input:-webkit-autofill:active {
           -webkit-box-shadow: 0 0 0 30px white inset !important;
         }
+        .clean-search-input {
+          background-color: transparent !important;
+          color: #111827 !important;
+        }
+        .clean-search-input:focus {
+          background-color: transparent !important;
+          -webkit-box-shadow: none !important;
+        }
+        .clean-search-input::placeholder {
+          color: #9ca3af !important;
+        }
       `}</style>
 
       <div className="pos-content">
@@ -414,21 +425,28 @@ export default function PosScreen() {
 
                     <div className="pos-search pos-search--inline" style={{ margin: 0, maxWidth: '340px', width: '340px' }}>
                       <Icon.Search className="pos-search__icon" />
-                      <input type="text" placeholder="ค้นหาเมนู (Search menu)..." />
+                      <input type="text" placeholder="ค้นหาเมนู (Search menu)..." className="clean-search-input" autoComplete="off" />
                     </div>
 
                   </div>
 
                   <div className="pos-menu__grid">
                     {menu
-                      .filter((item) => item.category === activeNav)
-                      .map((item) => (
+                      .filter((item) => item.category === activeNav && item.active)
+                      .map((item) => {
+                        const isOutOfStock = item.stock !== undefined && item.stock <= 0;
+                        return (
                         <article
                           className="pos-card"
                           key={item.id}
-                          onClick={() => activeNav === "tea" ? setSelectedTeaForModal(item) : setSelectedItemForModal(item)}
-                          style={{ cursor: 'pointer' }}
+                          onClick={() => { if (!isOutOfStock) { activeNav === "tea" ? setSelectedTeaForModal(item) : setSelectedItemForModal(item); } }}
+                          style={{ opacity: isOutOfStock ? 0.6 : 1, position: 'relative', cursor: isOutOfStock ? 'not-allowed' : 'pointer' }}
                         >
+                          {isOutOfStock && (
+                            <div style={{ position: 'absolute', top: 12, right: 12, background: '#ef4444', color: '#fff', fontSize: '12px', fontWeight: 700, padding: '4px 10px', borderRadius: '20px', zIndex: 10, boxShadow: '0 2px 4px rgba(239, 68, 68, 0.4)' }}>
+                              Sold Out
+                            </div>
+                          )}
                           <div className={`pos-card__image ${item.kind ? `is-${item.kind}` : ""}`}>
                             {item.imgSrc ? (
                               <img src={item.imgSrc} alt={item.name} className="pos-real-image" />
@@ -451,19 +469,12 @@ export default function PosScreen() {
                             </div>
                           </div>
                         </article>
-                      ))}
+                        ); })}
                   </div>
                 </section>
 
-                <aside className="pos-order">
-                  <div className="pos-order__meta">
-                    <div>
-                      <div className="pos-order__invoice">Invoice No: {currentOrder?.id ?? "—"}</div>
-                    </div>
-                    <div className="pos-order__date">{new Date(currentOrder?.createdAt ?? Date.now()).toLocaleString("th-TH")}</div>
-                  </div>
-
-<div className="pos-order__items">
+                <aside className="pos-order" style={{ display: 'flex', flexDirection: 'column' }}>
+                  <div className="pos-order__items custom-scrollbar" style={{ flex: 1, overflowY: 'auto', marginTop: 0, marginBottom: '20px', paddingRight: '4px' }}>
                     {cart.map((item) => (
                       <div className="pos-orderitem" key={item.id}>
                         <div className="pos-orderitem__icon">
@@ -475,7 +486,7 @@ export default function PosScreen() {
                               {item.name}
                               {item.isNew && <span className="pos-badge">ใหม่</span>}
                             </div>
-                            <div className="pos-orderitem__price">${item.price.toFixed(2)}</div>
+                            <div className="pos-orderitem__price">฿{item.price.toFixed(2)}</div>
                           </div>
                           <div className="pos-orderitem__detail">{item.detail}</div>
                           <div className="pos-orderitem__extras">{item.extras}</div>
@@ -547,7 +558,7 @@ export default function PosScreen() {
                         Items: {itemCount}, Quantity: {quantityCount}
                       </div>
                     </div>
-                    <div className="pos-total__value">${total.toFixed(2)}</div>
+                    <div className="pos-total__value">฿{total.toFixed(2)}</div>
                   </div>
 
                   <div className="pos-order__buttons">

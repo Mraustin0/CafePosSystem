@@ -56,9 +56,9 @@ export default function MenuManagementView({ onOpenAddMenuModal, onEditMenu }) {
 
   const getCategoryStyle = (cat) => {
     switch(cat) {
-      case 'coffee': return { bg: '#fef3c7', color: '#92400e', label: '☕️ กาแฟ' };
-      case 'tea': return { bg: '#ecfdf5', color: '#059669', label: '🍵 ชา' };
-      case 'snack': return { bg: '#ffedd5', color: '#c2410c', label: '🥐 ขนม' };
+      case 'coffee': return { bg: '#fef3c7', color: '#92400e', label: 'กาแฟ' };
+      case 'tea': return { bg: '#ecfdf5', color: '#059669', label: 'ชา' };
+      case 'snack': return { bg: '#ffedd5', color: '#c2410c', label: 'ขนม' };
       default: return { bg: '#f3f4f6', color: '#4b5563', label: 'ทั่วไป' };
     }
   };
@@ -103,7 +103,7 @@ export default function MenuManagementView({ onOpenAddMenuModal, onEditMenu }) {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexShrink: 0 }}>
         <div style={{ display: 'flex', gap: '8px' }}>
-          {[{ id: 'all', label: 'ทั้งหมด (All)' }, { id: 'coffee', label: '☕️ กาแฟ' }, { id: 'tea', label: '🍵 ชา' }, { id: 'snack', label: '🥐 ขนม' }].map(tab => (
+          {[{ id: 'all', label: 'ทั้งหมด (All)' }, { id: 'coffee', label: 'กาแฟ' }, { id: 'tea', label: 'ชา' }, { id: 'snack', label: 'ขนม' }].map(tab => (
             <button key={tab.id} onClick={() => setCategoryFilter(tab.id)} style={{ padding: '8px 16px', borderRadius: '20px', border: '1px solid #e5e7eb', background: categoryFilter === tab.id ? '#111827' : '#fff', color: categoryFilter === tab.id ? '#fff' : '#4b5563', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease' }}>
               {tab.label}
             </button>

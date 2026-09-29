@@ -11,6 +11,9 @@ import { SelectPromotionModal } from "./SelectPromotionModal";
 import MenuConfigModal  from "./MenuConfigModal";
 import AddonManagementView from "./AddonManagementView"; 
 
+import PaymentModal from "./PaymentModal";
+import PaymentSuccessModal from "./PaymentSuccessModal"; /* 👉 นำเข้า PaymentSuccessModal */
+
 /* ---------------------------------------------------------
    Icons
 --------------------------------------------------------- */
@@ -84,6 +87,10 @@ export default function PosScreen() {
   const [isAddPromoModalOpen, setIsAddPromoModalOpen] = useState(false);
   const [isSelectPromoModalOpen, setIsSelectPromoModalOpen] = useState(false);
   const [appliedPromo, setAppliedPromo] = useState(null);
+
+  /* 👉 State สำหรับจัดการ Modal การชำระเงิน */
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [completedPaymentData, setCompletedPaymentData] = useState(null);
 
   const handleToggleMenuStatus = (id) => {
     setMenu(prevMenu => 
@@ -162,8 +169,6 @@ export default function PosScreen() {
             -webkit-box-shadow: 0 0 0 30px white inset !important;
         }
       `}</style>
-
-      {/* เอา <header className="pos-header"> ออกแล้ว */}
 
       <div className="pos-content">
         <aside className="pos-sidebar">
@@ -410,10 +415,22 @@ export default function PosScreen() {
                     </div>
 
                     <div className="pos-order__buttons">
-                      <button className="pos-btn pos-btn--solid pos-btn--full" style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
+                      
+                      <button 
+                        className="pos-btn pos-btn--solid pos-btn--full" 
+                        style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}
+                        onClick={() => {
+                          if (cart.length > 0) {
+                            setIsPaymentModalOpen(true);
+                          } else {
+                            alert("กรุณาเพิ่มรายการสั่งซื้อก่อนชำระเงิน");
+                          }
+                        }}
+                      >
                         <Icon.Card />
                         Payments
                       </button>
+
                     </div>
                   </div>
                 </aside>
@@ -474,6 +491,34 @@ export default function PosScreen() {
           }} 
         />
       )}
+
+      {/* 👉 Payment Modal แบบเต็มจอ */}
+      {isPaymentModalOpen && (
+        <PaymentModal 
+          cart={cart}
+          onClose={() => setIsPaymentModalOpen(false)}
+          onConfirmPayment={(data) => {
+            setCompletedPaymentData(data); // บันทึกข้อมูลที่จ่ายเสร็จ
+            setIsPaymentModalOpen(false); // ปิดหน้าจอ Payment
+          }}
+        />
+      )}
+
+      {/* 👉 Payment Success Modal ที่เพิ่งสร้าง */}
+      {completedPaymentData && (
+        <PaymentSuccessModal 
+          paymentData={completedPaymentData}
+          onClose={() => {
+            setCompletedPaymentData(null);
+          }}
+          onNewOrder={() => {
+            setCart([]); // เคลียร์ตะกร้า
+            setAppliedPromo(null); // เคลียร์โปรโมชั่น
+            setCompletedPaymentData(null); // ปิดหน้าต่าง Success
+          }}
+        />
+      )}
+
     </div>
   );
 }

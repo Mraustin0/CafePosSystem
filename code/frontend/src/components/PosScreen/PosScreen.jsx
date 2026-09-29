@@ -186,6 +186,7 @@ export default function PosScreen() {
   // P04: cache order id across payment retries — if createOrder succeeded but payOrder failed,
   // the next confirm should retry payment on the same order (not create a duplicate).
   const [pendingOrder, setPendingOrder] = useState(null);
+  const [menuSearch, setMenuSearch] = useState("");
 
   // 👉 State เก็บข้อมูลโปรโมชั่นที่ลูกค้าเลือก
   const [appliedPromo, setAppliedPromo] = useState(null);
@@ -471,14 +472,14 @@ export default function PosScreen() {
 
                     <div className="pos-search pos-search--inline" style={{ margin: 0, maxWidth: '340px', width: '340px' }}>
                       <Icon.Search className="pos-search__icon" />
-                      <input type="text" placeholder="ค้นหาเมนู (Search menu)..." className="clean-search-input" autoComplete="off" />
+                      <input type="text" placeholder="ค้นหาเมนู (Search menu)..." className="clean-search-input" autoComplete="off" value={menuSearch} onChange={(e) => setMenuSearch(e.target.value)} />
                     </div>
 
                   </div>
 
                   <div className="pos-menu__grid">
                     {menu
-                      .filter((item) => item.category === activeNav && item.active)
+                      .filter((item) => item.category === activeNav && item.active && (menuSearch.trim() === "" || item.name?.toLowerCase().includes(menuSearch.trim().toLowerCase())))
                       .map((item) => {
                         const isOutOfStock = item.stock !== undefined && item.stock <= 0;
                         return (

@@ -9,6 +9,7 @@ export default function MenuManagementView({ onOpenAddMenuModal, onEditMenu }) {
   const [busy, setBusy] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [search, setSearch] = useState('');
   const [stockOverrides, setStockOverrides] = useState({});
   const [stockModalItem, setStockModalItem] = useState(null);
   const [tempStockValue, setTempStockValue] = useState("");
@@ -52,7 +53,8 @@ export default function MenuManagementView({ onOpenAddMenuModal, onEditMenu }) {
     } finally { setBusy(false); }
   };
 
-  const filteredMenu = menu.filter(item => categoryFilter === 'all' || item.category === categoryFilter);
+  const q = search.trim().toLowerCase();
+  const filteredMenu = menu.filter(item => (categoryFilter === 'all' || item.category === categoryFilter) && (q === '' || item.name?.toLowerCase().includes(q)));
 
   const getCategoryStyle = (cat) => {
     switch(cat) {
@@ -97,7 +99,7 @@ export default function MenuManagementView({ onOpenAddMenuModal, onEditMenu }) {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #d1d5db', borderRadius: '8px', padding: '8px 12px', width: '300px' }}>
           <svg width="16" height="16" fill="none" stroke="#9ca3af" strokeWidth="2" viewBox="0 0 24 24" style={{ marginRight: '8px' }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" placeholder="ค้นหาเมนู (Search menu)..." autoComplete="off" style={{ border: 'none', outline: 'none', width: '100%', fontSize: '14px', background: 'transparent' }} />
+          <input type="text" placeholder="ค้นหาเมนู (Search menu)..." autoComplete="off" value={search} onChange={(e) => setSearch(e.target.value)} style={{ border: 'none', outline: 'none', width: '100%', fontSize: '14px', background: 'transparent' }} />
         </div>
       </header>
 

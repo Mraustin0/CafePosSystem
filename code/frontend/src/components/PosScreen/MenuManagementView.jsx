@@ -8,9 +8,10 @@ export default function MenuManagementView({ onOpenAddMenuModal, onEditMenu }) {
   const [menu, setMenu] = useState([]);
   const [busy, setBusy] = useState(false);
   const [loadError, setLoadError] = useState(null);
-
-  // 👉 1. สร้าง State สำหรับเก็บค่าหมวดหมู่ที่เลือก (ค่าเริ่มต้นคือ 'all' โชว์ทุกเมนู)
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [stockOverrides, setStockOverrides] = useState({});
+  const [stockModalItem, setStockModalItem] = useState(null);
+  const [tempStockValue, setTempStockValue] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -51,138 +52,136 @@ export default function MenuManagementView({ onOpenAddMenuModal, onEditMenu }) {
     } finally { setBusy(false); }
   };
 
-  // 👉 2. กรองข้อมูลตามหมวดหมู่ที่เลือกก่อนนำไปแสดงผล
-  const filteredMenu = menu.filter(item => {
-    if (categoryFilter === 'all') return true;
-    return item.category === categoryFilter;
-  });
+  const filteredMenu = menu.filter(item => categoryFilter === 'all' || item.category === categoryFilter);
+
+  const getCategoryStyle = (cat) => {
+    switch(cat) {
+      case 'coffee': return { bg: '#fef3c7', color: '#92400e', label: '☕️ กาแฟ' };
+      case 'tea': return { bg: '#ecfdf5', color: '#059669', label: '🍵 ชา' };
+      case 'snack': return { bg: '#ffedd5', color: '#c2410c', label: '🥐 ขนม' };
+      default: return { bg: '#f3f4f6', color: '#4b5563', label: 'ทั่วไป' };
+    }
+  };
+
+  const handleOpenStockModal = (item) => {
+    setStockModalItem(item);
+    const current = stockOverrides[item.id];
+    setTempStockValue(current == null ? "" : String(current));
+  };
+
+  const handleSaveStock = () => {
+    const newStock = tempStockValue.trim() === "" ? null : Number(tempStockValue);
+    setStockOverrides((prev) => ({ ...prev, [stockModalItem.id]: newStock }));
+    setStockModalItem(null);
+  };
 
   return (
-    <div className="promo-view" style={{ width: '100%' }}>
-      
-      {/* ---------------- Header & Toolbar ---------------- */}
-      <header className="promo-header" style={{ alignItems: 'center', marginBottom: '16px' }}>
-        <div className="promo-header-info">
-          <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 4px 0', color: 'var(--gray-900)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            จัดการเมนู <span>(Menu Management)</span>
-          </h2>
-          
-        </div>
+    <div className="promo-view" style={{ width: '100%', display: 'flex', flexDirection: 'column', height: '100%' }}>
 
-        <div className="promo-toolbar" style={{ margin: 0, alignItems: 'center' }}>
-          <div className="pos-search pos-search--inline" style={{ margin: '0 16px 0 0', maxWidth: '340px', width: '340px' }}>
-            <svg className="pos-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="text" placeholder="ค้นหาเมนู (Search menu)..." />
-          </div>
-          
-          <div className="promo-filter">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
-            <select style={{ border: 'none', background: 'transparent', outline: 'none', fontWeight: 600, color: 'var(--gray-900)', fontSize: '13px', cursor: 'pointer' }}>
-               <option value="ACTIVE">เปิดใช้งาน (Active)</option>
-               <option value="INACTIVE">ปิดใช้งาน (Inactive)</option>
-            </select>
-          </div>
+      <header className="promo-header" style={{ alignItems: 'center', marginBottom: '16px', flexShrink: 0, display: 'flex', justifyContent: 'space-between' }}>
+        <div className="promo-header-info">
+          <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 4px 0', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            จัดการเมนู <span style={{ color: '#6b7280', fontSize: '16px' }}>(Menu Management)</span>
+          </h2>
+          <p style={{ fontSize: '13px', color: '#6b7280', margin: 0 }}>จัดการรายการสินค้า ตั้งค่าราคา และเปิด/ปิดเมนูหน้าร้าน</p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #d1d5db', borderRadius: '8px', padding: '8px 12px', width: '300px' }}>
+          <svg width="16" height="16" fill="none" stroke="#9ca3af" strokeWidth="2" viewBox="0 0 24 24" style={{ marginRight: '8px' }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" placeholder="ค้นหาเมนู (Search menu)..." autoComplete="off" style={{ border: 'none', outline: 'none', width: '100%', fontSize: '14px', background: 'transparent' }} />
         </div>
       </header>
 
-      {/* 👉 3. แถบปุ่ม Pill Tabs สำหรับกดกรองหมวดหมู่ */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
-        {[
-          { id: 'all', label: 'ทั้งหมด (All)' },
-          { id: 'coffee', label: 'กาแฟ (Coffee)' },
-          { id: 'tea', label: 'ชา (Tea)' },
-          { id: 'snack', label: 'ขนม (Snacks)' }
-        ].map(tab => (
-          <button 
-            key={tab.id}
-            onClick={() => setCategoryFilter(tab.id)}
-            style={{ 
-              padding: '8px 16px', 
-              borderRadius: '20px', 
-              border: '1px solid var(--gray-200)', 
-              background: categoryFilter === tab.id ? 'var(--gray-900)' : '#fff', 
-              color: categoryFilter === tab.id ? '#fff' : 'var(--gray-600)', 
-              fontSize: '13px', 
-              fontWeight: 600, 
-              cursor: 'pointer', 
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => { if (categoryFilter !== tab.id) e.currentTarget.style.background = 'var(--gray-100)'; }}
-            onMouseLeave={(e) => { if (categoryFilter !== tab.id) e.currentTarget.style.background = '#fff'; }}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {[{ id: 'all', label: 'ทั้งหมด (All)' }, { id: 'coffee', label: '☕️ กาแฟ' }, { id: 'tea', label: '🍵 ชา' }, { id: 'snack', label: '🥐 ขนม' }].map(tab => (
+            <button key={tab.id} onClick={() => setCategoryFilter(tab.id)} style={{ padding: '8px 16px', borderRadius: '20px', border: '1px solid #e5e7eb', background: categoryFilter === tab.id ? '#111827' : '#fff', color: categoryFilter === tab.id ? '#fff' : '#4b5563', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease' }}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <button onClick={onOpenAddMenuModal} style={{ background: '#059669', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          เพิ่มเมนูใหม่
+        </button>
       </div>
 
-      {/* ---------------- Grid ---------------- */}
-      <div className="pos-menu__grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', paddingBottom: '24px' }}>
-        
-        {/* 👉 4. Add Card: ซ่อนการ์ด "เพิ่มเมนูใหม่" ถ้าไม่ได้อยู่ในหน้า "ทั้งหมด (All)" */}
-        {categoryFilter === 'all' && (
-          <article className="pos-card pos-card--add" onClick={onOpenAddMenuModal}>
-            <div className="pos-card__add-content">
-              <div className="pos-card__add-icon">
-                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg>
-              </div>
-              <span className="pos-card__add-text">เพิ่มเมนูใหม่</span>
-              <span className="pos-card__add-subtext">(คลิกเพื่อเปิดฟอร์ม)</span>
-            </div>
-          </article>
-        )}
+      {loadError && <p style={{ color: '#ef4444', padding: '8px 0', flexShrink: 0 }}>{loadError}</p>}
 
-        {/* Existing Menu Cards */}
-        {filteredMenu.map(item => (
-          <article className="pos-card" key={item.id} style={{ opacity: item.isActive ? 1 : 0.5, transition: '0.2s' }}>
-            <div className={`pos-card__image ${item.kind ? `is-${item.kind}` : ""}`}>
-              {item.imgSrc ? (
-                <img src={item.imgSrc} alt={item.name} className="pos-real-image" />
-              ) : (
-                item.kind === "espresso" && <div className="pos-cup" />
-              )}
-            </div>
-            
-            <div className="pos-card__body">
-              <h3>{item.name}</h3>
-
-              <div className="pos-card__row" style={{ marginTop: 'auto', justifyContent: 'flex-start', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  
-                  <label className="toggle-switch" style={{ margin: 0, transform: 'scale(0.9)', transformOrigin: 'left center' }}>
-                    <input type="checkbox" checked={item.isActive} onChange={() => toggleStatus(item.id)} />
-                    <span className="slider"></span>
-                  </label>
-                  
-                  <button 
-                    className="icon-btn" 
-                    onClick={() => onEditMenu && onEditMenu(item)} 
-                    title="แก้ไขเมนู"
-                    style={{ 
-                      background: 'var(--gray-100)', 
-                      borderRadius: '8px', 
-                      width: '32px', 
-                      height: '32px', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      color: 'var(--gray-600)',
-                      transition: '0.2s'
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--gray-200)'; e.currentTarget.style.color = 'var(--gray-900)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--gray-100)'; e.currentTarget.style.color = 'var(--gray-600)'; }}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-                      <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-                    </svg>
-                  </button>
-
-                </div>
-              </div>
-
-            </div>
-          </article>
-        ))}
+      <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', flex: 1, overflowY: 'auto', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
+          <thead style={{ background: '#f9fafb', position: 'sticky', top: 0, zIndex: 1, borderBottom: '1px solid #e5e7eb' }}>
+            <tr>
+              <th style={{ padding: '16px 24px', color: '#6b7280', fontWeight: 600, width: '30%' }}>สินค้า (Item)</th>
+              <th style={{ padding: '16px 24px', color: '#6b7280', fontWeight: 600, width: '15%' }}>หมวดหมู่</th>
+              <th style={{ padding: '16px 24px', color: '#6b7280', fontWeight: 600, width: '15%' }}>ราคา</th>
+              <th style={{ padding: '16px 24px', color: '#6b7280', fontWeight: 600, width: '15%' }}>สต็อก (Stock)</th>
+              <th style={{ padding: '16px 24px', color: '#6b7280', fontWeight: 600, width: '10%' }}>สถานะ</th>
+              <th style={{ padding: '16px 24px', color: '#6b7280', fontWeight: 600, textAlign: 'right', width: '15%' }}>จัดการ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredMenu.length > 0 ? filteredMenu.map((item, index) => {
+              const catStyle = getCategoryStyle(item.category);
+              const stock = stockOverrides[item.id] ?? null;
+              return (
+                <tr key={item.id} style={{ borderBottom: index === filteredMenu.length - 1 ? 'none' : '1px solid #f3f4f6', opacity: item.isActive ? 1 : 0.5 }}>
+                  <td style={{ padding: '16px 24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <div style={{ width: '44px', height: '44px', borderRadius: '8px', background: '#f3f4f6', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {item.imgSrc ? <img src={item.imgSrc} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: '20px' }}>☕️</span>}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, color: '#111827', marginBottom: '2px', textDecoration: item.isActive ? 'none' : 'line-through' }}>{item.name}</div>
+                        <div style={{ fontSize: '12px', color: '#9ca3af', fontFamily: 'monospace' }}>SKU-{String(item.id).padStart(4, '0')}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td style={{ padding: '16px 24px' }}>
+                    <span style={{ background: catStyle.bg, color: catStyle.color, padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600 }}>{catStyle.label}</span>
+                  </td>
+                  <td style={{ padding: '16px 24px', fontWeight: 600, color: '#374151' }}>฿ {item.price.toFixed(2)}</td>
+                  <td style={{ padding: '16px 24px', fontWeight: 600, color: stock === 0 ? '#ef4444' : '#374151' }}>
+                    {stock != null ? `${stock} ชิ้น` : <span style={{ color: '#9ca3af', fontWeight: 'normal' }}>ไม่จำกัด (∞)</span>}
+                  </td>
+                  <td style={{ padding: '16px 24px' }}>
+                    <label className="toggle-switch" style={{ margin: 0, transform: 'scale(0.85)', transformOrigin: 'left center' }}>
+                      <input type="checkbox" checked={item.isActive} onChange={() => toggleStatus(item.id)} disabled={busy} />
+                      <span className="slider"></span>
+                    </label>
+                  </td>
+                  <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                      <button onClick={() => onEditMenu && onEditMenu(item)} style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="ตั้งค่าเมนู">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+                      </button>
+                      <button onClick={() => handleOpenStockModal(item)} style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#fff', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="อัปเดตสต็อก">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            }) : (
+              <tr><td colSpan="6" style={{ padding: '48px', textAlign: 'center', color: '#9ca3af' }}>ไม่พบรายการเมนูในหมวดหมู่นี้</td></tr>
+            )}
+          </tbody>
+        </table>
       </div>
+
+      {stockModalItem && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
+          <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', width: '320px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+            <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: 800, color: '#111827' }}>อัปเดตสต็อก</h3>
+            <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#6b7280' }}>{stockModalItem.name}</p>
+            <label style={{ fontSize: '13px', fontWeight: 700, color: '#4b5563', display: 'block', marginBottom: '8px' }}>จำนวนสต็อก (เว้นว่าง = มีของตลอด)</label>
+            <input type="number" value={tempStockValue} onChange={(e) => setTempStockValue(e.target.value)} placeholder="เช่น 20" autoComplete="off" autoFocus style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #d1d5db', marginBottom: '24px', fontSize: '14px', outline: 'none', background: '#fff', color: '#111827' }} />
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setStockModalItem(null)} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#f3f4f6', color: '#4b5563', fontWeight: 600, cursor: 'pointer' }}>ยกเลิก</button>
+              <button onClick={handleSaveStock} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#f59e0b', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>อัปเดตสต็อก</button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

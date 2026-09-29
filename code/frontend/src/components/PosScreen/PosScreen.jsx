@@ -7,6 +7,8 @@ import PromotionView from "./PromotionView";
 import { AddPromotionModal } from "./AddPromotionModal";
 import MenuManagementView from "./MenuManagementView";
 import { SelectPromotionModal } from "./SelectPromotionModal";
+import AddonManagementView from "./AddonManagementView";
+import MenuConfigModal from "./MenuConfigModal";
 import { listProducts, createProduct } from "../../api/products";
 import { getCategories } from "../../api/categories";
 import { createPromotion, updatePromotion } from "../../api/promotions";
@@ -116,6 +118,13 @@ const Icon = {
       <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
+  Layers: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}>
+      <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+      <polyline points="2 12 12 17 22 12"/>
+      <polyline points="2 17 12 22 22 17"/>
+    </svg>
+  ),
 };
 
 /* ---------------------------------------------------------
@@ -129,9 +138,19 @@ const NAV_ITEMS = [
 
 const NAV_FOOTER = [
   { key: "manage", label: "จัดการเมนู", icon: Icon.Edit },
+  { key: "manage_addon", label: "จัดการท็อปปิ้ง", icon: Icon.Layers },
   { key: "promo", label: "โปรโมชั่น", icon: Icon.Tag },
   { key: "dashboard", label: "Dashboard", icon: Icon.Grid },
-  { key: "settings", label: "ตั้งค่า", icon: Icon.Gear },
+];
+
+const INITIAL_GLOBAL_ADDONS = [
+  { id: 'shot', label: 'เพิ่มช็อตกาแฟ', desc: '+Extra Shot', price: 20, isActive: true, category: 'coffee' },
+  { id: 'whip', label: 'วิปครีม', desc: '+Whipped Cream', price: 15, isActive: true, category: 'all' },
+  { id: 'boba', label: 'ไข่มุก', desc: '+Tapioca Pearls', price: 10, isActive: true, category: 'tea' },
+  { id: 'jelly', label: 'บุกบราวน์ชูการ์', desc: '+Brown Sugar Jelly', price: 15, isActive: true, category: 'tea' },
+  { id: 'pudding', label: 'พุดดิ้งไข่', desc: '+Egg Pudding', price: 15, isActive: true, category: 'tea' },
+  { id: 'oatmilk', label: 'นมโอ๊ต', desc: '+Oat Milk', price: 15, isActive: true, category: 'all' },
+  { id: 'vanilla', label: 'วานิลลาไซรัป', desc: '+Vanilla Syrup', price: 15, isActive: false, category: 'coffee' },
 ];
 
 export default function PosScreen() {
@@ -146,6 +165,8 @@ export default function PosScreen() {
   const [selectedItemForModal, setSelectedItemForModal] = useState(null);
   const [selectedTeaForModal, setSelectedTeaForModal] = useState(null);
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
+  const [editingConfigItem, setEditingConfigItem] = useState(null);
+  const [globalAddons, setGlobalAddons] = useState(INITIAL_GLOBAL_ADDONS);
 
   const [isAddPromoModalOpen, setIsAddPromoModalOpen] = useState(false);
   const [isSelectPromoModalOpen, setIsSelectPromoModalOpen] = useState(false);
@@ -255,6 +276,13 @@ export default function PosScreen() {
     }
   };
 
+  const handleSaveMenuConfig = (id, data) => {
+    setMenu((prev) => prev.map((item) =>
+      item.id === id ? { ...item, config: data.config, price: data.price, name: data.name } : item
+    ));
+    setEditingConfigItem(null);
+  };
+
   const changeMenuQty = (id, delta) => {
     setMenu((prev) =>
       prev.map((item) =>
@@ -280,29 +308,14 @@ export default function PosScreen() {
 
   return (
     <div className="pos">
-      <header className="pos-header">
-        <div className="pos-brand">
-          <div className="pos-brand__logo">EP</div>
-          <div>
-            <div className="pos-brand__title">Easy POS Studio</div>
-            <div className="pos-brand__subtitle">สาขาหลัก • Terminal 01</div>
-          </div>
-        </div>
-
-        <div className="pos-cashier">
-          <div className="pos-cashier__text">
-            <div className="pos-cashier__name">{cashierName}</div>
-            <div className="pos-cashier__status">
-              <span className="pos-dot pos-dot--online" />
-              ออนไลน์
-            </div>
-          </div>
-          <div className="pos-cashier__avatar">
-            <Icon.User />
-          </div>
-          <Icon.Chevron className="pos-cashier__chevron" />
-        </div>
-      </header>
+      <style>{`
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus,
+        input:-webkit-autofill:active {
+          -webkit-box-shadow: 0 0 0 30px white inset !important;
+        }
+      `}</style>
 
       <div className="pos-content">
         <aside className="pos-sidebar">
@@ -335,24 +348,30 @@ export default function PosScreen() {
 
         {/* -------- Main column -------- */}
         <div className="pos-main">
-          <div className="pos-body" style={{ flexDirection: (activeNav === "promo" || activeNav === "manage") ? "column" : "row" }}>
+          <div className="pos-body" style={{ flexDirection: (activeNav === "promo" || activeNav === "manage" || activeNav === "manage_addon") ? "column" : "row" }}>
 
-            {/* โชว์หน้าโปรโมชั่น (เต็มจอ) */}
-            {activeNav === "promo" ? (
+            {activeNav === "manage_addon" ? (
+              <AddonManagementView
+                addons={globalAddons}
+                onToggleStatus={(id) => setGlobalAddons((prev) => prev.map((a) => a.id === id ? { ...a, isActive: !a.isActive } : a))}
+                onAddAddon={(newAddon) => setGlobalAddons((prev) => [...prev, newAddon])}
+              />
+            ) :
+
+            activeNav === "promo" ? (
               <PromotionView
                 onOpenAddPromoModal={() => { setEditingPromo(null); setIsAddPromoModalOpen(true); }}
                 onEditPromo={(promo) => { setEditingPromo(promo); setIsAddPromoModalOpen(true); }}
               />
             ) :
 
-            /* โชว์หน้าจัดการเมนู (เต็มจอ โชว์ทุกหมวด) */
             activeNav === "manage" ? (
               <MenuManagementView
                 onOpenAddMenuModal={() => setIsAddMenuOpen(true)}
-                onEditMenu={(item) => alert(`แก้ไข "${item.name}" — ยังไม่ได้ทำ edit modal`)}
+                onEditMenu={(item) => setEditingConfigItem(item)}
               />
             ) :
-            
+
             /* โชว์หน้าแคชเชียร์ขายของปกติ (โชว์เฉพาะหมวดที่เลือก + มีใบเสร็จ) */
             (
               <>
@@ -543,16 +562,28 @@ export default function PosScreen() {
       {selectedItemForModal && (
         <CoffeeModal
           item={selectedItemForModal}
+          globalAddons={globalAddons}
           onClose={() => setSelectedItemForModal(null)}
-          onAddToCart={(customizedItem) => { setCart((prev) => [...prev, { ...customizedItem, productId: customizedItem.id, id: Date.now() + Math.random() }]); }}
+          onAddToCart={(customizedItem) => { setCart((prev) => [...prev, { ...customizedItem, productId: selectedItemForModal.id, id: Date.now() + Math.random() }]); }}
         />
       )}
 
       {selectedTeaForModal && (
         <TeaModal
           item={selectedTeaForModal}
+          globalAddons={globalAddons}
           onClose={() => setSelectedTeaForModal(null)}
-          onAddToCart={(customizedItem) => { setCart((prev) => [...prev, { ...customizedItem, productId: customizedItem.id, id: Date.now() + Math.random() }]); }}
+          onAddToCart={(customizedItem) => { setCart((prev) => [...prev, { ...customizedItem, productId: selectedTeaForModal.id, id: Date.now() + Math.random() }]); }}
+        />
+      )}
+
+      {editingConfigItem && (
+        <MenuConfigModal
+          item={editingConfigItem}
+          globalAddons={globalAddons}
+          onAddGlobalAddon={(newAddon) => setGlobalAddons((prev) => [...prev, newAddon])}
+          onClose={() => setEditingConfigItem(null)}
+          onSave={handleSaveMenuConfig}
         />
       )}
 

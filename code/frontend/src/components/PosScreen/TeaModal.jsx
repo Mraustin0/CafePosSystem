@@ -1,238 +1,243 @@
 import React, { useState } from "react";
-import "./TeaModal.css";
+import "./AddNewItemModal.css"; // หรือไฟล์ CSS ที่ใช้จัดการหน้าต่าง Modal นี้
 
-const SERVING_TYPES = [
-  { id: "iced", label: "เย็น (Iced)", priceDelta: 0 },
-  { id: "hot", label: "ร้อน (Hot)", priceDelta: 0 },
-  { id: "frappe", label: "ปั่น (Frappe +฿15)", priceDelta: 15 },
-];
+// โครงสร้างสำรอง กรณีแอดมินยังไม่เคยกดเซ็ต Config เมนูชานี้
+const FALLBACK_TEA_CONFIG = {
+  serving: [
+    { id: 'iced', label: 'เย็น (Iced)', price: 0, active: true },
+    { id: 'hot', label: 'ร้อน (Hot)', price: 0, active: true },
+    { id: 'frappe', label: 'ปั่น (Frappe +฿15)', price: 15, active: true }
+  ],
+  sweetness: [
+    { label: '100%', active: true }, { label: '75%', active: true }, 
+    { label: '50%', active: true }, { label: '25%', active: true }, { label: '0%', active: true }
+  ],
+  addonIds: ['boba', 'jelly', 'pudding'] // สำรองให้มีไข่มุก บุก พุดดิ้ง
+};
 
-const SWEETNESS_LEVELS = [
-  { id: "100", label: "100%", desc: "หวานปกติ (100%)" },
-  { id: "75", label: "75%", desc: "หวาน 75% (หวานกำลังดี)" },
-  { id: "50", label: "50%", desc: "หวาน 50% (หวานน้อย)" },
-  { id: "25", label: "25%", desc: "หวาน 25% (หวานน้อยมาก)" },
-  { id: "0", label: "0%", desc: "ไม่หวานเลย (0%)" },
-];
-
-const TOPPINGS = [
-  { id: "honey_konjac", title: "บุกน้ำผึ้ง (+Honey Konjac Jelly)", subtitle: "เพิ่มเนื้อสัมผัสหนึบและกลิ่นหอมน้ำผึ้งธรรมชาติ", priceDelta: 15 },
-  { id: "whipped_cream", title: "วิปครีม (+Whipped Cream)", subtitle: "ครีมสดตีฟูเพื่อความละมุน", priceDelta: 15 },
-  { id: "milk_pudding", title: "พุดดิ้งนมสด (+Fresh Milk Pudding)", subtitle: "เนื้อพุดดิ้งเนียนนุ่ม กลิ่นนมสดแท้", priceDelta: 20 },
-  { id: "grass_jelly", title: "เฉาก๊วย (+Grass Jelly)", subtitle: "เฉาก๊วยแท้เนื้อสัมผัสเหนียวนุ่ม", priceDelta: 15 },
-  { id: "aloe_vera", title: "ว่านหางจระเข้ (+Aloe Vera)", subtitle: "ว่านหางจระเข้ในน้ำเชื่อมเพื่อความสดชื่น", priceDelta: 15 },
-  { id: "brown_sugar_boba", title: "ไข่มุกบราวน์ชูการ์ (+Brown Sugar Boba)", subtitle: "ไข่มุกต้มสุกผสานน้ำตาลทรายแดง", priceDelta: 15 },
-  { id: "sago", title: "สาคู (+Sago)", subtitle: "เม็ดสาคูต้มสุกเนื้อนุ่มลื่น", priceDelta: 10 },
-  { id: "chia_seeds", title: "เมล็ดเจีย (+Chia Seeds)", subtitle: "เมล็ดเจียออร์แกนิกอุดมด้วยคุณค่าทางโภชนาการ", priceDelta: 15 },
-];
-
-const QUICK_NOTES = ["+ แยกน้ำแข็ง", "+ หวานน้อยมาก", "+ นมโอ๊ต (+Oat Milk)"];
-
-export default function TeaModal({ item, onClose, onAddToCart }) {
-  const [serving, setServing] = useState("iced");
-  const [sweetness, setSweetness] = useState("75");
-  const [selectedToppings, setSelectedToppings] = useState([]);
+// 👉 รับ props globalAddons มาเพื่อเทียบเช็คสถานะท็อปปิ้ง
+export default function TeaModal({ item, onClose, onAddToCart, globalAddons = [] }) {
+  // ดึง Config ที่แอดมินตั้งไว้ ถ้าไม่มีให้ใช้ตัวสำรอง
+  const config = item.config || FALLBACK_TEA_CONFIG;
   
-  // แยกระบบโน้ตเป็น 2 ส่วน: ข้อความที่พิมพ์เอง กับ แท็กที่กดเลือก
-  const [customRequest, setCustomRequest] = useState("");
-  const [activeChips, setActiveChips] = useState([]);
+  // กรองเอาเฉพาะ Serving และ Sweetness ที่แอดมินเปิด "Active" ไว้ มาใช้งาน
+  const activeServing = config.serving?.filter(s => s.active) || [];
+  const activeSweetness = config.sweetness?.filter(s => s.active) || [];
   
+  // 👉 หัวใจสำคัญ: กรอง Add-ons จากถังกลาง โดยเอาเฉพาะที่ 
+  // 1. เมนูนี้ตั้งค่าผูกไว้ (อยู่ใน config.addonIds)
+  // 2. สถานะในถังกลาง ต้อง "เปิดขายอยู่" (a.isActive === true)
+  const activeAddons = globalAddons.filter(a => 
+    (config.addonIds || []).includes(a.id) && a.isActive
+  );
+
+  // State สำหรับตะกร้าลูกค้า
+  const [selectedServing, setSelectedServing] = useState(activeServing[0]?.id || null);
+  const [selectedSweetness, setSelectedSweetness] = useState("100%");
+  const [selectedAddons, setSelectedAddons] = useState([]);
+  const [note, setNote] = useState("");
   const [quantity, setQuantity] = useState(1);
 
-  if (!item) return null; 
-
-  const basePrice = item.price || 65;
-
-  const getSweetnessLabel = (val) => {
-    return SWEETNESS_LEVELS.find((s) => s.id === val)?.desc || `${val}%`;
+  // ฟังก์ชันติ๊กเลือก Add-on เข้าตะกร้า
+  const toggleAddon = (id) => {
+    setSelectedAddons(prev => prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]);
   };
 
-  const toggleTopping = (id) => {
-    setSelectedToppings((prev) =>
-      prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]
-    );
-  };
-
-  // ฟังก์ชันกดยืด-หด Auto message
-  const toggleChip = (chip) => {
-    setActiveChips((prev) => 
-      prev.includes(chip) ? prev.filter(c => c !== chip) : [...prev, chip]
-    );
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && customRequest.trim() !== '') {
-      e.preventDefault(); 
-      const newTag = customRequest.trim();
-      if (!activeChips.includes(newTag)) {
-        setActiveChips([...activeChips, newTag]);
+  const handleAddToCart = () => {
+    // 1. คำนวณราคา Base Price จากไอเทมโดยตรง
+    const basePrice = item.price || 0;
+    const servingData = activeServing.find(s => s.id === selectedServing);
+    const servingPrice = servingData ? servingData.price : 0;
+    
+    // คำนวณราคาท็อปปิ้งรวม
+    let addonsPrice = 0;
+    const addonDetails = [];
+    selectedAddons.forEach(id => {
+      const ad = activeAddons.find(a => a.id === id);
+      if (ad) {
+        addonsPrice += ad.price;
+        addonDetails.push(ad.label);
       }
-      setCustomRequest(""); 
-    }
-  };
+    });
 
-  const servingDelta = SERVING_TYPES.find((s) => s.id === serving)?.priceDelta || 0;
-  const addOnDelta = TOPPINGS
-    .filter((a) => selectedToppings.includes(a.id))
-    .reduce((sum, a) => sum + a.priceDelta, 0);
-  const totalPrice = (basePrice + servingDelta + addOnDelta) * quantity;
+    const finalPrice = (basePrice + servingPrice + addonsPrice) * quantity;
+    
+    // 2. จัดรูปแบบข้อความรายละเอียดเพื่อโชว์ในบิล
+    const servingLabel = servingData ? servingData.label.split(' ')[0] : "";
+    const detailString = `${servingLabel} • หวาน ${selectedSweetness}`;
+    const extrasString = addonDetails.length > 0 ? addonDetails.join(", ") : "ไม่มีเพิ่มเติม";
 
-  const handleConfirm = () => {
-    // นำแท็กที่เลือก + ข้อความที่พิมพ์ มารวมกัน
-    const finalNote = [
-      ...activeChips.map(chip => chip.replace(/^\+\s*/, "")), 
-      customRequest
-    ].filter(Boolean).join(", ");
-
+    // 3. ส่งข้อมูลลงตะกร้า
     onAddToCart({
-      ...item,
+      id: Date.now(),
+      name: item.name,
+      price: finalPrice / quantity, 
       qty: quantity,
-      price: totalPrice / quantity,
-      detail: `${SERVING_TYPES.find(s=>s.id===serving).label} • ${getSweetnessLabel(sweetness)}`,
-      extras: selectedToppings.map(id => TOPPINGS.find(a=>a.id===id).title).join(", "),
-      note: finalNote ? `โน้ต: ${finalNote}` : "",
+      detail: detailString,
+      extras: extrasString,
+      note: note ? `โน้ต: ${note}` : "",
       isNew: true
     });
+    
     onClose();
   };
 
+  // คำนวณราคาสุทธิแบบ Real-time เพื่อโชว์บนปุ่ม
+  const currentBasePrice = item.price || 0;
+  const currentServingPrice = activeServing.find(s => s.id === selectedServing)?.price || 0;
+  let currentAddonPrice = 0;
+  selectedAddons.forEach(id => {
+    const ad = activeAddons.find(a => a.id === id);
+    if (ad) currentAddonPrice += ad.price;
+  });
+  const currentTotalPrice = (currentBasePrice + currentServingPrice + currentAddonPrice) * quantity;
+
   return (
-    <div className="tea-modal-overlay">
-      <div className="tea-modal">
-        {/* Header */}
-        <header className="tea-header">
-          <div className="tea-header-left">
-            <div className="tea-icon-box">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M6 8v8a6 6 0 0 0 12 0V8"/><path d="M4 8h16"/><path d="M8 8 9 3h6l1 5"/><circle cx="10" cy="15" r="1"/><circle cx="14" cy="14" r="1"/><circle cx="12" cy="17" r="1"/>
-              </svg>
+    <div className="add-modal-overlay" style={{ zIndex: 1100 }}>
+      <div className="add-modal" style={{ maxWidth: '800px', backgroundColor: '#fff', borderRadius: '24px', overflow: 'hidden', fontFamily: "'Prompt', sans-serif" }}>
+        
+        {/* Header ของเมนูชา */}
+        <div style={{ padding: '24px', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{ width: '56px', height: '56px', borderRadius: '12px', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
+               {item.imgSrc ? <img src={item.imgSrc} alt={item.name} style={{width:'100%', height:'100%', borderRadius:'12px', objectFit:'cover'}} /> : '🍵'}
             </div>
             <div>
-              <div className="tea-title-row">
-                <h2 className="tea-title">{item.name || "ชาไทยพรีเมียม / Artisan Thai Tea"}</h2>
-                <span className="tea-badge">Artisan Tea</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <h2 style={{ fontSize: '20px', fontWeight: 800, margin: 0, color: '#111827' }}>{item.name}</h2>
+                <span style={{ fontSize: '11px', background: '#ecfdf5', color: '#059669', padding: '2px 8px', borderRadius: '100px', fontWeight: 600 }}>Tea Menu</span>
               </div>
-              <p className="tea-base-price">Base Price: ฿{basePrice.toFixed(2)}</p>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: '#059669' }}>Base Price: ฿{item.price}</div>
             </div>
           </div>
-          <button className="tea-close-btn" onClick={onClose}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          <button onClick={onClose} style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#f3f4f6', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6b7280' }}>
+            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
-        </header>
-
-        {/* Body */}
-        <div className="tea-body">
-          <section>
-            <h3 className="tea-section-title">1. รูปแบบเครื่องดื่ม / SERVING TYPE <span className="tea-req">*</span></h3>
-            <div className="tea-pill-row">
-              {SERVING_TYPES.map((opt) => (
-                <button key={opt.id} className={`tea-pill ${serving === opt.id ? "active" : ""}`} onClick={() => setServing(opt.id)}>
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <div className="tea-section-head">
-              <h3 className="tea-section-title">2. ระดับความหวาน / SWEETNESS LEVEL</h3>
-              <span className="tea-head-note">{getSweetnessLabel(sweetness)}</span>
-            </div>
-            <div className="tea-pill-row">
-              {SWEETNESS_LEVELS.map((opt) => (
-                <button key={opt.id} className={`tea-sweet-pill ${sweetness === opt.id ? "active" : ""}`} onClick={() => setSweetness(opt.id)}>
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <h3 className="tea-section-title">3. ท็อปปิ้งชา & ตัวเลือกเสริม / TEA TOPPINGS & ADD-ONS</h3>
-            <div className="tea-addon-list">
-              {TOPPINGS.map((opt) => {
-                const isChecked = selectedToppings.includes(opt.id);
-                const isFree = opt.priceDelta === 0;
-                return (
-                  <div key={opt.id} className={`tea-addon ${isChecked ? "checked" : ""}`} onClick={() => toggleTopping(opt.id)}>
-                    <span className="tea-checkbox">
-                      {isChecked && (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M20 6 9 17l-5-5"/>
-                        </svg>
-                      )}
-                    </span>
-                    <div className="tea-addon-info">
-                      <span className="tea-addon-title">{opt.title}</span>
-                      <span className="tea-addon-sub">{opt.subtitle}</span>
-                    </div>
-                    <span className={`tea-addon-price ${isFree ? "free" : ""}`}>
-                      {isFree ? "Free" : `+฿${opt.priceDelta}`}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* 4. Special Requests */}
-          <section>
-            <h3 className="tea-section-title">4. โน้ตพิเศษ / SPECIAL REQUESTS</h3>
-            
-            {/* กล่องข้อความแบบมี Tag ดันเข้าไปอยู่ข้างใน */}
-            <div className="tea-input-container" onClick={() => document.getElementById('tea-note-input').focus()}>
-              {activeChips.map((chip, idx) => (
-                <span key={idx} className="tea-inner-tag">
-                  {chip}
-                  <span className="tea-inner-tag-close" onClick={(e) => { 
-                    e.stopPropagation(); 
-                    toggleChip(chip); 
-                  }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                  </span>
-                </span>
-              ))}
-              <input 
-                id="tea-note-input"
-                type="text" 
-                className="tea-inner-input" 
-                placeholder={activeChips.length === 0 ? "พิมพ์โน้ตอื่นๆ แล้วกด Enter..." : "พิมพ์เพิ่มแล้วกด Enter..."} 
-                value={customRequest} 
-                onChange={(e) => setCustomRequest(e.target.value)} 
-                onKeyDown={handleKeyDown} 
-              />
-            </div>
-
-            {/* ปุ่มช้อยส์ด้านล่าง */}
-            <div className="tea-chip-row">
-              {QUICK_NOTES.map((chip, idx) => {
-                const isActive = activeChips.includes(chip);
-                return (
-                  <button key={idx} className={`tea-chip ${isActive ? "is-active" : ""}`} onClick={() => toggleChip(chip)}>
-                    {chip}
-                  </button>
-                )
-              })}
-            </div>
-          </section>
         </div>
 
-        {/* Footer */}
-        <footer className="tea-footer">
-          <div className="tea-qty">
-            <button className="tea-qty-btn" onClick={() => setQuantity(Math.max(1, quantity - 1))}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14"/></svg>
+        {/* Body ตัวเลือก */}
+        <div className="custom-scrollbar" style={{ padding: '24px', maxHeight: '60vh', overflowY: 'auto' }}>
+          
+          {/* SERVING TYPE */}
+          {activeServing.length > 0 && (
+            <div style={{ marginBottom: '32px' }}>
+              <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#6b7280', marginBottom: '12px', letterSpacing: '0.05em' }}>1. รูปแบบเครื่องดื่ม / SERVING TYPE <span style={{color: '#059669'}}>*</span></h3>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                {activeServing.map(s => (
+                  <button 
+                    key={s.id} 
+                    onClick={() => setSelectedServing(s.id)}
+                    style={{ 
+                      padding: '10px 24px', borderRadius: '100px', fontSize: '14px', fontWeight: s.id === selectedServing ? 700 : 500, cursor: 'pointer', transition: '0.2s',
+                      background: s.id === selectedServing ? '#ecfdf5' : '#fff',
+                      border: s.id === selectedServing ? '2px solid #10b981' : '1px solid #d1d5db',
+                      color: s.id === selectedServing ? '#059669' : '#4b5563'
+                    }}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* SWEETNESS LEVEL */}
+          {activeSweetness.length > 0 && (
+            <div style={{ marginBottom: '32px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#6b7280', margin: 0, letterSpacing: '0.05em' }}>2. ระดับความหวาน / SWEETNESS LEVEL</h3>
+                <span style={{ fontSize: '14px', fontWeight: 700, color: '#059669' }}>{selectedSweetness === '100%' ? 'หวานปกติ (100%)' : selectedSweetness}</span>
+              </div>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                {activeSweetness.map(s => (
+                  <button 
+                    key={s.label}
+                    onClick={() => setSelectedSweetness(s.label)}
+                    style={{ 
+                      flex: 1, minWidth: '60px', padding: '12px 0', borderRadius: '8px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', transition: '0.2s',
+                      background: s.label === selectedSweetness ? '#10b981' : '#fff',
+                      border: s.label === selectedSweetness ? '2px solid #10b981' : '1px solid #d1d5db',
+                      color: s.label === selectedSweetness ? '#fff' : '#4b5563'
+                    }}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ADD-ONS (กรองจากถังกลางมาแล้ว) */}
+          {activeAddons.length > 0 && (
+            <div style={{ marginBottom: '32px' }}>
+              <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#6b7280', marginBottom: '12px', letterSpacing: '0.05em' }}>3. ท็อปปิ้งเพิ่มเติม / TOPPINGS & ADD-ONS</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {activeAddons.map(ad => (
+                  <div 
+                    key={ad.id} 
+                    onClick={() => toggleAddon(ad.id)}
+                    style={{ 
+                      padding: '16px', borderRadius: '12px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'all 0.2s',
+                      border: selectedAddons.includes(ad.id) ? '2px solid #10b981' : '1px solid #e5e7eb',
+                      background: selectedAddons.includes(ad.id) ? '#ecfdf5' : '#fff'
+                    }}
+                  >
+                    <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={selectedAddons.includes(ad.id)} 
+                        readOnly 
+                        style={{ accentColor: '#10b981', width: '24px', height: '24px', borderRadius: '6px', cursor: 'pointer' }} 
+                      />
+                      <div>
+                        <div style={{ fontSize: '15px', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>{ad.label}</div>
+                        <div style={{ fontSize: '13px', color: '#6b7280' }}>{ad.desc}</div>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '15px', fontWeight: 700, color: ad.price === 0 ? '#10b981' : '#374151' }}>
+                      {ad.price === 0 ? 'Free' : `+฿${ad.price}`}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* SPECIAL REQUESTS */}
+          <div>
+            <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#6b7280', marginBottom: '12px', letterSpacing: '0.05em' }}>4. โน้ตพิเศษ / SPECIAL REQUESTS</h3>
+            <textarea 
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="ระบุข้อความเพิ่มเติมถึงบาริสต้า (เช่น แยกน้ำแข็ง, ไม่รับหลอด)..."
+              style={{ width: '100%', padding: '16px', borderRadius: '12px', border: '1px solid #d1d5db', fontSize: '14px', resize: 'none', height: '80px', fontFamily: 'inherit' }}
+            />
+          </div>
+
+        </div>
+
+        {/* Footer สั่งซื้อ */}
+        <div style={{ padding: '24px', borderTop: '1px solid #f3f4f6', background: '#fff', display: 'flex', gap: '24px' }}>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', border: '1px solid #d1d5db', borderRadius: '12px', padding: '4px' }}>
+            <button onClick={() => setQuantity(Math.max(1, quantity - 1))} style={{ width: '40px', height: '40px', background: '#fff', border: 'none', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" /></svg>
             </button>
-            <span className="tea-qty-value">{quantity}</span>
-            <button className="tea-qty-btn" onClick={() => setQuantity(quantity + 1)}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            <span style={{ width: '32px', textAlign: 'center', fontSize: '16px', fontWeight: 700, color: '#111827' }}>{quantity}</span>
+            <button onClick={() => setQuantity(quantity + 1)} style={{ width: '40px', height: '40px', background: '#fff', border: 'none', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14m-7-7h14" /></svg>
             </button>
           </div>
-          <button className="tea-add-btn" onClick={handleConfirm}>
+
+          <button 
+            onClick={handleAddToCart}
+            style={{ flex: 1, background: '#10b981', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 24px', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)' }}
+          >
             <span>เพิ่มลงรายการสั่งซื้อ (Add to Order)</span>
-            <span>฿{totalPrice.toLocaleString()}</span>
+            <span style={{ fontSize: '18px' }}>฿{currentTotalPrice}</span>
           </button>
-        </footer>
+        </div>
+
       </div>
     </div>
   );

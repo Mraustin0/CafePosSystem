@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 
-export default function PaymentModal({ onClose, cart = [], onConfirmPayment, orderId = "A-108" }) {
-  const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+export default function PaymentModal({ onClose, cart = [], onConfirmPayment, orderId = "A-108", subtotal, discountAmount = 0, promoName = null }) {
+  const cartSubtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+  const effectiveSubtotal = subtotal != null ? subtotal : cartSubtotal;
+  const totalAmount = Math.max(0, effectiveSubtotal - discountAmount);
   const itemCount = cart.length;
   const quantityCount = cart.reduce((sum, item) => sum + item.qty, 0);
   
@@ -266,14 +268,14 @@ export default function PaymentModal({ onClose, cart = [], onConfirmPayment, ord
             <div className="order-summary-footer">
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', color: '#4b5563', marginBottom: '12px' }}>
                 <span>ยอดรวมย่อย (Subtotal)</span>
-                <span style={{ fontWeight: 700, color: '#111827' }}>฿{totalAmount.toFixed(2)}</span>
+                <span style={{ fontWeight: 700, color: '#111827' }}>฿{effectiveSubtotal.toFixed(2)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', color: '#00694b', marginBottom: '12px' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>
-                  ส่วนลดพิเศษ (Promotion)
+                  ส่วนลดพิเศษ (Promotion){promoName ? ` — ${promoName}` : ''}
                 </span>
-                <span>-฿0.00</span>
+                <span>-฿{discountAmount.toFixed(2)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#6b7280' }}>
                 <span>ภาษีมูลค่าเพิ่ม VAT 7% (รวมในราคาแล้ว)</span>

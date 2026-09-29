@@ -21,6 +21,23 @@ import { useAuth } from "../../auth/useAuth";
 
 // Backend category name -> UI nav key (Thana-nan's shape uses "coffee"/"tea"/"snack").
 const CATEGORY_TO_NAV = { Coffee: "coffee", Tea: "tea", Bakery: "snack" };
+
+// Default customization options — backend only stores product name/price/addons, so the UI
+// menus for serving/roast/sweetness are shared across products and populated from these
+// defaults every load. addOns are still driven by the backend association.
+const DEFAULT_SERVING = [
+  { id: 'iced', label: 'เย็น (Iced)', price: 0, active: true },
+  { id: 'hot', label: 'ร้อน (Hot)', price: 0, active: true },
+  { id: 'frappe', label: 'ปั่น (Frappe +฿15)', price: 15, active: true },
+];
+const DEFAULT_ROASTS = [
+  { id: 'medium', label: 'คั่วกลาง (Medium Roast)', desc: 'Nutty, Caramel, Balanced acidity', active: true },
+  { id: 'dark', label: 'คั่วเข้ม (Dark Roast)', desc: 'Bold, Smokey, Dark Chocolate', active: true },
+];
+const DEFAULT_SWEETNESS = [
+  { label: '100%', active: true }, { label: '75%', active: true },
+  { label: '50%', active: true }, { label: '25%', active: true }, { label: '0%', active: true },
+];
 const NAV_TO_CATEGORY = { coffee: "Coffee", tea: "Tea", snack: "Bakery" };
 
 /* ---------------------------------------------------------
@@ -166,6 +183,9 @@ export default function PosScreen() {
   const [isSelectPromoModalOpen, setIsSelectPromoModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [completedPaymentData, setCompletedPaymentData] = useState(null);
+  // P04: cache order id across payment retries — if createOrder succeeded but payOrder failed,
+  // the next confirm should retry payment on the same order (not create a duplicate).
+  const [pendingOrder, setPendingOrder] = useState(null);
 
   // 👉 State เก็บข้อมูลโปรโมชั่นที่ลูกค้าเลือก
   const [appliedPromo, setAppliedPromo] = useState(null);
@@ -186,7 +206,12 @@ export default function PosScreen() {
              : p.category?.name === "Tea" ? "tea"
              : p.category?.name === "Bakery" ? "snack" : "",
         active: p.active,
-        config: { addonIds: (p.addOns ?? []).map(a => a.id) },
+        config: {
+          serving: DEFAULT_SERVING,
+          roasts: p.category?.name === "Coffee" ? DEFAULT_ROASTS : [],
+          sweetness: DEFAULT_SWEETNESS,
+          addonIds: (p.addOns ?? []).map(a => a.id),
+        },
       }));
       setMenu(items);
       setLoadError(null);
@@ -238,34 +263,60 @@ export default function PosScreen() {
 
   const cashierName = user?.fullName || user?.username || "แคชเชียร์";
 
+  // P05: explicit method mapping — fail loud on unknown values instead of silently defaulting to CASH.
+  const METHOD_MAP = { cash: "CASH", promptpay: "QR_CODE", card: "CARD" };
+
   // Called from PaymentModal after user picks method + confirms. Wires PaymentModal UI to backend
   // (createOrder + applyDiscount + payOrder), then opens PaymentSuccessModal on success.
-  // paymentData shape from PaymentModal: { method: 'cash'|'promptpay', totalAmount, cashGiven, changeAmount }
+  // paymentData shape from PaymentModal: { method: 'cash'|'promptpay'|'card', totalAmount, cashGiven, changeAmount }
+  // P04: if createOrder+applyDiscount already succeeded on a prior attempt, reuse pendingOrder so
+  //      a payment retry doesn't create a duplicate order.
   const handleConfirmPayment = async (paymentData) => {
     if (cart.length === 0) return;
-    const method = paymentData.method === "promptpay" ? "QR_CODE" : "CASH";
-    const amountReceived = method === "CASH" ? Number(paymentData.cashGiven) : Number(paymentData.totalAmount);
+    const method = METHOD_MAP[paymentData.method];
+    if (!method) {
+      alert(`วิธีชำระเงินไม่รองรับ: ${paymentData.method}`);
+      return;
+    }
+    // P10: match backend BigDecimal scale=2 HALF_UP to avoid float precision mismatch on QR/CARD.
+    const rawAmount = method === "CASH" ? paymentData.cashGiven : paymentData.totalAmount;
+    const amountReceived = Number(Number(rawAmount).toFixed(2));
 
     setCheckoutBusy(true);
     try {
-      const byProduct = new Map();
-      for (const c of cart) {
-        const pId = c.productId ?? c.id;
-        const prev = byProduct.get(pId) ?? { productId: pId, quantity: 0, addOnIds: [] };
-        prev.quantity += c.qty;
-        byProduct.set(pId, prev);
-      }
-      let order = await createOrder([...byProduct.values()]);
-      if (appliedPromo && promoDiscount > 0) {
-        order = await applyDiscount(order.id, {
-          type: appliedPromo.discountType,
-          value: Number(appliedPromo.discountValue),
-        });
+      let order = pendingOrder;
+      if (!order) {
+        const byProduct = new Map();
+        for (const c of cart) {
+          const pId = c.productId ?? c.id;
+          const prev = byProduct.get(pId) ?? { productId: pId, quantity: 0, addOnIds: [] };
+          prev.quantity += c.qty;
+          byProduct.set(pId, prev);
+        }
+        order = await createOrder([...byProduct.values()]);
+        if (appliedPromo && promoDiscount > 0) {
+          order = await applyDiscount(order.id, {
+            type: appliedPromo.discountType,
+            value: Number(appliedPromo.discountValue),
+          });
+        }
+        setPendingOrder(order);
       }
       const payment = await payOrder(order.id, { method, amountReceived });
       setCurrentOrder({ ...order, payment });
+      setPendingOrder(null);
       setIsPaymentModalOpen(false);
-      setCompletedPaymentData({ ...paymentData, cart, order, payment });
+      // P06/P07/P09: hand PaymentSuccessModal the backend-authoritative values
+      // (change, orderNumber) plus the cashier from the session so the receipt reflects real data.
+      setCompletedPaymentData({
+        ...paymentData,
+        changeAmount: payment?.change != null ? Number(payment.change) : paymentData.changeAmount,
+        orderId: order?.orderNumber ?? paymentData.orderId,
+        cashierName: user?.username ?? user?.name ?? user?.email ?? 'Cashier',
+        cart,
+        order,
+        payment,
+      });
     } catch (err) {
       console.error("checkout failed:", err);
       alert(`Checkout ล้มเหลว (${err?.status ?? "no status"}): ${err?.message ?? err}`);
@@ -659,7 +710,10 @@ export default function PosScreen() {
       {isPaymentModalOpen && (
         <PaymentModal
           cart={cart}
-          onClose={() => setIsPaymentModalOpen(false)}
+          subtotal={subtotal}
+          discountAmount={promoDiscount}
+          promoName={appliedPromo?.title ?? appliedPromo?.name ?? null}
+          onClose={() => { setIsPaymentModalOpen(false); setPendingOrder(null); }}
           onConfirmPayment={handleConfirmPayment}
         />
       )}

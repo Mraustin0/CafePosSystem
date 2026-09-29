@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 export default function MenuManagementView({ menuItems, onToggleStatus, onDeleteMenu, onOpenAddMenuModal, onEditMenu, onUpdateStock }) {
   const [categoryFilter, setCategoryFilter] = useState('all');
 
-  // State สำหรับคุม Modal อัปเดตสต็อกด่วน
   const [stockModalItem, setStockModalItem] = useState(null);
   const [tempStockValue, setTempStockValue] = useState("");
 
@@ -14,9 +13,9 @@ export default function MenuManagementView({ menuItems, onToggleStatus, onDelete
 
   const getCategoryStyle = (cat) => {
     switch(cat) {
-      case 'coffee': return { bg: '#fef3c7', color: '#92400e', label: ' กาแฟ' };
-      case 'tea': return { bg: '#ecfdf5', color: '#059669', label: ' ชา' };
-      case 'snack': return { bg: '#ffedd5', color: '#c2410c', label: ' ขนม' };
+      case 'coffee': return { bg: '#fef3c7', color: '#92400e', label: '☕️ กาแฟ' };
+      case 'tea': return { bg: '#ecfdf5', color: '#059669', label: '🍵 ชา' };
+      case 'snack': return { bg: '#ffedd5', color: '#c2410c', label: '🥐 ขนม' };
       default: return { bg: '#f3f4f6', color: '#4b5563', label: 'ทั่วไป' };
     }
   };
@@ -37,6 +36,18 @@ export default function MenuManagementView({ menuItems, onToggleStatus, onDelete
   return (
     <div className="promo-view" style={{ width: '100%', display: 'flex', flexDirection: 'column', height: '100%' }}>
       
+      {/* 👇 เพิ่ม Style นี้เพื่อแก้ปัญหาพื้นหลังดำของ Input (ค้นหา) */}
+      <style>{`
+        .clean-search-input {
+          background-color: #ffffff !important;
+          color: #111827 !important;
+          -webkit-box-shadow: 0 0 0 30px white inset !important;
+        }
+        .clean-search-input::placeholder {
+          color: #9ca3af !important;
+        }
+      `}</style>
+
       <header className="promo-header" style={{ alignItems: 'center', marginBottom: '16px', flexShrink: 0, display: 'flex', justifyContent: 'space-between' }}>
         <div className="promo-header-info">
           <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 4px 0', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -48,9 +59,17 @@ export default function MenuManagementView({ menuItems, onToggleStatus, onDelete
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          
+          {/* 👉 แก้ช่องค้นหาตรงนี้ */}
           <div style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #d1d5db', borderRadius: '8px', padding: '8px 12px', width: '300px' }}>
             <svg width="16" height="16" fill="none" stroke="#9ca3af" strokeWidth="2" viewBox="0 0 24 24" style={{marginRight: '8px'}}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="text" placeholder="ค้นหาเมนู (Search menu)..." style={{ border: 'none', outline: 'none', width: '100%', fontSize: '14px' }} />
+            <input 
+              type="text" 
+              placeholder="ค้นหาเมนู (Search menu)..." 
+              className="clean-search-input"
+              autoComplete="off"
+              style={{ border: 'none', outline: 'none', width: '100%', fontSize: '14px', background: 'transparent' }} 
+            />
           </div>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#374151', fontSize: '14px', fontWeight: 600 }}>
@@ -68,9 +87,9 @@ export default function MenuManagementView({ menuItems, onToggleStatus, onDelete
         <div style={{ display: 'flex', gap: '8px' }}>
           {[
             { id: 'all', label: 'ทั้งหมด (All)' },
-            { id: 'coffee', label: ' กาแฟ' },
-            { id: 'tea', label: ' ชา' },
-            { id: 'snack', label: ' ขนม' }
+            { id: 'coffee', label: '☕️ กาแฟ' },
+            { id: 'tea', label: '🍵 ชา' },
+            { id: 'snack', label: '🥐 ขนม' }
           ].map(tab => (
             <button 
               key={tab.id}
@@ -157,17 +176,14 @@ export default function MenuManagementView({ menuItems, onToggleStatus, onDelete
                   <td style={{ padding: '16px 24px', textAlign: 'right' }}>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                       
-                      {/* 1. ปุ่มแก้ไขเมนู (ซ้ายสุด) */}
                       <button onClick={() => onEditMenu && onEditMenu(item)} style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: '0.2s' }} title="ตั้งค่า/แก้ไขเมนู">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
                       </button>
 
-                      {/* 👉 2. ปุ่มอัปเดตสต็อก (แทรกตรงกลาง) */}
                       <button onClick={() => handleOpenStockModal(item)} style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#fff', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: '0.2s' }} title="อัปเดตสต็อก">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
                       </button>
                       
-                      {/* 3. ปุ่มลบเมนู (ขวาสุด) */}
                       <button onClick={() => onDeleteMenu && onDeleteMenu(item.id)} style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#fff', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: '0.2s' }} title="ลบเมนู">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                       </button>
@@ -185,7 +201,6 @@ export default function MenuManagementView({ menuItems, onToggleStatus, onDelete
         </table>
       </div>
 
-      {/* 👉 Modal อัปเดตสต็อก (Quick Update) */}
       {stockModalItem && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
           <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', width: '320px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
@@ -203,6 +218,8 @@ export default function MenuManagementView({ menuItems, onToggleStatus, onDelete
               value={tempStockValue}
               onChange={(e) => setTempStockValue(e.target.value)}
               placeholder="เช่น 20"
+              autoComplete="off"
+              className="clean-search-input"
               style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #d1d5db', marginBottom: '24px', fontSize: '14px', outline: 'none' }}
               autoFocus
             />

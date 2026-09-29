@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import "./MenuConfigModal.css"; 
 
 const GET_DEFAULT_CONFIG = (category) => {
   if (category === 'tea') {
@@ -15,31 +14,26 @@ const GET_DEFAULT_CONFIG = (category) => {
   } else {
     return {
       serving: [{ id: 'iced', label: 'เย็น (Iced)', price: 0, active: true }, { id: 'hot', label: 'ร้อน (Hot)', price: 0, active: true }, { id: 'frappe', label: 'ปั่น (Frappe +฿15)', price: 15, active: true }],
-      roasts: [{ id: 'medium', label: 'คั่วกลาง (Medium Roast)', desc: 'Nutty, Caramel, Balanced acidity', active: true }, { id: 'dark', label: 'คั่วเข้ม (Dark Roast)', desc: 'Bold, Smokey, Dark Chocolate', active: false }],
+      roasts: [{ id: 'medium', label: 'คั่วกลาง (Medium Roast)', desc: 'Nutty, Caramel, Balanced acidity', active: true }, { id: 'dark', label: 'คั่วเข้ม (Dark Roast)', desc: 'Bold, Smokey, Dark Chocolate', active: true }],
       sweetness: [{ label: '100%', active: true }, { label: '75%', active: true }, { label: '50%', active: true }, { label: '25%', active: true }, { label: '0%', active: true }],
-      addonIds: ['shot'] 
+      addonIds: ['shot', 'whip', 'jelly', 'oatmilk'] 
     };
   }
 };
 
 const CheckIcon = () => (
-  <svg fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"></path></svg>
+  <svg fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24" width="14" height="14"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"></path></svg>
 );
 
 const PlusIcon = () => (
-  <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"></path></svg>
+  <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" width="16" height="16"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"></path></svg>
 );
 
 export default function MenuConfigModal({ item, onClose, onSave, globalAddons = [], onAddGlobalAddon }) {
   const [config, setConfig] = useState(item.config || GET_DEFAULT_CONFIG(item.category));
-  
-  // 👉 เพิ่ม State สำหรับเก็บค่า "ชื่อเมนู" และ "ราคา" ที่ถูกแก้ไข
   const [editedName, setEditedName] = useState(item.name);
   const [editedPrice, setEditedPrice] = useState(item.price);
   
-  const [showPrompt, setShowPrompt] = useState(null); 
-  const [promptData, setPromptData] = useState({ name: '', desc: '', price: '' });
-
   const toggleActive = (category, index) => {
     const newArr = [...config[category]];
     newArr[index].active = !newArr[index].active;
@@ -55,34 +49,6 @@ export default function MenuConfigModal({ item, onClose, onSave, globalAddons = 
     }
   };
 
-  const openPrompt = (type) => {
-    setPromptData({ name: '', desc: '', price: '' });
-    setShowPrompt(type);
-  };
-
-  const submitPrompt = () => {
-    if (!promptData.name) return;
-
-    if (showPrompt === 'roast') {
-      const newRoast = { id: Date.now().toString(), label: promptData.name, desc: promptData.desc, active: true };
-      setConfig({ ...config, roasts: [...config.roasts, newRoast] });
-    } else if (showPrompt === 'addon') {
-      const newGlobalAddon = { 
-        id: 'addon_' + Date.now(), 
-        label: promptData.name, 
-        desc: promptData.desc || `+${promptData.name}`, 
-        price: parseInt(promptData.price) || 0, 
-        isActive: true,
-        category: item.category 
-      };
-      
-      if (onAddGlobalAddon) onAddGlobalAddon(newGlobalAddon); 
-      setConfig({ ...config, addonIds: [...(config.addonIds || []), newGlobalAddon.id] });
-    }
-    setShowPrompt(null);
-  };
-
-  // 👉 อัปเดตฟังก์ชัน Save ให้ส่ง "ชื่อใหม่" กลับไปด้วย
   const handleSave = () => {
     if (!editedName.trim()) {
       alert("กรุณากรอกชื่อเมนู");
@@ -94,262 +60,343 @@ export default function MenuConfigModal({ item, onClose, onSave, globalAddons = 
   const activeServing = config.serving?.filter(s => s.active).length || 0;
   const activeRoasts = config.roasts?.filter(r => r.active).length || 0;
   const activeSweetness = config.sweetness?.filter(s => s.active).length || 0;
-  const activeAddonsCount = (config.addonIds || []).length;
-
+  
   const filteredGlobalAddons = globalAddons.filter(addon => 
     addon.category === 'all' || addon.category === item.category
   );
+  
+  const activeAddonsCount = filteredGlobalAddons.filter(addon => (config.addonIds || []).includes(addon.id)).length;
 
   return (
-    <div className="config-overlay">
-      <div className="config-modal" style={{ position: 'relative' }}>
+    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '24px' }}>
+      
+      <style>{`
+        .edit-modal-container {
+          background: #ffffff;
+          border-radius: 20px;
+          width: 100%;
+          max-width: 800px;
+          max-height: 90vh;
+          display: flex;
+          flex-direction: column;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+          font-family: 'Prompt', sans-serif;
+          overflow: hidden;
+        }
+        .edit-modal-header {
+          padding: 24px;
+          border-bottom: 1px solid #f3f4f6;
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+        }
+        .edit-modal-body {
+          padding: 24px;
+          overflow-y: auto;
+          flex: 1;
+        }
+        .edit-modal-footer {
+          padding: 20px 24px;
+          border-top: 1px solid #f3f4f6;
+          background: #f9fafb;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .edit-section {
+          margin-bottom: 32px;
+        }
+        .edit-section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-end;
+          margin-bottom: 12px;
+        }
+        .edit-section-title {
+          font-size: 14px;
+          font-weight: 700;
+          color: #374151;
+          margin: 0 0 4px 0;
+        }
+        .edit-section-subtitle {
+          font-size: 12px;
+          color: #9ca3af;
+          margin: 0;
+          font-weight: 400;
+        }
+        .edit-badge {
+          background: #ecfdf5;
+          color: #059669;
+          font-size: 12px;
+          font-weight: 600;
+          padding: 4px 10px;
+          border-radius: 20px;
+        }
+        .edit-grid-3 {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 12px;
+        }
+        .edit-grid-auto {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+        .edit-option-btn {
+          border: 1px solid #e5e7eb;
+          background: #ffffff;
+          padding: 12px 16px;
+          border-radius: 10px;
+          font-size: 14px;
+          font-weight: 600;
+          color: #4b5563;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          transition: all 0.2s;
+        }
+        .edit-option-btn.active {
+          border-color: #10b981;
+          color: #059669;
+          background: #ecfdf5;
+        }
+        .edit-addon-card {
+          border: 1px solid #e5e7eb;
+          border-radius: 12px;
+          padding: 16px;
+          background: #ffffff;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          transition: all 0.2s;
+          cursor: pointer;
+          min-height: 110px;
+        }
+        .edit-addon-card.active {
+          border-color: #10b981;
+        }
+        /* Toggle Switch CSS */
+        .custom-toggle {
+          position: relative;
+          width: 44px;
+          height: 24px;
+          background-color: #e5e7eb;
+          border-radius: 24px;
+          transition: 0.3s;
+        }
+        .custom-toggle::after {
+          content: '';
+          position: absolute;
+          top: 2px;
+          left: 2px;
+          width: 20px;
+          height: 20px;
+          background-color: white;
+          border-radius: 50%;
+          transition: 0.3s;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .custom-toggle.active {
+          background-color: #10b981;
+        }
+        .custom-toggle.active::after {
+          transform: translateX(20px);
+        }
+
+        /* 👇 CSS พิเศษสำหรับป้องกันพื้นหลังสีเทา */
+        .clean-input {
+            background-color: #ffffff !important; 
+            color: #111827 !important;
+            -webkit-box-shadow: 0 0 0 30px white inset !important;
+        }
+      `}</style>
+
+      <div className="edit-modal-container">
         
         {/* --- Header --- */}
-        <header className="config-header">
-          <div className="config-header-info" style={{ width: '100%' }}>
-            <div className="config-img-box">
-              {item.imgSrc ? <><img src={item.imgSrc} alt={item.name} /><div className="config-img-badge">CONFIG</div></> : <><div className="config-img-fallback">{item.category === 'tea' ? 'Tea' : item.category === 'snack' ? 'Snack' : 'Espresso'}</div><div className="config-img-badge">CONFIG</div></>}
+        <header className="edit-modal-header">
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '12px', border: '1px solid #10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981', background: '#ecfdf5' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 9h13a3 3 0 0 1 0 6h-1" /><path strokeLinecap="round" strokeLinejoin="round" d="M4 9v6a4 4 0 0 0 4 4h4a4 4 0 0 0 4-4V9" /></svg>
             </div>
-            <div style={{ flex: 1 }}>
-              
-              {/* 👉 แก้ไขให้ชื่อเมนูเป็น Input Field ที่พิมพ์ได้ */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <input 
-                  type="text" 
-                  value={editedName}
-                  onChange={(e) => setEditedName(e.target.value)}
-                  title="คลิกเพื่อแก้ไขชื่อเมนู"
-                  style={{ 
-                    fontSize: '1.5rem', fontWeight: 800, margin: 0, color: '#111827', 
-                    background: '#f9fafb', border: '1px dashed #9ca3af', borderRadius: '6px', 
-                    padding: '2px 8px', outline: 'none', width: '100%', maxWidth: '280px' 
-                  }}
-                />
-                <span className="config-badge">{item.category === 'coffee' ? 'Coffee Bar' : item.category === 'tea' ? 'Tea Menu' : 'Snack'}</span>
-                <span className="config-badge" style={{ background: '#ecfdf5', color: '#059669', borderColor: '#a7f3d0' }}>Config Mode</span>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#111827' }}>แก้ไขข้อมูลเมนู <span style={{color: '#6b7280', fontWeight: 500}}>(Edit Menu Item)</span></h2>
+                <span style={{ fontSize: '11px', background: '#ecfdf5', color: '#059669', padding: '2px 8px', borderRadius: '100px', fontWeight: 700 }}>SKU-{item.id.toString().padStart(4, '0')}</span>
               </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
-                <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  Base Price: 
-                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                    <span style={{ position: 'absolute', left: '8px', color: '#047857', fontWeight: 700 }}>฿</span>
-                    {/* 👉 ช่องราคา */}
-                    <input 
-                      type="number" 
-                      value={editedPrice} 
-                      onChange={(e) => setEditedPrice(e.target.value)} 
-                      title="คลิกเพื่อแก้ไขราคาตั้งต้น"
-                      style={{ 
-                        width: '70px', padding: '2px 8px 2px 20px', borderRadius: '6px', 
-                        border: '1px dashed #10b981', background: '#ecfdf5', color: '#047857', 
-                        fontWeight: 700, outline: 'none', fontSize: '14px' 
-                      }} 
-                    />
-                  </div>
-                </span>
-                <span style={{ color: '#d1d5db' }}>•</span>
-                <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                  โครงสร้างตัวเลือกเมนู (Menu Options Config) - สำหรับกำหนดตัวเลือกที่แสดงหน้าแคชเชียร์
-                </span>
-              </div>
+              <p style={{ fontSize: '13px', color: '#6b7280', margin: 0 }}>กำหนดชื่อเมนู ราคาเริ่มต้น และตั้งค่าตัวเลือกการสั่งซื้อสำหรับระบบ POS หน้าร้าน</p>
             </div>
           </div>
-          <button onClick={onClose} className="config-close-btn"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
+          <button onClick={onClose} style={{ background: '#f3f4f6', border: 'none', width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', cursor: 'pointer' }}>
+            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
         </header>
 
         {/* --- Body --- */}
-        <div className="config-body">
+        <div className="edit-modal-body custom-scrollbar">
           
-          {(item.category === 'coffee' || item.category === 'tea') && (
-            <section>
-              <div className="config-section-head">
-                <span className="config-label">รูปแบบเครื่องดื่ม / SERVING TYPE <span style={{ color: '#059669', fontWeight: 'normal', fontSize: '12px' }}>* (เลือกประเภทที่เปิดขาย)</span></span>
-                <span className="config-badge" style={{ background: '#ecfdf5', color: '#059669', borderColor: '#a7f3d0' }}>เปิดใช้งาน {activeServing}/{config.serving.length}</span>
+          {/* 1. Basic Info (Name & Price) */}
+          <div className="edit-section" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#374151', marginBottom: '8px' }}>ชื่อเมนู (ITEM NAME) <span style={{color: '#10b981'}}>*</span></label>
+              
+              {/* 👇 ปรับการรับค่า Input ที่นี่ */}
+              <input 
+                type="text" 
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                autoComplete="off"
+                className="clean-input"
+                style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1px solid #d1d5db', fontSize: '15px', fontWeight: 700, outline: 'none' }}
+              />
+              <p style={{ fontSize: '11px', color: '#9ca3af', margin: '6px 0 0 0' }}>ชื่อที่จะแสดงบนใบเสร็จและหน้าจอรับออเดอร์</p>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#374151', marginBottom: '8px' }}>ราคาเริ่มต้น (BASE PRICE) <span style={{color: '#10b981'}}>*</span></label>
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: '#111827' }}>฿</span>
+                
+                {/* 👇 ปรับการรับค่า Input ที่นี่ */}
+                <input 
+                  type="number" 
+                  value={editedPrice}
+                  onChange={(e) => setEditedPrice(e.target.value)}
+                  autoComplete="off"
+                  className="clean-input"
+                  style={{ width: '100%', padding: '12px 16px 12px 36px', borderRadius: '10px', border: '1px solid #d1d5db', fontSize: '15px', fontWeight: 700, outline: 'none' }}
+                />
               </div>
-              <div className="config-grid-3">
+              <p style={{ fontSize: '11px', color: '#059669', margin: '6px 0 0 0', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"></path></svg>
+                ราคาปกติก่อนคำนวณส่วนเสริม (Add-ons)
+              </p>
+            </div>
+          </div>
+
+          <hr style={{ border: 'none', borderTop: '1px solid #f3f4f6', margin: '0 0 32px 0' }} />
+
+          {/* 2. SERVING TYPE */}
+          {(item.category === 'coffee' || item.category === 'tea') && (
+            <div className="edit-section">
+              <div className="edit-section-header">
+                <div>
+                  <h3 className="edit-section-title">รูปแบบการเสิร์ฟ (SERVING TYPE) <span style={{color: '#10b981'}}>*</span></h3>
+                  <p className="edit-section-subtitle">เลือกประเภทเครื่องดื่มที่เปิดขายหน้าร้าน</p>
+                </div>
+                <span className="edit-badge">เปิดใช้งาน {activeServing}/{config.serving.length}</span>
+              </div>
+              <div className="edit-grid-3">
                 {config.serving.map((s, idx) => (
-                  <button 
-                    key={idx} 
-                    onClick={() => toggleActive('serving', idx)} 
-                    className={`config-toggle-btn ${s.active ? 'active' : ''}`}
-                    style={{ justifyContent: 'center' }} 
-                  >
-                    {s.active && <div style={{width:'16px', height:'16px', color:'#10b981'}}><CheckIcon /></div>}
-                    <span>{s.label}</span>
+                  <button key={idx} onClick={() => toggleActive('serving', idx)} className={`edit-option-btn ${s.active ? 'active' : ''}`}>
+                    {s.active && <CheckIcon />} <span>{s.label}</span>
                   </button>
                 ))}
               </div>
-            </section>
+            </div>
           )}
 
+          {/* 3. ROAST PROFILE */}
           {item.category === 'coffee' && (
-            <section>
-              <div className="config-section-head">
-                <span className="config-label">เมล็ดกาแฟ / ROAST PROFILE <span style={{ color: '#059669', fontWeight: 'normal', fontSize: '12px' }}>* (เลือกระดับการคั่วที่เปิดบริการ)</span></span>
-                <span className="config-badge" style={{ background: '#ecfdf5', color: '#059669', borderColor: '#a7f3d0' }}>เปิดใช้งาน {activeRoasts}/{config.roasts.length}</span>
+            <div className="edit-section">
+              <div className="edit-section-header">
+                <div>
+                  <h3 className="edit-section-title">ระดับการคั่วเมล็ดกาแฟ (ROAST PROFILE) <span style={{color: '#10b981'}}>*</span></h3>
+                  <p className="edit-section-subtitle">เลือกระดับการคั่วที่เปิดให้บริการสำหรับเมนูนี้</p>
+                </div>
+                <span className="edit-badge">เปิดใช้งาน {activeRoasts}/{config.roasts.length}</span>
               </div>
-              <div className="config-grid-3">
+              <div className="edit-grid-3">
                 {config.roasts.map((r, idx) => (
-                  <button 
-                    key={idx} 
-                    onClick={() => toggleActive('roasts', idx)} 
-                    className={`config-toggle-btn config-roast-card ${r.active ? 'active' : ''}`}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <div className={`config-radio ${r.active ? 'checked' : ''}`}>
-                         {r.active && <div style={{width:'10px', height:'10px', backgroundColor:'#10b981', borderRadius: '50%'}}></div>}
-                      </div>
-                      <span style={{ fontSize: '0.875rem', fontWeight: 700 }}>{r.label}</span>
-                    </div>
-                    <span className="roast-desc">{r.desc}</span>
+                  <button key={idx} onClick={() => toggleActive('roasts', idx)} className={`edit-option-btn ${r.active ? 'active' : ''}`}>
+                    {r.active && <CheckIcon />} <span>{r.label}</span>
                   </button>
                 ))}
-                
-                {/* ปุ่มเพิ่มเมล็ดกาแฟ */}
-                <button onClick={() => openPrompt('roast')} className="config-toggle-btn config-add-btn" style={{ minHeight: '60px', borderStyle: 'dashed', justifyContent: 'center', display: 'flex', gap: '8px' }}>
-                  <PlusIcon /><span style={{ color: '#374151', fontSize: '14px' }}>+ เพิ่มเมล็ดกาแฟ</span>
+                <button className="edit-option-btn" style={{ borderStyle: 'dashed' }}>
+                  <PlusIcon /> <span>เพิ่มเมล็ดกาแฟ</span>
                 </button>
               </div>
-            </section>
+            </div>
           )}
 
+          {/* 4. SWEETNESS LEVEL */}
           {(item.category === 'coffee' || item.category === 'tea') && (
-            <section>
-              <div className="config-section-head">
-                <span className="config-label">ระดับความหวาน / SWEETNESS LEVEL <span style={{ color: '#9ca3af', fontWeight: 'normal', fontSize: '12px' }}>(กำหนดระดับความหวานที่เปิดให้สั่ง)</span></span>
-                <span className="config-badge" style={{ background: '#ecfdf5', color: '#059669', borderColor: '#a7f3d0' }}>เปิด {activeSweetness} ระดับ</span>
+            <div className="edit-section">
+              <div className="edit-section-header">
+                <div>
+                  <h3 className="edit-section-title">ระดับความหวาน (SWEETNESS LEVEL)</h3>
+                  <p className="edit-section-subtitle">กำหนดระดับความหวานที่ลูกค้าสามารถเลือกได้</p>
+                </div>
+                <span className="edit-badge">เปิด {activeSweetness} ระดับ</span>
               </div>
-              <div className="config-flex-wrap" style={{ display: 'flex', gap: '12px' }}>
+              <div className="edit-grid-auto" style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)' }}>
                 {config.sweetness.map((s, idx) => (
-                  <button 
-                    key={idx} 
-                    onClick={() => toggleActive('sweetness', idx)} 
-                    className={`config-toggle-btn ${s.active ? 'active' : ''}`} 
-                    style={{ flex: 1, padding: '0.75rem 0', justifyContent: 'center' }}
-                  >
-                    {s.active && <div style={{width:'16px', height:'16px', color:'#10b981', display: 'none'}}><CheckIcon /></div>}
-                    <span>{s.label}</span>
+                  <button key={idx} onClick={() => toggleActive('sweetness', idx)} className={`edit-option-btn ${s.active ? 'active' : ''}`}>
+                    {s.active && <CheckIcon />} <span>{s.label}</span>
                   </button>
                 ))}
+                <button className="edit-option-btn" style={{ borderStyle: 'dashed' }}>
+                  <PlusIcon /> <span>เพิ่มระดับ</span>
+                </button>
               </div>
-            </section>
+            </div>
           )}
 
-          <section>
-            <div className="config-section-head">
-              <span className="config-label">ตัวเลือกเพิ่มเติม / ADD-ONS <span style={{ color: '#9ca3af', fontWeight: 'normal', fontSize: '12px' }}>(ผูกท็อปปิ้งหรือส่วนผสมเสริม)</span></span>
-              <span className="config-badge" style={{ background: '#ecfdf5', color: '#059669', borderColor: '#a7f3d0' }}>เปิดใช้งาน {activeAddonsCount} รายการ</span>
+          {/* 5. ADD-ONS */}
+          <div className="edit-section" style={{ marginBottom: 0 }}>
+            <div className="edit-section-header">
+              <div>
+                <h3 className="edit-section-title">ตัวเลือกเพิ่มเติม / ท็อปปิ้ง (ADD-ONS & OPTIONS)</h3>
+                <p className="edit-section-subtitle">เปิด/ปิดการขายท็อปปิ้งและส่วนผสมเสริมหน้าร้าน</p>
+              </div>
+              <span className="edit-badge">เปิดใช้งาน {activeAddonsCount}/{filteredGlobalAddons.length} รายการ</span>
             </div>
             
-            <div className="config-grid-3">
+            <div className="edit-grid-3">
               {filteredGlobalAddons.map(addon => {
                 const isLinked = (config.addonIds || []).includes(addon.id);
                 return (
-                  <div 
-                    key={addon.id} 
-                    onClick={() => toggleGlobalAddon(addon.id)} 
-                    className={`config-addon-card ${isLinked ? 'active' : ''}`}
-                    style={{ 
-                        display: 'flex', 
-                        flexDirection: 'column',
-                        justifyContent: 'space-between', 
-                        padding: '16px', 
-                        border: isLinked ? '2px solid #10b981' : '1px solid #e5e7eb',
-                        borderRadius: '12px',
-                        cursor: 'pointer',
-                        background: isLinked ? '#ecfdf5' : '#fff',
-                        minHeight: '104px'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
+                  <div key={addon.id} onClick={() => toggleGlobalAddon(addon.id)} className={`edit-addon-card ${isLinked ? 'active' : ''}`} style={{ opacity: addon.isActive ? 1 : 0.6 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div>
-                        <div className="config-addon-title" style={{ fontSize: '15px', fontWeight: 700, color: addon.isActive ? (isLinked ? '#111827' : '#4b5563') : '#ef4444', marginBottom: '4px' }}>
-                          {addon.label} {!addon.isActive && '(หมด)'}
-                        </div>
-                        <div className="config-addon-desc" style={{ fontSize: '13px', color: '#6b7280' }}>{addon.desc}</div>
+                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827', marginBottom: '2px' }}>{addon.label}</div>
+                        <div style={{ fontSize: '11px', color: '#6b7280' }}>{addon.desc} {addon.isActive ? '' : '(ปิดขาย)'}</div>
                       </div>
                       
-                      <div className={`config-checkbox ${isLinked ? 'checked' : ''}`} style={{ borderColor: isLinked ? '#10b981' : '#d1d5db', backgroundColor: isLinked ? '#10b981' : 'transparent', flexShrink: 0 }}>
-                        {isLinked && <svg width="14" height="14" fill="none" stroke="#fff" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"></path></svg>}
-                      </div>
+                      <div className={`custom-toggle ${isLinked ? 'active' : ''}`}></div>
                     </div>
                     
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%', marginTop: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '16px' }}>
                       <span style={{ fontSize: '12px', color: '#9ca3af' }}>ราคาเพิ่ม</span>
-                      <span style={{ fontSize: '15px', fontWeight: 700, color: addon.price === 0 ? '#10b981' : '#111827' }}>
-                        {addon.price > 0 ? `+฿${addon.price}` : <span style={{ backgroundColor: '#d1fae5', color: '#059669', padding: '2px 8px', borderRadius: '4px' }}>Free (+฿0)</span>}
+                      <span style={{ fontSize: '14px', fontWeight: 700, color: addon.price === 0 ? '#10b981' : '#111827' }}>
+                        {addon.price > 0 ? `+฿${addon.price}` : <span style={{ color: '#059669' }}>ฟรี (+฿0)</span>}
                       </span>
                     </div>
                   </div>
                 )
               })}
               
-              <button 
-                onClick={() => openPrompt('addon')} 
-                className="config-toggle-btn config-add-btn" 
-                style={{ minHeight: '104px', borderStyle: 'dashed', flexDirection: 'column', justifyContent: 'center', display: 'flex', gap: '4px' }}
-              >
-                <PlusIcon />
-                <span style={{ color: '#111827', fontSize: '14px', fontWeight: 700 }}>+ เพิ่ม Add-on ใหม่</span>
-                <span style={{ color: '#9ca3af', fontSize: '12px' }}>กำหนดชื่อและราคาเสริม</span>
-              </button>
-            </div>
-          </section>
-        </div>
-
-        {/* --- Footer --- */}
-        <footer className="config-footer" style={{ padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#4b5563', fontWeight: 700, fontSize: '15px', cursor: 'pointer' }}>
-            ยกเลิก (Cancel)
-          </button>
-          <button onClick={handleSave} style={{ background: '#059669', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '100px', fontWeight: 700, fontSize: '15px', cursor: 'pointer', display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"></path></svg>
-            บันทึกการตั้งค่า (Save Configuration)
-          </button>
-        </footer>
-
-        {/* --- Custom Inner Pop-up สำหรับสร้าง Add-on ใหม่ --- */}
-        {showPrompt && (
-          <div className="prompt-overlay">
-            <div className="prompt-modal">
-              <h3 className="prompt-title">
-                {showPrompt === 'roast' ? 'เพิ่มระดับการคั่ว' : 'เพิ่ม Add-on ใหม่'}
-              </h3>
-              
-              <div className="prompt-field">
-                <label>ชื่อ{showPrompt === 'roast' ? 'ระดับการคั่ว' : ' Add-on'}:</label>
-                <input 
-                  type="text" placeholder={showPrompt === 'roast' ? "เช่น คั่วอ่อน" : "เช่น นมโอ๊ต"}
-                  value={promptData.name} onChange={e => setPromptData({...promptData, name: e.target.value})}
-                />
-              </div>
-
-              <div className="prompt-field">
-                <label>คำอธิบายย่อ:</label>
-                <input 
-                  type="text" placeholder={showPrompt === 'roast' ? "เช่น Fruity, Floral" : "เช่น +Oat Milk"}
-                  value={promptData.desc} onChange={e => setPromptData({...promptData, desc: e.target.value})}
-                />
-              </div>
-
-              {showPrompt === 'addon' && (
-                <div className="prompt-field">
-                  <label>ราคาที่บวกเพิ่ม (฿):</label>
-                  <input 
-                    type="number" placeholder="เช่น 15 (ใส่ 0 ถ้าฟรี)"
-                    value={promptData.price} onChange={e => setPromptData({...promptData, price: e.target.value})}
-                  />
-                </div>
-              )}
-
-              <div className="prompt-actions">
-                <button className="prompt-btn-close" onClick={() => setShowPrompt(null)}>ยกเลิก</button>
-                <button className="prompt-btn-submit" onClick={submitPrompt}>เพิ่มรายการ</button>
+              <div className="edit-addon-card" style={{ borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center', gap: '4px', cursor: 'default' }}>
+                <div style={{ color: '#10b981' }}><PlusIcon /></div>
+                <span style={{ fontSize: '14px', fontWeight: 700, color: '#374151' }}>เพิ่ม Add-on ใหม่</span>
+                <span style={{ fontSize: '11px', color: '#9ca3af' }}>กำหนดชื่อและราคาเสริม</span>
               </div>
             </div>
           </div>
-        )}
+
+        </div>
+
+        {/* --- Footer --- */}
+        <footer className="edit-modal-footer">
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#4b5563', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}>
+            ยกเลิก (Cancel)
+          </button>
+          <button onClick={handleSave} style={{ background: '#10b981', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '100px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', display: 'flex', gap: '8px', alignItems: 'center', boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)' }}>
+            <CheckIcon />
+            บันทึกการตั้งค่า (Save Configuration)
+          </button>
+        </footer>
 
       </div>
     </div>

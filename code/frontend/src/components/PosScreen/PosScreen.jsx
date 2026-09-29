@@ -11,6 +11,7 @@ import AddonManagementView from "./AddonManagementView";
 import MenuConfigModal from "./MenuConfigModal";
 import PaymentModal from "./PaymentModal";
 import PaymentSuccessModal from "./PaymentSuccessModal";
+import BillManagementView from "./BillManagementView";
 import { listProducts, createProduct, updateProduct } from "../../api/products";
 import { listAddOns, createAddOn, setAddOnStatus } from "../../api/addOns";
 import { getCategories } from "../../api/categories";
@@ -145,6 +146,12 @@ const Icon = {
       <polyline points="2 17 12 22 22 17"/>
     </svg>
   ),
+  Receipt: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}>
+      <path d="M21 2v20l-5-4-5 4-5-4-5 4V2a1 1 0 0 1 1-1h18a1 1 0 0 1 1 1z" strokeLinejoin="round" />
+      <path d="M7 10h10M7 14h6" strokeLinecap="round" />
+    </svg>
+  ),
 };
 
 /* ---------------------------------------------------------
@@ -157,6 +164,7 @@ const NAV_ITEMS = [
 ];
 
 const NAV_FOOTER = [
+  { key: "bill_mgmt", label: "จัดการบิล", icon: Icon.Receipt },
   { key: "manage", label: "จัดการเมนู", icon: Icon.Edit },
   { key: "manage_addon", label: "จัดการท็อปปิ้ง", icon: Icon.Layers },
   { key: "promo", label: "โปรโมชั่น", icon: Icon.Tag },
@@ -422,9 +430,13 @@ export default function PosScreen() {
 
         {/* -------- Main column -------- */}
         <div className="pos-main">
-          <div className="pos-body" style={{ flexDirection: (activeNav === "promo" || activeNav === "manage" || activeNav === "manage_addon") ? "column" : "row" }}>
+          <div className="pos-body" style={{ flexDirection: (activeNav === "promo" || activeNav === "manage" || activeNav === "manage_addon" || activeNav === "bill_mgmt") ? "column" : "row" }}>
 
-            {activeNav === "manage_addon" ? (
+            {activeNav === "bill_mgmt" ? (
+              <BillManagementView />
+            ) :
+
+            activeNav === "manage_addon" ? (
               <AddonManagementView
                 addons={globalAddons}
                 onToggleStatus={async (id) => {

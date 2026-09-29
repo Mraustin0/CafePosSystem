@@ -9,7 +9,8 @@ import MenuManagementView from "./MenuManagementView";
 import { SelectPromotionModal } from "./SelectPromotionModal";
 import AddonManagementView from "./AddonManagementView";
 import MenuConfigModal from "./MenuConfigModal";
-import { listProducts, createProduct } from "../../api/products";
+import { listProducts, createProduct, updateProduct } from "../../api/products";
+import { listAddOns, createAddOn, setAddOnStatus } from "../../api/addOns";
 import { getCategories } from "../../api/categories";
 import { createPromotion, updatePromotion } from "../../api/promotions";
 import { createOrder, applyDiscount } from "../../api/orders";
@@ -143,15 +144,6 @@ const NAV_FOOTER = [
   { key: "dashboard", label: "Dashboard", icon: Icon.Grid },
 ];
 
-const INITIAL_GLOBAL_ADDONS = [
-  { id: 'shot', label: 'เพิ่มช็อตกาแฟ', desc: '+Extra Shot', price: 20, isActive: true, category: 'coffee' },
-  { id: 'whip', label: 'วิปครีม', desc: '+Whipped Cream', price: 15, isActive: true, category: 'all' },
-  { id: 'boba', label: 'ไข่มุก', desc: '+Tapioca Pearls', price: 10, isActive: true, category: 'tea' },
-  { id: 'jelly', label: 'บุกบราวน์ชูการ์', desc: '+Brown Sugar Jelly', price: 15, isActive: true, category: 'tea' },
-  { id: 'pudding', label: 'พุดดิ้งไข่', desc: '+Egg Pudding', price: 15, isActive: true, category: 'tea' },
-  { id: 'oatmilk', label: 'นมโอ๊ต', desc: '+Oat Milk', price: 15, isActive: true, category: 'all' },
-  { id: 'vanilla', label: 'วานิลลาไซรัป', desc: '+Vanilla Syrup', price: 15, isActive: false, category: 'coffee' },
-];
 
 export default function PosScreen() {
   const { user } = useAuth();
@@ -166,7 +158,7 @@ export default function PosScreen() {
   const [selectedTeaForModal, setSelectedTeaForModal] = useState(null);
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [editingConfigItem, setEditingConfigItem] = useState(null);
-  const [globalAddons, setGlobalAddons] = useState(INITIAL_GLOBAL_ADDONS);
+  const [globalAddons, setGlobalAddons] = useState([]);
 
   const [isAddPromoModalOpen, setIsAddPromoModalOpen] = useState(false);
   const [isSelectPromoModalOpen, setIsSelectPromoModalOpen] = useState(false);
@@ -190,6 +182,7 @@ export default function PosScreen() {
              : p.category?.name === "Tea" ? "tea"
              : p.category?.name === "Bakery" ? "snack" : "",
         active: p.active,
+        config: { addonIds: (p.addOns ?? []).map(a => a.id) },
       }));
       setMenu(items);
       setLoadError(null);
@@ -199,10 +192,27 @@ export default function PosScreen() {
     }
   }, []);
 
+  const loadAddons = useCallback(async () => {
+    try {
+      const items = await listAddOns();
+      setGlobalAddons((items ?? []).map(a => ({
+        id: a.id,
+        label: a.name,
+        desc: a.name,
+        price: Number(a.price),
+        isActive: a.active,
+        category: 'all',
+      })));
+    } catch (err) {
+      console.error("listAddOns failed:", err);
+    }
+  }, []);
+
   useEffect(() => {
     getCategories().then(setCategories).catch(() => {});
     loadProducts();
-  }, [loadProducts]);
+    loadAddons();
+  }, [loadProducts, loadAddons]);
 
   useEffect(() => {
     const reload = () => loadProducts();
@@ -276,7 +286,13 @@ export default function PosScreen() {
     }
   };
 
-  const handleSaveMenuConfig = (id, data) => {
+  const handleSaveMenuConfig = async (id, data) => {
+    try {
+      await updateProduct(id, { name: data.name, price: data.price });
+    } catch (err) {
+      alert(err?.message ?? 'บันทึกเมนูไม่สำเร็จ');
+      return;
+    }
     setMenu((prev) => prev.map((item) =>
       item.id === id ? { ...item, config: data.config, price: data.price, name: data.name } : item
     ));
@@ -353,8 +369,14 @@ export default function PosScreen() {
             {activeNav === "manage_addon" ? (
               <AddonManagementView
                 addons={globalAddons}
-                onToggleStatus={(id) => setGlobalAddons((prev) => prev.map((a) => a.id === id ? { ...a, isActive: !a.isActive } : a))}
-                onAddAddon={(newAddon) => setGlobalAddons((prev) => [...prev, newAddon])}
+                onToggleStatus={async (id) => {
+                  const addon = globalAddons.find(a => a.id === id);
+                  if (!addon) return;
+                  try { await setAddOnStatus(id, !addon.isActive); await loadAddons(); } catch (err) { alert(err?.message ?? 'เปลี่ยนสถานะไม่สำเร็จ'); }
+                }}
+                onAddAddon={async (newAddon) => {
+                  try { await createAddOn({ name: newAddon.label, price: newAddon.price }); await loadAddons(); } catch (err) { alert(err?.message ?? 'สร้าง Add-on ไม่สำเร็จ'); }
+                }}
               />
             ) :
 
@@ -401,7 +423,12 @@ export default function PosScreen() {
                     {menu
                       .filter((item) => item.category === activeNav)
                       .map((item) => (
-                        <article className="pos-card" key={item.id}>
+                        <article
+                          className="pos-card"
+                          key={item.id}
+                          onClick={() => activeNav === "tea" ? setSelectedTeaForModal(item) : setSelectedItemForModal(item)}
+                          style={{ cursor: 'pointer' }}
+                        >
                           <div className={`pos-card__image ${item.kind ? `is-${item.kind}` : ""}`}>
                             {item.imgSrc ? (
                               <img src={item.imgSrc} alt={item.name} className="pos-real-image" />
@@ -420,14 +447,6 @@ export default function PosScreen() {
                                 ) : (
                                   <span className="pos-skeleton pos-skeleton--price" />
                                 )}
-                              </div>
-                              <div className="pos-stepper">
-                                <button onClick={() => changeMenuQty(item.id, -1)} aria-label="ลดจำนวน"><Icon.Minus /></button>
-                                <span className={item.qty > 0 ? "is-active" : ""}>{item.qty}</span>
-                                <button
-                                  onClick={() => activeNav === "tea" ? setSelectedTeaForModal(item) : setSelectedItemForModal(item)}
-                                  aria-label="เพิ่มจำนวน"
-                                ><Icon.Plus /></button>
                               </div>
                             </div>
                           </div>
@@ -581,7 +600,9 @@ export default function PosScreen() {
         <MenuConfigModal
           item={editingConfigItem}
           globalAddons={globalAddons}
-          onAddGlobalAddon={(newAddon) => setGlobalAddons((prev) => [...prev, newAddon])}
+          onAddGlobalAddon={async (newAddon) => {
+            try { await createAddOn({ name: newAddon.label, price: newAddon.price }); await loadAddons(); } catch (err) { alert(err?.message ?? 'สร้าง Add-on ไม่สำเร็จ'); }
+          }}
           onClose={() => setEditingConfigItem(null)}
           onSave={handleSaveMenuConfig}
         />

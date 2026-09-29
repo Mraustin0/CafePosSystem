@@ -11,8 +11,9 @@ import { SelectPromotionModal } from "./SelectPromotionModal";
 import MenuConfigModal  from "./MenuConfigModal";
 import AddonManagementView from "./AddonManagementView"; 
 
+/* 👉 นำเข้า PaymentModal และ PaymentSuccessModal */
 import PaymentModal from "./PaymentModal";
-import PaymentSuccessModal from "./PaymentSuccessModal"; /* 👉 นำเข้า PaymentSuccessModal */
+import PaymentSuccessModal from "./PaymentSuccessModal";
 
 /* ---------------------------------------------------------
    Icons
@@ -88,7 +89,6 @@ export default function PosScreen() {
   const [isSelectPromoModalOpen, setIsSelectPromoModalOpen] = useState(false);
   const [appliedPromo, setAppliedPromo] = useState(null);
 
-  /* 👉 State สำหรับจัดการ Modal การชำระเงิน */
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [completedPaymentData, setCompletedPaymentData] = useState(null);
 
@@ -498,13 +498,14 @@ export default function PosScreen() {
           cart={cart}
           onClose={() => setIsPaymentModalOpen(false)}
           onConfirmPayment={(data) => {
-            setCompletedPaymentData(data); // บันทึกข้อมูลที่จ่ายเสร็จ
-            setIsPaymentModalOpen(false); // ปิดหน้าจอ Payment
+            // 👉 แก้ตรงนี้: แนบ cart เข้าไปในข้อมูลที่ชำระเงินเสร็จด้วย
+            setCompletedPaymentData({ ...data, cart: cart }); 
+            setIsPaymentModalOpen(false); 
           }}
         />
       )}
 
-      {/* 👉 Payment Success Modal ที่เพิ่งสร้าง */}
+      {/* 👉 Payment Success Modal */}
       {completedPaymentData && (
         <PaymentSuccessModal 
           paymentData={completedPaymentData}

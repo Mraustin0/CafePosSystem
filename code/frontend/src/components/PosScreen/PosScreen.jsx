@@ -463,16 +463,7 @@ export default function PosScreen() {
                     <div className="pos-order__date">{new Date(currentOrder?.createdAt ?? Date.now()).toLocaleString("th-TH")}</div>
                   </div>
 
-                  <div className="pos-order__shop">
-                    <div className="pos-order__shoplogo">EP</div>
-                    <div className="pos-order__shopinfo">
-                      <div className="pos-order__shopname">Easy POS Studio</div>
-                      <div className="pos-order__shopemail">easypos@gmail.com</div>
-                    </div>
-                    <div className="pos-pill">Order: {currentOrder?.orderNumber ?? "#—"}</div>
-                  </div>
-
-                  <div className="pos-order__items">
+<div className="pos-order__items">
                     {cart.map((item) => (
                       <div className="pos-orderitem" key={item.id}>
                         <div className="pos-orderitem__icon">

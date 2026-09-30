@@ -400,6 +400,70 @@ export default function PosScreen() {
         .clean-search-input::placeholder {
           color: #9ca3af !important;
         }
+
+        /* -------------------------------------------
+           สไตล์ส่วนขยายฝั่งตะกร้า (Cart Panel) — ported from Thana-nan pos-demo
+           ------------------------------------------- */
+        .custom-cart-icon {
+          width: 36px !important;
+          height: 36px !important;
+          font-size: 15px !important;
+          border-radius: 10px !important;
+        }
+        .custom-cart-name {
+          font-size: 16px !important;
+          font-weight: 700 !important;
+        }
+        .custom-cart-price {
+          font-size: 18px !important;
+          font-weight: 800 !important;
+          color: #ea580c !important;
+        }
+        .custom-cart-detail {
+          font-size: 13px !important;
+          margin-top: 4px;
+        }
+        .custom-new-badge {
+          font-size: 11px !important;
+          padding: 4px 8px !important;
+          border-radius: 6px !important;
+        }
+        .custom-stepper {
+          height: 36px !important;
+          border-radius: 10px !important;
+        }
+        .custom-stepper button {
+          width: 36px !important;
+          height: 36px !important;
+        }
+        .custom-stepper span {
+          font-size: 16px !important;
+          font-weight: 700 !important;
+          min-width: 32px !important;
+        }
+        .custom-trash-btn {
+          width: 36px !important;
+          height: 36px !important;
+          border-radius: 10px !important;
+        }
+        .custom-trash-btn svg {
+          width: 18px;
+          height: 18px;
+        }
+        .custom-payment-btn {
+          height: 64px !important;
+          font-size: 18px !important;
+          border-radius: 12px !important;
+          background-color: #00694b !important;
+          color: #ffffff !important;
+          border: none !important;
+          box-shadow: 0 4px 6px -1px rgba(0, 105, 75, 0.2) !important;
+        }
+        .custom-total-value {
+          font-size: 32px !important;
+          font-weight: 800 !important;
+          color: #00694b !important;
+        }
       `}</style>
 
       <div className="pos-content">
@@ -557,102 +621,119 @@ export default function PosScreen() {
                 </section>
 
                 <aside className="pos-order" style={{ display: 'flex', flexDirection: 'column' }}>
+
                   <div className="pos-order__items custom-scrollbar" style={{ flex: 1, overflowY: 'auto', marginTop: 0, marginBottom: '20px', paddingRight: '4px' }}>
                     {cart.map((item) => (
                       <div className="pos-orderitem" key={item.id}>
-                        <div className="pos-orderitem__icon">
-                          <Icon.Coffee />
+                        {/* 👉 แทนที่ไอคอนด้วยป้าย 1x */}
+                        <div className="pos-orderitem__icon custom-cart-icon" style={{ background: '#e6f7f1', color: '#00694b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                          {item.qty}x
                         </div>
                         <div className="pos-orderitem__body">
                           <div className="pos-orderitem__row">
-                            <div className="pos-orderitem__name">
+                            <div className="pos-orderitem__name custom-cart-name">
                               {item.name}
-                              {item.isNew && <span className="pos-badge">ใหม่</span>}
+                              {item.isNew && <span className="pos-badge custom-new-badge" style={{ background: '#f97316', color: '#fff' }}>ใหม่</span>}
                             </div>
-                            <div className="pos-orderitem__price">฿{item.price.toFixed(2)}</div>
+                            <div className="pos-orderitem__price custom-cart-price">฿{(item.price * item.qty).toFixed(2)}</div>
                           </div>
-                          <div className="pos-orderitem__detail">{item.detail}</div>
-                          <div className="pos-orderitem__extras">{item.extras}</div>
-                          {item.note && <div className="pos-orderitem__note">{item.note}</div>}
 
-                          <div className="pos-orderitem__footer">
-                            <div className="pos-stepper pos-stepper--panel">
-                              <button onClick={() => changeCartQty(item.id, -1)} aria-label="ลดจำนวน"><Icon.Minus /></button>
+                          {/* 👉 รายละเอียดเมนูที่ใหญ่ขึ้น */}
+                          <div className="pos-orderitem__detail custom-cart-detail">{item.detail}</div>
+                          {item.extras && <div className="pos-orderitem__extras custom-cart-detail" style={{ color: '#059669', marginTop: '2px' }}>{item.extras}</div>}
+                          {item.note && <div className="pos-orderitem__note custom-cart-detail" style={{ color: '#ea580c', marginTop: '2px' }}>* {item.note}</div>}
+
+                          <div className="pos-orderitem__footer" style={{ marginTop: '16px' }}>
+                            <div className="pos-stepper pos-stepper--panel custom-stepper">
+                              <button onClick={() => changeCartQty(item.id, -1)} aria-label="ลดจำนวน" style={{ color: '#ef4444' }}><Icon.Minus /></button>
                               <span>{item.qty}</span>
-                              <button onClick={() => changeCartQty(item.id, 1)} aria-label="เพิ่มจำนวน"><Icon.Plus /></button>
+                              <button onClick={() => changeCartQty(item.id, 1)} aria-label="เพิ่มจำนวน" style={{ color: '#f97316' }}><Icon.Plus /></button>
                             </div>
-                            <button className="pos-iconbtn" onClick={() => removeCartItem(item.id)} aria-label="ลบรายการ">
+                            <button className="pos-iconbtn custom-trash-btn" onClick={() => removeCartItem(item.id)} aria-label="ลบรายการ">
                               <Icon.Trash />
                             </button>
                           </div>
                         </div>
                       </div>
                     ))}
-                    {cart.length === 0 && <div className="pos-order__empty">ยังไม่มีรายการสั่งซื้อ</div>}
-                  </div>
-
-                  <div className="pos-promo">
-                    <div className="pos-promo__head">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Icon.Tag className="pos-promo__icon" />
-                        <span>โปรโมชั่น (Promotion)</span>
-                      </div>
-                      
-                      {/* 👉 ถ้ามีโปรโมชั่นถูกเลือก ให้แสดงป้ายสีเขียวที่เขียนว่า "ประหยัด..." */}
-                      {appliedPromo ? (
-                        <span className="pos-pill pos-pill--green">ประหยัด {appliedPromo.value.replace('-', '')}</span>
-                      ) : (
-                        <span 
-                          className="pos-pill pos-pill--green" 
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => setIsSelectPromoModalOpen(true)}
-                        >
-                          + เพิ่มส่วนลด
-                        </span>
-                      )}
-                    </div>
-
-                    {/* 👉 ดึงข้อมูลจริงจาก State `appliedPromo` มาแสดงแทนข้อความเดิมที่โดนล็อก */}
-                    {appliedPromo ? (
-                      <>
-                        <div className="pos-promo__row">
-                          <div className="pos-promo__label">
-                            <span className="pos-dot pos-dot--green" />
-                            {appliedPromo.title}
-                          </div>
-                          <div className="pos-promo__value" style={{ color: 'var(--green-600)', fontWeight: 'bold' }}>{appliedPromo.value}</div>
-                        </div>
-                        <div className="pos-promo__row pos-promo__row--sub">
-                          <span>โค้ด: {appliedPromo.code}</span>
-                          <button className="pos-linkbtn" onClick={() => setAppliedPromo(null)}>ยกเลิกส่วนลด</button>
-                        </div>
-                      </>
-                    ) : (
-                      <div style={{ padding: '16px 0 8px', textAlign: 'center', color: '#9ca3af', fontSize: '13px' }}>
-                        ยังไม่มีการเลือกโปรโมชั่น
+                    {cart.length === 0 && (
+                      <div className="pos-order__empty" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af' }}>
+                        ยังไม่มีรายการสั่งซื้อ
                       </div>
                     )}
                   </div>
 
-                  <div className="pos-total">
-                    <div>
-                      <div className="pos-total__label">Total</div>
-                      <div className="pos-total__meta">
-                        Items: {itemCount}, Quantity: {quantityCount}
-                      </div>
-                    </div>
-                    <div className="pos-total__value">฿{total.toFixed(2)}</div>
-                  </div>
+                  <div style={{ flexShrink: 0 }}>
+                    <div className="pos-promo">
+                      <div className="pos-promo__head">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <Icon.Tag className="pos-promo__icon" />
+                          <span style={{ fontSize: '15px', fontWeight: 600 }}>โปรโมชั่น (Promotion)</span>
+                        </div>
 
-                  <div className="pos-order__buttons">
-                    <button className="pos-btn pos-btn--outline" onClick={() => window.print()} disabled={!currentOrder}>
-                      <Icon.Print />
-                      Print Invoice
-                    </button>
-                    <button className="pos-btn pos-btn--solid pos-btn--full" onClick={() => { if (cart.length > 0) setIsPaymentModalOpen(true); else alert("กรุณาเพิ่มรายการสั่งซื้อก่อนชำระเงิน"); }} disabled={cart.length === 0 || checkoutBusy}>
-                      <Icon.Card />
-                      {checkoutBusy ? "..." : "Payments"}
-                    </button>
+                        {appliedPromo ? (
+                          <span className="pos-pill pos-pill--green" style={{ fontSize: '13px', padding: '6px 12px' }}>ประหยัด {appliedPromo.value.replace('-', '')}</span>
+                        ) : (
+                          <span
+                            className="pos-pill pos-pill--green"
+                            style={{ cursor: 'pointer', fontSize: '13px', padding: '6px 12px' }}
+                            onClick={() => setIsSelectPromoModalOpen(true)}
+                          >
+                            + เพิ่มส่วนลด
+                          </span>
+                        )}
+                      </div>
+
+                      {appliedPromo ? (
+                        <>
+                          <div className="pos-promo__row">
+                            <div className="pos-promo__label">
+                              <span className="pos-dot pos-dot--green" />
+                              {appliedPromo.title}
+                            </div>
+                            <div className="pos-promo__value" style={{ color: 'var(--green-600)', fontWeight: 'bold' }}>{appliedPromo.value}</div>
+                          </div>
+                          <div className="pos-promo__row pos-promo__row--sub">
+                            <span>โค้ด: {appliedPromo.code}</span>
+                            <button className="pos-linkbtn" onClick={() => setAppliedPromo(null)}>ยกเลิกส่วนลด</button>
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ padding: '16px 0 8px', textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
+                          ยังไม่มีการเลือกโปรโมชั่น
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="pos-total" style={{ padding: '24px 0 16px' }}>
+                      <div>
+                        <div className="pos-total__label" style={{ fontSize: '18px', fontWeight: 700, color: '#111827' }}>Total</div>
+                        <div className="pos-total__meta" style={{ fontSize: '13px' }}>
+                          Items: {itemCount}, Quantity: {quantityCount}
+                        </div>
+                      </div>
+                      <div className="pos-total__value custom-total-value">฿{total.toFixed(2)}</div>
+                    </div>
+
+                    <div className="pos-order__buttons">
+
+                      <button
+                        className="pos-btn pos-btn--solid pos-btn--full custom-payment-btn"
+                        style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}
+                        onClick={() => {
+                          if (cart.length > 0) {
+                            setIsPaymentModalOpen(true);
+                          } else {
+                            alert("กรุณาเพิ่มรายการสั่งซื้อก่อนชำระเงิน");
+                          }
+                        }}
+                        disabled={cart.length === 0 || checkoutBusy}
+                      >
+                        <Icon.Card />
+                        {checkoutBusy ? "..." : "Payments"}
+                      </button>
+
+                    </div>
                   </div>
                 </aside>
               </>

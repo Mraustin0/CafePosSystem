@@ -3,7 +3,7 @@ import React, { useState } from "react";
 const GET_DEFAULT_CONFIG = (category) => {
   if (category === 'tea') {
     return {
-      serving: [{ id: 'iced', label: 'เย็น (Iced)', price: 0, active: true }, { id: 'hot', label: 'ร้อน (Hot)', price: 0, active: true }, { id: 'frappe', label: 'ปั่น (Frappe +฿15)', price: 15, active: true }],
+      serving: [{ id: 'iced', label: 'เย็น (Iced)', price: 0, active: true }, { id: 'hot', label: 'ร้อน (Hot)', price: 0, active: true }, { id: 'frappe', label: 'ปั่น  +฿15', price: 15, active: true }],
       sweetness: [{ label: '100%', active: true }, { label: '75%', active: true }, { label: '50%', active: true }, { label: '25%', active: true }, { label: '0%', active: true }],
       roasts: [], addonIds: ['boba', 'jelly'] 
     };
@@ -13,7 +13,7 @@ const GET_DEFAULT_CONFIG = (category) => {
     };
   } else {
     return {
-      serving: [{ id: 'iced', label: 'เย็น (Iced)', price: 0, active: true }, { id: 'hot', label: 'ร้อน (Hot)', price: 0, active: true }, { id: 'frappe', label: 'ปั่น (Frappe +฿15)', price: 15, active: true }],
+      serving: [{ id: 'iced', label: 'เย็น (Iced)', price: 0, active: true }, { id: 'hot', label: 'ร้อน (Hot)', price: 0, active: true }, { id: 'frappe', label: 'ปั่น +฿15', price: 15, active: true }],
       roasts: [{ id: 'medium', label: 'คั่วกลาง (Medium Roast)', desc: 'Nutty, Caramel, Balanced acidity', active: true }, { id: 'dark', label: 'คั่วเข้ม (Dark Roast)', desc: 'Bold, Smokey, Dark Chocolate', active: true }],
       sweetness: [{ label: '100%', active: true }, { label: '75%', active: true }, { label: '50%', active: true }, { label: '25%', active: true }, { label: '0%', active: true }],
       addonIds: ['shot', 'whip', 'jelly', 'oatmilk'] 
@@ -33,6 +33,9 @@ export default function MenuConfigModal({ item, onClose, onSave, globalAddons = 
   const [config, setConfig] = useState(item.config || GET_DEFAULT_CONFIG(item.category));
   const [editedName, setEditedName] = useState(item.name);
   const [editedPrice, setEditedPrice] = useState(item.price);
+  
+  // 👉 กำหนดค่าเริ่มต้น category ในหน้าแก้ไข ถ้าไม่มีให้เป็น coffee 
+  const [editedCategory, setEditedCategory] = useState(item.category || "coffee");
   
   const toggleActive = (category, index) => {
     const newArr = [...config[category]];
@@ -54,7 +57,14 @@ export default function MenuConfigModal({ item, onClose, onSave, globalAddons = 
       alert("กรุณากรอกชื่อเมนู");
       return;
     }
-    if (onSave) onSave(item.id, { config, price: Number(editedPrice), name: editedName });
+    // 👉 เพิ่ม check ว่ามีการเลือก category หรือไม่
+    if(!editedCategory) {
+       alert("กรุณาเลือกหมวดหมู่สินค้า");
+       return;
+    }
+    
+    // 👉 ส่ง category กลับไปด้วยตอน save
+    if (onSave) onSave(item.id, { config, price: Number(editedPrice), name: editedName, category: editedCategory });
   };
 
   const activeServing = config.serving?.filter(s => s.active).length || 0;
@@ -62,7 +72,7 @@ export default function MenuConfigModal({ item, onClose, onSave, globalAddons = 
   const activeSweetness = config.sweetness?.filter(s => s.active).length || 0;
   
   const filteredGlobalAddons = globalAddons.filter(addon => 
-    addon.category === 'all' || addon.category === item.category
+    addon.category === 'all' || addon.category === item.category // 👉 หรือจะกรองด้วย editedCategory ก็ได้
   );
   
   const activeAddonsCount = filteredGlobalAddons.filter(addon => (config.addonIds || []).includes(addon.id)).length;
@@ -83,26 +93,34 @@ export default function MenuConfigModal({ item, onClose, onSave, globalAddons = 
           font-family: 'Prompt', sans-serif;
           overflow: hidden;
         }
+        
+        /* 👇 อัปเดต CSS Header ใหม่ */
         .edit-modal-header {
-          padding: 24px;
-          border-bottom: 1px solid #f3f4f6;
+          padding: 20px 24px;
+          border-bottom: 1px solid #e5e7eb;
           display: flex;
-          align-items: flex-start;
+          align-items: center;
           justify-content: space-between;
+          background: #ffffff;
         }
+
         .edit-modal-body {
           padding: 24px;
           overflow-y: auto;
           flex: 1;
         }
+        
+        /* 👇 อัปเดต CSS Footer ใหม่ */
         .edit-modal-footer {
           padding: 20px 24px;
-          border-top: 1px solid #f3f4f6;
+          border-top: 1px solid #e5e7eb;
           background: #f9fafb;
           display: flex;
-          justify-content: space-between;
+          justify-content: flex-end; /* เลื่อนปุ่มไปขวา */
+          gap: 12px;
           align-items: center;
         }
+
         .edit-section {
           margin-bottom: 32px;
         }
@@ -205,7 +223,6 @@ export default function MenuConfigModal({ item, onClose, onSave, globalAddons = 
           transform: translateX(20px);
         }
 
-        /* 👇 CSS พิเศษสำหรับป้องกันพื้นหลังสีเทา */
         .clean-input {
             background-color: #ffffff !important; 
             color: #111827 !important;
@@ -215,34 +232,28 @@ export default function MenuConfigModal({ item, onClose, onSave, globalAddons = 
 
       <div className="edit-modal-container">
         
-        {/* --- Header --- */}
+        {/* --- Header ดีไซน์ใหม่ --- */}
         <header className="edit-modal-header">
-          <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '12px', border: '1px solid #10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981', background: '#ecfdf5' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 9h13a3 3 0 0 1 0 6h-1" /><path strokeLinecap="round" strokeLinejoin="round" d="M4 9v6a4 4 0 0 0 4 4h4a4 4 0 0 0 4-4V9" /></svg>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#004f37', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', fontWeight: 800, fontSize: '18px' }}>
+              EP
             </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#111827' }}>แก้ไขข้อมูลเมนู <span style={{color: '#6b7280', fontWeight: 500}}>(Edit Menu Item)</span></h2>
-                <span style={{ fontSize: '11px', background: '#ecfdf5', color: '#059669', padding: '2px 8px', borderRadius: '100px', fontWeight: 700 }}>SKU-{item.id.toString().padStart(4, '0')}</span>
-              </div>
-              <p style={{ fontSize: '13px', color: '#6b7280', margin: 0 }}>กำหนดชื่อเมนู ราคาเริ่มต้น และตั้งค่าตัวเลือกการสั่งซื้อสำหรับระบบ POS หน้าร้าน</p>
-            </div>
+            <h2 style={{ fontSize: '20px', fontWeight: 800, margin: 0, color: '#111827' }}>
+              แก้ไขข้อมูลเมนู <span style={{color: '#6b7280', fontWeight: 500}}>(Edit Menu Item)</span>
+            </h2>
           </div>
-          <button onClick={onClose} style={{ background: '#f3f4f6', border: 'none', width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', cursor: 'pointer' }}>
-            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
+          
+          
         </header>
 
         {/* --- Body --- */}
         <div className="edit-modal-body custom-scrollbar">
           
           {/* 1. Basic Info (Name & Price) */}
-          <div className="edit-section" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#374151', marginBottom: '8px' }}>ชื่อเมนู (ITEM NAME) <span style={{color: '#10b981'}}>*</span></label>
+          <div className="edit-section" style={{ display: 'flex', gap: '20px' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#374151', marginBottom: '8px' }}>ชื่อเมนู (ITEM NAME) <span style={{color: '#ef4444'}}>*</span></label>
               
-              {/* 👇 ปรับการรับค่า Input ที่นี่ */}
               <input 
                 type="text" 
                 value={editedName}
@@ -251,14 +262,12 @@ export default function MenuConfigModal({ item, onClose, onSave, globalAddons = 
                 className="clean-input"
                 style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1px solid #d1d5db', fontSize: '15px', fontWeight: 700, outline: 'none' }}
               />
-              <p style={{ fontSize: '11px', color: '#9ca3af', margin: '6px 0 0 0' }}>ชื่อที่จะแสดงบนใบเสร็จและหน้าจอรับออเดอร์</p>
             </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#374151', marginBottom: '8px' }}>ราคาเริ่มต้น (BASE PRICE) <span style={{color: '#10b981'}}>*</span></label>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#374151', marginBottom: '8px' }}>ราคาเริ่มต้น (BASE PRICE) <span style={{color: '#ef4444'}}>*</span></label>
               <div style={{ position: 'relative' }}>
                 <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: '#111827' }}>฿</span>
                 
-                {/* 👇 ปรับการรับค่า Input ที่นี่ */}
                 <input 
                   type="number" 
                   value={editedPrice}
@@ -268,11 +277,36 @@ export default function MenuConfigModal({ item, onClose, onSave, globalAddons = 
                   style={{ width: '100%', padding: '12px 16px 12px 36px', borderRadius: '10px', border: '1px solid #d1d5db', fontSize: '15px', fontWeight: 700, outline: 'none' }}
                 />
               </div>
-              <p style={{ fontSize: '11px', color: '#059669', margin: '6px 0 0 0', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"></path></svg>
-                ราคาปกติก่อนคำนวณส่วนเสริม (Add-ons)
-              </p>
             </div>
+          </div>
+          
+          {/* 👉 เพิ่มช่องเลือกหมวดหมู่แบบเต็มความกว้าง */}
+          <div className="edit-section">
+             <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#374151', marginBottom: '8px' }}>หมวดหมู่ / ประเภทสินค้า (CATEGORY) <span style={{color: '#ef4444'}}>*</span></label>
+             <div style={{ position: 'relative' }}>
+               <select 
+                 value={editedCategory} 
+                 onChange={e => setEditedCategory(e.target.value)} 
+                 style={{ 
+                   width: '100%', 
+                   padding: '12px 16px', 
+                   borderRadius: '10px', 
+                   border: '1px solid #d1d5db', 
+                   fontSize: '15px', 
+                   outline: 'none', 
+                   background: '#fff',
+                   fontWeight: 700,
+                   color: editedCategory === "" ? '#9ca3af' : '#111827',
+                   appearance: 'none' 
+                 }}
+               >
+                 <option value="" disabled hidden>กรุณาเลือกหมวดหมู่...</option>
+                 <option value="coffee" style={{ color: '#111827' }}>กาแฟ </option>
+                 <option value="tea" style={{ color: '#111827' }}>ชา </option>
+                 <option value="snack" style={{ color: '#111827' }}>ขนม </option>
+               </select>
+               <svg style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+             </div>
           </div>
 
           <hr style={{ border: 'none', borderTop: '1px solid #f3f4f6', margin: '0 0 32px 0' }} />
@@ -282,8 +316,8 @@ export default function MenuConfigModal({ item, onClose, onSave, globalAddons = 
             <div className="edit-section">
               <div className="edit-section-header">
                 <div>
-                  <h3 className="edit-section-title">รูปแบบการเสิร์ฟ (SERVING TYPE) <span style={{color: '#10b981'}}>*</span></h3>
-                  <p className="edit-section-subtitle">เลือกประเภทเครื่องดื่มที่เปิดขายหน้าร้าน</p>
+                  <h3 className="edit-section-title">รูปแบบการเสิร์ฟ (SERVING TYPE) <span style={{color: '#ef4444'}}>*</span></h3>
+                  
                 </div>
                 <span className="edit-badge">เปิดใช้งาน {activeServing}/{config.serving.length}</span>
               </div>
@@ -302,8 +336,7 @@ export default function MenuConfigModal({ item, onClose, onSave, globalAddons = 
             <div className="edit-section">
               <div className="edit-section-header">
                 <div>
-                  <h3 className="edit-section-title">ระดับการคั่วเมล็ดกาแฟ (ROAST PROFILE) <span style={{color: '#10b981'}}>*</span></h3>
-                  <p className="edit-section-subtitle">เลือกระดับการคั่วที่เปิดให้บริการสำหรับเมนูนี้</p>
+                  <h3 className="edit-section-title">ระดับการคั่วเมล็ดกาแฟ (ROAST PROFILE) <span style={{color: '#ef4444'}}>*</span></h3>
                 </div>
                 <span className="edit-badge">เปิดใช้งาน {activeRoasts}/{config.roasts.length}</span>
               </div>
@@ -313,9 +346,7 @@ export default function MenuConfigModal({ item, onClose, onSave, globalAddons = 
                     {r.active && <CheckIcon />} <span>{r.label}</span>
                   </button>
                 ))}
-                <button className="edit-option-btn" style={{ borderStyle: 'dashed' }}>
-                  <PlusIcon /> <span>เพิ่มเมล็ดกาแฟ</span>
-                </button>
+                
               </div>
             </div>
           )}
@@ -336,9 +367,7 @@ export default function MenuConfigModal({ item, onClose, onSave, globalAddons = 
                     {s.active && <CheckIcon />} <span>{s.label}</span>
                   </button>
                 ))}
-                <button className="edit-option-btn" style={{ borderStyle: 'dashed' }}>
-                  <PlusIcon /> <span>เพิ่มระดับ</span>
-                </button>
+               
               </div>
             </div>
           )}
@@ -387,14 +416,13 @@ export default function MenuConfigModal({ item, onClose, onSave, globalAddons = 
 
         </div>
 
-        {/* --- Footer --- */}
+        {/* --- Footer (ย้ายปุ่มมาด้านขวา) --- */}
         <footer className="edit-modal-footer">
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#4b5563', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}>
-            ยกเลิก (Cancel)
+          <button onClick={onClose} style={{ background: '#ffffff', border: '1px solid #d1d5db', color: '#4b5563', padding: '12px 24px', borderRadius: '12px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', transition: '0.2s' }}>
+            ยกเลิก
           </button>
-          <button onClick={handleSave} style={{ background: '#10b981', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '100px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', display: 'flex', gap: '8px', alignItems: 'center', boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)' }}>
-            <CheckIcon />
-            บันทึกการตั้งค่า (Save Configuration)
+          <button onClick={handleSave} style={{ background: '#00694b', color: '#fff', border: 'none', padding: '12px 32px', borderRadius: '12px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', display: 'flex', gap: '8px', alignItems: 'center', boxShadow: '0 4px 6px -1px rgba(0, 105, 75, 0.2)' }}>
+            บันทึกการตั้งค่า
           </button>
         </footer>
 

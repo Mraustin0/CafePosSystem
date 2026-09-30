@@ -1,17 +1,19 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
-import RequireAuth from './auth/RequireAuth'
-import LoginPage from './pages/LoginPage'
-import PosPage from './pages/PosPage'
+import React from 'react';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import RequireAuth from './auth/RequireAuth';
+import LoginPage from './pages/LoginPage';
+import PosPage from './pages/PosPage';
+import AddUserPage from './pages/AddUserPage';
 
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-
+      <Route path="/add-user" element={<AddUserPage />} />
       <Route element={<RequireAuth />}>
         <Route path="/pos" element={<PosPage />} />
         <Route path="*" element={<Navigate to="/pos" replace />} />
       </Route>
     </Routes>
-  )
+  );
 }

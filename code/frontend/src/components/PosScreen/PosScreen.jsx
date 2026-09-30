@@ -14,12 +14,13 @@ import PaymentSuccessModal from "./PaymentSuccessModal";
 import BillManagementView from "./BillManagementView";
 import DashboardView from "./DashboardView";
 import { listProducts, createProduct, updateProduct } from "../../api/products";
-import { listAddOns, createAddOn, setAddOnStatus } from "../../api/addOns";
+import { listAddOns, createAddOn, setAddOnStatus, updateAddOn } from "../../api/addOns";
 import { getCategories } from "../../api/categories";
 import { createPromotion, updatePromotion } from "../../api/promotions";
 import { createOrder, applyDiscount } from "../../api/orders";
 import { payOrder } from "../../api/payment";
 import { useAuth } from "../../auth/useAuth";
+import { useNavigate } from "react-router-dom";
 
 // Backend category name -> UI nav key (Thana-nan's shape uses "coffee"/"tea"/"snack").
 const CATEGORY_TO_NAV = { Coffee: "coffee", Tea: "tea", Bakery: "snack" };
@@ -175,6 +176,7 @@ const NAV_FOOTER = [
 
 export default function PosScreen() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [activeNav, setActiveNav] = useState("coffee");
   const [menu, setMenu] = useState([]);
   const [cart, setCart] = useState([]);
@@ -426,6 +428,15 @@ export default function PosScreen() {
                 <span>{label}</span>
               </button>
             ))}
+            {user?.role === 'ADMIN' && (
+              <button
+                className="pos-navitem pos-navitem--muted"
+                onClick={() => navigate('/add-user')}
+              >
+                <Icon.User className="pos-navitem__icon" />
+                <span>เพิ่มผู้ใช้</span>
+              </button>
+            )}
           </nav>
         </aside>
 
@@ -451,6 +462,14 @@ export default function PosScreen() {
                 }}
                 onAddAddon={async (newAddon) => {
                   try { await createAddOn({ name: newAddon.label, price: newAddon.price }); await loadAddons(); } catch (err) { alert(err?.message ?? 'สร้าง Add-on ไม่สำเร็จ'); }
+                }}
+                onEditAddon={async (patch) => {
+                  // Backend only persists name + price; desc/category stay client-side.
+                  try { await updateAddOn(patch.id, { name: patch.label, price: patch.price }); await loadAddons(); } catch (err) { alert(err?.message ?? 'แก้ไข Add-on ไม่สำเร็จ'); }
+                }}
+                onDeleteAddon={async (id) => {
+                  // No hard-delete endpoint; soft-delete via setAddOnStatus(false).
+                  try { await setAddOnStatus(id, false); await loadAddons(); } catch (err) { alert(err?.message ?? 'ลบ Add-on ไม่สำเร็จ'); }
                 }}
               />
             ) :

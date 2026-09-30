@@ -6,9 +6,16 @@
 
 ## สมาชิกกลุ่ม
 
+<!-- TODO: ยืนยันรหัสของธนนันค์ — ตาราง 673380568-8 แต่ชื่อ branch ใช้ 6733805868 (ต้องตรงกัน ไม่งั้น branch ไม่ถูกตรวจ) -->
+
 | ลำดับ | ชื่อ-นามสกุล | รหัสนักศึกษา | Section | Branch | หน้าที่รับผิดชอบ |
 | ----- | ------------ | ------------ | ------- | ------ | ---------------- |
-| 1 | | | | `ชื่อ_รหัส_section` | |
+| 1 | ภควัฒน์ สุขมณี | 673380418-9 | 04 | `Phakawat_6733804189_04` | Auth & User (F-01–09), Sales / Order + POS (F-24–31), Payment (F-32–34), Design Patterns, Security, Exception Handler, Docker / CI / Deploy |
+| 2 | ธนนันค์ สาวิกัน | 673380568-8 | 04 | `Thana-nan_6733805868_04` | Category, Add-on (F-10–13, F-20–23) |
+| 3 | กวินธิดา อนุนิวัฒน์ | 673380390-5 | 04 | `Kawinthida_6733803905_04` | Product (F-14–19) |
+| 4 | กัญญาวีร์ สิงห์ลี | 673380573-7 | 04 | `Kanyawee_6733805737_04` | Reports (F-35–38), Test Report |
+
+รายละเอียดการแบ่งงาน: [doc/system-functions.md](doc/system-functions.md#การแบ่งงาน)
 
 ## Tech Stack
 
@@ -33,7 +40,10 @@ Production: React build ถูก copy เข้า Spring Boot เป็น sta
 
 ## Database Design (ER Diagram)
 
-<!-- TODO: ใส่ ER Diagram จาก doc/diagrams -->
+8 ตาราง — One-to-One (`users`–`user_profiles`, `orders`–`payments`), One-to-Many, Many-to-Many (`products`–`add_ons`)
+
+- ER Diagram: [doc/diagrams/er-diagram.md](doc/diagrams/er-diagram.md)
+- Data Dictionary: [doc/data-dictionary.md](doc/data-dictionary.md)
 
 ## Installation & Setup
 
@@ -50,7 +60,7 @@ cd CafePosSystem/code/frontend && npm install
 
 ```bash
 cd code
-docker compose up -d db              # PostgreSQL :5432
+docker compose up -d db              # PostgreSQL :5433 (กันชนกับ Postgres ที่ลงในเครื่อง)
 cd backend && ./mvnw spring-boot:run # API :8080
 cd frontend && npm run dev           # UI :5173 (proxy /api → :8080)
 ```

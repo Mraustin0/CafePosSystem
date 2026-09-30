@@ -1,0 +1,305 @@
+/* PromotionView.css */
+
+.promo-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;       /* 👉 เพิ่ม width: 100% ให้กางเต็มจอ */
+  padding-right: 8px;
+  overflow-y: auto;
+}
+
+/* ---------------- Header ---------------- */
+.promo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.promo-header-info h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  color: var(--gray-900);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.promo-header-info h2 span {
+  font-weight: 500;
+  color: var(--gray-600);
+  font-size: 16px;
+}
+
+.promo-header-info p {
+  font-size: 13px;
+  color: var(--gray-600);
+  margin: 0;
+}
+
+/* ---------------- Toolbar ---------------- */
+.promo-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.promo-search-bar {
+  flex: 1;
+  max-width: 360px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: 999px;
+  padding: 10px 16px;
+}
+
+.promo-search-bar input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  background: transparent;
+  color: var(--gray-900);
+}
+
+.promo-search-bar .icon-search,
+.promo-search-bar .icon-mic {
+  width: 16px;
+  height: 16px;
+  color: var(--gray-400);
+}
+
+.promo-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-900);
+  cursor: pointer;
+}
+
+.promo-filter svg { width: 16px; height: 16px; color: var(--gray-600); }
+
+/* ---------------- Grid & Cards ---------------- */
+.promo-grid {
+  display: grid;
+  /* 👉 ปรับ Grid ให้เรียงแบบยืดหยุ่น ขยายเต็มพื้นที่ 
+     (ตั้งค่าขั้นต่ำ 280px ถ้าจอใหญ่จะเพิ่มเป็น 3 หรือ 4 คอลัมน์อัตโนมัติ) */
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+.promo-card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 180px;
+  box-shadow: var(--shadow-card);
+  position: relative;
+}
+
+/* Add New Card */
+.promo-card--add {
+  border: 2px dashed var(--green-600);
+  background: rgba(35, 122, 79, 0.02);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.promo-card--add:hover { background: var(--green-100); }
+
+.promo-add-tag {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--green-700);
+}
+
+.promo-add-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--green-700);
+}
+
+.promo-add-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.promo-add-icon svg { width: 24px; height: 24px; }
+
+.promo-add-content h4 { font-size: 15px; font-weight: 700; margin: 0; }
+.promo-add-content p { font-size: 12px; margin: 0; color: var(--gray-600); }
+
+/* Promo Card Content */
+.promo-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.promo-card__title-area {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.promo-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--orange-100);
+  color: var(--orange-500);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.promo-icon svg { width: 14px; height: 14px; }
+
+.promo-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  color: var(--gray-900);
+}
+
+.promo-code {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray-600);
+}
+.promo-code span { color: var(--gray-900); }
+
+/* Tags */
+.promo-type-tag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.tag-dark { background: #2b2622; color: var(--white); }
+.tag-green { background: var(--green-700); color: var(--white); }
+.tag-brown { background: #926a3c; color: var(--white); }
+.tag-gray { background: var(--gray-200); color: var(--gray-600); }
+
+/* Body Area */
+.promo-card__body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.promo-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--gray-400);
+  margin-bottom: 4px;
+}
+
+.promo-val-col { text-align: left; }
+.promo-cond-col { text-align: right; }
+
+.promo-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--green-700);
+}
+
+.promo-condition {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-900);
+}
+
+/* Footer Area */
+.promo-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px dashed var(--gray-200);
+  padding-top: 14px;
+}
+
+.promo-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-400);
+}
+.status-text.active { color: var(--green-700); }
+
+/* Toggle Switch */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+  position: absolute; cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: var(--gray-200);
+  transition: .2s; border-radius: 34px;
+}
+.slider:before {
+  position: absolute; content: "";
+  height: 14px; width: 14px;
+  left: 3px; bottom: 3px;
+  background-color: white; transition: .2s; border-radius: 50%;
+}
+.toggle-switch input:checked + .slider { background-color: var(--green-600); }
+.toggle-switch input:checked + .slider:before { transform: translateX(16px); }
+
+/* Actions */
+.promo-actions {
+  display: flex;
+  gap: 8px;
+}
+.icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--gray-400);
+  cursor: pointer;
+  padding: 0;
+}
+.icon-btn svg { width: 16px; height: 16px; }
+.icon-btn:hover { color: var(--gray-900); }
+
+/* Expired Card */
+.promo-card.is-expired {
+  opacity: 0.6;
+  background: #fafafa;
+}
+.promo-card.is-expired .promo-value { color: var(--gray-400); }
+.promo-card.is-expired .promo-icon { background: var(--gray-200); color: var(--gray-400); }

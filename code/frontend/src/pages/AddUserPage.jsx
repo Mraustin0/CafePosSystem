@@ -1,291 +1,203 @@
 import React, { useState } from 'react';
-import { Camera, Save, X, ArrowLeft, Shield, User, Mail, Phone, Building, Key } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { UserPlus, Eye, EyeOff, Info, Check } from 'lucide-react';
 
-export default function AddUserForm() {
+export default function AddUserPage() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    role: 'user',
-    department: '',
+    fullName: 'นายสมชาย ใจดี',
+    username: 'Somchai.j',
     password: '',
-    confirmPassword: '',
-    status: 'active',
+    role: 'CASHIER', // 'CASHIER' หรือ 'ADMIN'
+    phone: '',
+    email: 'Somchai.j@example.com',
   });
 
-  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setAvatarPreview(URL.createObjectURL(file));
-    }
-  };
-
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (formData.password !== formData.confirmPassword) {
-      alert('รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน');
-      return;
-    }
-    console.log('ข้อมูลผู้ใช้งานใหม่:', formData);
-    alert('บันทึกข้อมูลผู้ใช้งานเรียบร้อยแล้ว');
+    console.log('บันทึกข้อมูล:', formData);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8 font-sans">
-      <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        {/* Header Section */}
-        <div className="border-b border-gray-100 p-6 flex items-center justify-between bg-white">
-          <div className="flex items-center space-x-3">
-            <button type="button" className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500">
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">เพิ่มผู้ใช้งานใหม่</h1>
-              <p className="text-sm text-gray-500">กรอกข้อมูลด้านล่างเพื่อสร้างบัญชีผู้ใช้งานใหม่ในระบบ</p>
+    <div className="w-full h-screen bg-gray-50 flex flex-col font-['Prompt',sans-serif] text-gray-800">
+      <main className="flex-1 w-full overflow-y-auto px-4 py-6 flex items-center justify-center">
+        <div className="w-full max-w-[380px] bg-white rounded-2xl border border-gray-200 p-5 space-y-3 shadow-sm">
+          {/* Header Section */}
+          <div className="text-center space-y-1 pb-2 border-b border-gray-100">
+            <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 mb-1">
+              <UserPlus className="w-4 h-4" />
             </div>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-8">
-          {/* Avatar Upload Section */}
-          <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6 pb-6 border-b border-gray-100">
-            <div className="relative">
-              <div className="w-24 h-24 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden">
-                {avatarPreview ? (
-                  <img src={avatarPreview} alt="Preview" className="w-full h-full object-cover" />
-                ) : (
-                  <User className="w-10 h-10 text-gray-400" />
-                )}
-              </div>
-              <label
-                htmlFor="avatar-upload"
-                className="absolute bottom-0 right-0 p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full cursor-pointer shadow-md transition-colors"
-              >
-                <Camera className="w-4 h-4" />
-                <input
-                  id="avatar-upload"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImageChange}
-                />
-              </label>
-            </div>
-            <div className="text-center sm:text-left">
-              <h3 className="text-sm font-semibold text-gray-800">รูปโปรไฟล์</h3>
-              <p className="text-xs text-gray-500 mt-1">รองรับไฟล์ PNG, JPG หรือ GIF (ขนาดไม่เกิน 5MB)</p>
-            </div>
+            <h2 className="text-base font-semibold text-gray-900 tracking-tight">เพิ่มผู้ใช้งานใหม่</h2>
           </div>
 
-          {/* Form Fields Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* First Name */}
+          {/* Form Content */}
+          <form onSubmit={handleSubmit} className="space-y-2.5 text-left">
+            {/* ชื่อ-นามสกุล */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                ชื่อ <span className="text-red-500">*</span>
+              <label className="block text-[11px] font-medium text-gray-700 mb-1">
+                ชื่อ-นามสกุล <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="fullName"
+                value={formData.fullName}
+                onChange={handleChange}
+                required
+                className="w-full px-3 py-1.5 text-xs bg-gray-50/50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+              />
+            </div>
+
+            {/* ชื่อสำหรับเข้าสู่ระบบ */}
+            <div>
+              <label className="block text-[11px] font-medium text-gray-700 mb-1">
+                ชื่อสำหรับเข้าสู่ระบบ <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="username"
+                value={formData.username}
+                onChange={handleChange}
+                placeholder="Somchai.j"
+                required
+                className="w-full px-3 py-1.5 text-xs bg-gray-50/50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+              />
+              <p className="mt-1 text-[10px] text-gray-400 flex items-center gap-1 font-light">
+                <Info className="w-3 h-3 text-emerald-500 shrink-0" />
+                ใช้สำหรับล็อกอินเข้าเครื่อง POS และระบุชื่อในใบเสร็จ
+              </p>
+            </div>
+
+            {/* รหัสผ่าน */}
+            <div>
+              <label className="block text-[11px] font-medium text-gray-700 mb-1">
+                รหัสผ่าน <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
                 <input
-                  type="text"
-                  name="firstName"
-                  value={formData.firstName}
-                  onChange={handleChange}
-                  required
-                  placeholder="สมชาย"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-all outline-none"
-                />
-                <User className="w-4 h-4 text-gray-400 absolute left-3 top-3.5" />
-              </div>
-            </div>
-
-            {/* Last Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                นามสกุล <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  name="lastName"
-                  value={formData.lastName}
-                  onChange={handleChange}
-                  required
-                  placeholder="ใจดี"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-all outline-none"
-                />
-                <User className="w-4 h-4 text-gray-400 absolute left-3 top-3.5" />
-              </div>
-            </div>
-
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                อีเมล <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  placeholder="somchai@example.com"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-all outline-none"
-                />
-                <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-3.5" />
-              </div>
-            </div>
-
-            {/* Phone */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                เบอร์โทรศัพท์
-              </label>
-              <div className="relative">
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  placeholder="081-234-5678"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-all outline-none"
-                />
-                <Phone className="w-4 h-4 text-gray-400 absolute left-3 top-3.5" />
-              </div>
-            </div>
-
-            {/* Role */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                สิทธิ์การใช้งาน (Role) <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <select
-                  name="role"
-                  value={formData.role}
-                  onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-all outline-none bg-white appearance-none cursor-pointer"
-                >
-                  <option value="user">ผู้ใช้งานทั่วไป (User)</option>
-                  <option value="editor">ผู้แก้ไขข้อมูล (Editor)</option>
-                  <option value="manager">ผู้จัดการ (Manager)</option>
-                  <option value="admin">ผู้ดูแลระบบ (Admin)</option>
-                </select>
-                <Shield className="w-4 h-4 text-gray-400 absolute left-3 top-3.5 pointer-events-none" />
-              </div>
-            </div>
-
-            {/* Department */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                แผนก / ฝ่าย
-              </label>
-              <div className="relative">
-                <select
-                  name="department"
-                  value={formData.department}
-                  onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-all outline-none bg-white appearance-none cursor-pointer"
-                >
-                  <option value="">-- เลือกแผนก --</option>
-                  <option value="it">เทคโนโลยีสารสนเทศ (IT)</option>
-                  <option value="hr">ทรัพยากรบุคคล (HR)</option>
-                  <option value="marketing">การตลาด (Marketing)</option>
-                  <option value="sales">ฝ่ายขาย (Sales)</option>
-                  <option value="finance">การเงินและบัญชี (Finance)</option>
-                </select>
-                <Building className="w-4 h-4 text-gray-400 absolute left-3 top-3.5 pointer-events-none" />
-              </div>
-            </div>
-
-            {/* Password */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                รหัสผ่าน <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
+                  placeholder="อย่างน้อย 8 ตัวอักษร"
                   required
-                  placeholder="••••••••"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-all outline-none"
+                  className="w-full px-3 py-1.5 text-xs bg-gray-50/50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                 />
-                <Key className="w-4 h-4 text-gray-400 absolute left-3 top-3.5" />
+                <button
+                  type="button"
+                  tabIndex="-1"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 focus:outline-none"
+                >
+                  {showPassword ? (
+                    <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                  ) : (
+                    <EyeOff className="w-3.5 h-3.5" />
+                  )}
+                </button>
               </div>
             </div>
 
-            {/* Confirm Password */}
+            {/* สิทธิ์การใช้งาน */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                ยืนยันรหัสผ่าน <span className="text-red-500">*</span>
+              <label className="block text-[11px] font-medium text-gray-700 mb-1">
+                สิทธิ์การใช้งาน <span className="text-rose-500">*</span>
               </label>
-              <div className="relative">
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  required
-                  placeholder="••••••••"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-all outline-none"
-                />
-                <Key className="w-4 h-4 text-gray-400 absolute left-3 top-3.5" />
+              <div className="grid grid-cols-2 gap-1.5 p-1 bg-gray-100/80 rounded-lg border border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setFormData((p) => ({ ...p, role: 'CASHIER' }))}
+                  className={`py-1.5 text-xs font-medium rounded-md flex items-center justify-center gap-1 transition-all ${
+                    formData.role === 'CASHIER'
+                      ? 'bg-emerald-500 text-white shadow-sm font-semibold'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <Check className={`w-3 h-3 ${formData.role === 'CASHIER' ? 'opacity-100' : 'opacity-0'}`} />
+                  <span>CASHIER</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData((p) => ({ ...p, role: 'ADMIN' }))}
+                  className={`py-1.5 text-xs font-medium rounded-md flex items-center justify-center gap-1 transition-all ${
+                    formData.role === 'ADMIN'
+                      ? 'bg-emerald-500 text-white shadow-sm font-semibold'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <Check className={`w-3 h-3 ${formData.role === 'ADMIN' ? 'opacity-100' : 'opacity-0'}`} />
+                  <span>ADMIN</span>
+                </button>
               </div>
+              <p className="mt-1 text-[10px] text-gray-400 font-light">
+                {formData.role === 'CASHIER'
+                  ? 'สิทธิ์พนักงานคิดเงิน: เปิดบิล, รับชำระ, และพิมพ์ใบเสร็จ'
+                  : 'สิทธิ์ผู้ดูแลระบบ: เข้าถึงรายงาน, จัดการเมนู และตั้งค่าระบบทั้งหมด'}
+              </p>
             </div>
-          </div>
 
-          {/* Account Status Switch */}
-          <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
+            {/* เบอร์โทรศัพท์ */}
             <div>
-              <h4 className="text-sm font-medium text-gray-800">สถานะเปิดใช้งานบัญชี</h4>
-              <p className="text-xs text-gray-500">อนุญาตให้ผู้ใช้นี้เข้าสู่ระบบได้ทันทีหลังจากลงทะเบียน</p>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
+              <label className="block text-[11px] font-medium text-gray-700 mb-1">
+                เบอร์โทรศัพท์ <span className="font-normal text-gray-400">(ไม่บังคับ)</span>
+              </label>
               <input
-                type="checkbox"
-                checked={formData.status === 'active'}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    status: e.target.checked ? 'active' : 'inactive',
-                  }))
-                }
-                className="sr-only peer"
+                type="text"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                placeholder="08X-XXX-XXXX"
+                className="w-full px-3 py-1.5 text-xs bg-gray-50/50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-            </label>
-          </div>
+            </div>
 
-          {/* Form Actions */}
-          <div className="flex items-center justify-end space-x-3 pt-6 border-t border-gray-100">
-            <button
-              type="button"
-              className="px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium text-sm transition-colors flex items-center space-x-2"
-            >
-              <X className="w-4 h-4" />
-              <span>ยกเลิก</span>
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-colors shadow-sm flex items-center space-x-2"
-            >
-              <Save className="w-4 h-4" />
-              <span>บันทึกข้อมูล</span>
-            </button>
-          </div>
-        </form>
-      </div>
+            {/* อีเมล */}
+            <div>
+              <label className="block text-[11px] font-medium text-gray-700 mb-1">
+                อีเมล <span className="font-normal text-gray-400">(ไม่บังคับ)</span>
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="Somchai.j@example.com"
+                className="w-full px-3 py-1.5 text-xs bg-gray-50/50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+              />
+            </div>
+
+            {/* Buttons */}
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium transition-colors"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="submit"
+                className="py-2 bg-[#ff5722] hover:bg-[#f4511e] text-white rounded-lg text-xs font-medium shadow-sm transition-colors flex items-center justify-center gap-1"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>สร้างบัญชี</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="w-full bg-white border-t border-gray-200 px-6 py-2.5 flex items-center justify-between text-[11px] text-gray-500 shrink-0">
+        <div>Cafe POS System &nbsp;|&nbsp; Build POS-v2.1.0 [Production]</div>
+        <div>สงวนลิขสิทธิ์ © 2026 Cafe Management Solutions Co., Ltd.</div>
+      </footer>
     </div>
   );
 }

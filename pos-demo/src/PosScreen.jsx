@@ -150,6 +150,7 @@ export default function PosScreen() {
   return (
     <div className="pos">
       
+      {/* 👉 เพิ่ม CSS สำหรับขยายฝั่งขวา */}
       <style>{`
         .clean-search-input {
           background-color: transparent !important;
@@ -169,7 +170,6 @@ export default function PosScreen() {
             -webkit-box-shadow: 0 0 0 30px white inset !important;
         }
 
-        /* 👉 ปรับสัดส่วนพื้นที่หน้าจอเป็น 60/40 */
         .pos-menu {
           flex: 6 !important;
           min-width: 0;
@@ -178,6 +178,82 @@ export default function PosScreen() {
           flex: 4 !important;
           min-width: 400px !important;
           max-width: 520px !important; 
+        }
+
+        /* -------------------------------------------
+           สไตล์ส่วนขยายฝั่งตะกร้า (Cart Panel) ให้ใหญ่ขึ้น 
+           ------------------------------------------- */
+        
+        /* ขยายป้าย Qty ด้านหน้า */
+        .custom-cart-icon {
+          width: 36px !important;
+          height: 36px !important;
+          font-size: 15px !important;
+          border-radius: 10px !important;
+        }
+
+        /* ขยายชื่อและรายละเอียดสินค้า */
+        .custom-cart-name {
+          font-size: 16px !important;
+          font-weight: 700 !important;
+        }
+        .custom-cart-price {
+          font-size: 18px !important;
+          font-weight: 800 !important;
+          color: #ea580c !important; /* สีส้มอมแดง */
+        }
+        .custom-cart-detail {
+          font-size: 13px !important;
+          margin-top: 4px;
+        }
+
+        /* ขยายป้าย ใหม่ (New Badge) */
+        .custom-new-badge {
+          font-size: 11px !important;
+          padding: 4px 8px !important;
+          border-radius: 6px !important;
+        }
+
+        /* ขยายปุ่ม เพิ่ม/ลด จำนวน (+ / -) */
+        .custom-stepper {
+          height: 36px !important;
+          border-radius: 10px !important;
+        }
+        .custom-stepper button {
+          width: 36px !important;
+          height: 36px !important;
+        }
+        .custom-stepper span {
+          font-size: 16px !important;
+          font-weight: 700 !important;
+          min-width: 32px !important;
+        }
+        .custom-trash-btn {
+          width: 36px !important;
+          height: 36px !important;
+          border-radius: 10px !important;
+        }
+        .custom-trash-btn svg {
+          width: 18px;
+          height: 18px;
+        }
+
+        /* 👉 ขยายปุ่ม Payments และเปลี่ยนสีให้ตรงกับปุ่มเพิ่มเมนูใหม่ */
+        .custom-payment-btn {
+          height: 64px !important;
+          font-size: 18px !important;
+          border-radius: 12px !important;
+          background-color: #00694b !important; /* สีเขียวเดียวกับปุ่มเพิ่มเมนู */
+          color: #ffffff !important;
+          border: none !important;
+          box-shadow: 0 4px 6px -1px rgba(0, 105, 75, 0.2) !important;
+        }
+        
+        /* ขยายยอดรวม Total */
+        .custom-total-value {
+          font-size: 32px !important;
+          font-weight: 800 !important;
+          color: #00694b !important;
         }
       `}</style>
 
@@ -338,28 +414,31 @@ export default function PosScreen() {
                   <div className="pos-order__items custom-scrollbar" style={{ flex: 1, overflowY: 'auto', marginTop: 0, marginBottom: '20px', paddingRight: '4px' }}>
                     {cart.map((item) => (
                       <div className="pos-orderitem" key={item.id}>
-                        <div className="pos-orderitem__icon">
-                          <Icon.Coffee />
+                        {/* 👉 แทนที่ไอคอนด้วยป้าย 1x */}
+                        <div className="pos-orderitem__icon custom-cart-icon" style={{ background: '#e6f7f1', color: '#00694b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                          {item.qty}x
                         </div>
                         <div className="pos-orderitem__body">
                           <div className="pos-orderitem__row">
-                            <div className="pos-orderitem__name">
+                            <div className="pos-orderitem__name custom-cart-name">
                               {item.name}
-                              {item.isNew && <span className="pos-badge">ใหม่</span>}
+                              {item.isNew && <span className="pos-badge custom-new-badge" style={{ background: '#f97316', color: '#fff' }}>ใหม่</span>}
                             </div>
-                            <div className="pos-orderitem__price">฿{item.price.toFixed(2)}</div>
+                            <div className="pos-orderitem__price custom-cart-price">฿{(item.price * item.qty).toFixed(2)}</div>
                           </div>
-                          <div className="pos-orderitem__detail">{item.detail}</div>
-                          <div className="pos-orderitem__extras">{item.extras}</div>
-                          {item.note && <div className="pos-orderitem__note">{item.note}</div>}
+                          
+                          {/* 👉 รายละเอียดเมนูที่ใหญ่ขึ้น */}
+                          <div className="pos-orderitem__detail custom-cart-detail">{item.detail}</div>
+                          {item.extras && <div className="pos-orderitem__extras custom-cart-detail" style={{ color: '#059669', marginTop: '2px' }}>{item.extras}</div>}
+                          {item.note && <div className="pos-orderitem__note custom-cart-detail" style={{ color: '#ea580c', marginTop: '2px' }}>* {item.note}</div>}
 
-                          <div className="pos-orderitem__footer">
-                            <div className="pos-stepper pos-stepper--panel">
-                              <button onClick={() => changeCartQty(item.id, -1)} aria-label="ลดจำนวน"><Icon.Minus /></button>
+                          <div className="pos-orderitem__footer" style={{ marginTop: '16px' }}>
+                            <div className="pos-stepper pos-stepper--panel custom-stepper">
+                              <button onClick={() => changeCartQty(item.id, -1)} aria-label="ลดจำนวน" style={{ color: '#ef4444' }}><Icon.Minus /></button>
                               <span>{item.qty}</span>
-                              <button onClick={() => changeCartQty(item.id, 1)} aria-label="เพิ่มจำนวน"><Icon.Plus /></button>
+                              <button onClick={() => changeCartQty(item.id, 1)} aria-label="เพิ่มจำนวน" style={{ color: '#f97316' }}><Icon.Plus /></button>
                             </div>
-                            <button className="pos-iconbtn" onClick={() => removeCartItem(item.id)} aria-label="ลบรายการ">
+                            <button className="pos-iconbtn custom-trash-btn" onClick={() => removeCartItem(item.id)} aria-label="ลบรายการ">
                               <Icon.Trash />
                             </button>
                           </div>
@@ -378,15 +457,15 @@ export default function PosScreen() {
                       <div className="pos-promo__head">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <Icon.Tag className="pos-promo__icon" />
-                          <span>โปรโมชั่น (Promotion)</span>
+                          <span style={{ fontSize: '15px', fontWeight: 600 }}>โปรโมชั่น (Promotion)</span>
                         </div>
                         
                         {appliedPromo ? (
-                          <span className="pos-pill pos-pill--green">ประหยัด {appliedPromo.value.replace('-', '')}</span>
+                          <span className="pos-pill pos-pill--green" style={{ fontSize: '13px', padding: '6px 12px' }}>ประหยัด {appliedPromo.value.replace('-', '')}</span>
                         ) : (
                           <span 
                             className="pos-pill pos-pill--green" 
-                            style={{ cursor: 'pointer' }}
+                            style={{ cursor: 'pointer', fontSize: '13px', padding: '6px 12px' }}
                             onClick={() => setIsSelectPromoModalOpen(true)}
                           >
                             + เพิ่มส่วนลด
@@ -409,27 +488,27 @@ export default function PosScreen() {
                           </div>
                         </>
                       ) : (
-                        <div style={{ padding: '16px 0 8px', textAlign: 'center', color: '#9ca3af', fontSize: '13px' }}>
+                        <div style={{ padding: '16px 0 8px', textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
                           ยังไม่มีการเลือกโปรโมชั่น
                         </div>
                       )}
                     </div>
 
-                    <div className="pos-total">
+                    <div className="pos-total" style={{ padding: '24px 0 16px' }}>
                       <div>
-                        <div className="pos-total__label">Total</div>
-                        <div className="pos-total__meta">
+                        <div className="pos-total__label" style={{ fontSize: '18px', fontWeight: 700, color: '#111827' }}>Total</div>
+                        <div className="pos-total__meta" style={{ fontSize: '13px' }}>
                           Items: {itemCount}, Quantity: {quantityCount}
                         </div>
                       </div>
-                      <div className="pos-total__value">฿{cart.reduce((s, i) => s + (i.price * i.qty), 0).toFixed(2)}</div>
+                      <div className="pos-total__value custom-total-value">฿{cart.reduce((s, i) => s + (i.price * i.qty), 0).toFixed(2)}</div>
                     </div>
 
                     <div className="pos-order__buttons">
                       
                       <button 
-                        className="pos-btn pos-btn--solid pos-btn--full" 
-                        style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}
+                        className="pos-btn pos-btn--solid pos-btn--full custom-payment-btn" 
+                        style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}
                         onClick={() => {
                           if (cart.length > 0) {
                             setIsPaymentModalOpen(true);

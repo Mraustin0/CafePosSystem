@@ -345,7 +345,7 @@ export default function PaymentModal({ onClose, cart = [], onConfirmPayment, ord
             <div className="tender-box">
               {activeMethod === 'cash' ? (
                 <>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#1e40af' }}>ยอดรับ: ฿{totalAmount.toFixed(2)}</div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#000000' }}>ยอดรับ: ฿{totalAmount.toFixed(2)}</div>
                   
                   <div className="cash-grid">
                     {uniqueCashOptions.map((cash, i) => (

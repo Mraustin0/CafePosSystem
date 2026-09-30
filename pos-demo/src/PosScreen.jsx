@@ -10,6 +10,7 @@ import MenuManagementView from "./MenuManagementView";
 import { SelectPromotionModal } from "./SelectPromotionModal";
 import MenuConfigModal  from "./MenuConfigModal";
 import AddonManagementView from "./AddonManagementView"; 
+import BillManagementView from "./BillManagementView";
 
 /* 👉 นำเข้า PaymentModal และ PaymentSuccessModal */
 import PaymentModal from "./PaymentModal";
@@ -36,6 +37,7 @@ const Icon = {
   Print: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><path d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-2M6 14h12v7H6z" strokeLinejoin="round" /></svg>,
   Card: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><rect x="2.5" y="5" width="19" height="14" rx="2" /><path d="M2.5 10h19" /></svg>,
   Edit: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><path d="M12 20h9" strokeLinecap="round" strokeLinejoin="round" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" strokeLinecap="round" strokeLinejoin="round" /></svg>,
+  Receipt: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><path d="M21 2v20l-5-4-5 4-5-4-5 4V2a1 1 0 0 1 1-1h18a1 1 0 0 1 1 1z" strokeLinejoin="round" /><path d="M7 10h10M7 14h6" strokeLinecap="round" /></svg>,
 };
 
 const NAV_ITEMS = [
@@ -45,6 +47,7 @@ const NAV_ITEMS = [
 ];
 
 const NAV_FOOTER = [
+  { key: "bill_mgmt", label: "จัดการบิล", icon: Icon.Receipt },
   { key: "manage", label: "จัดการเมนู", icon: Icon.Edit },
   { key: "manage_addon", label: "จัดการท็อปปิ้ง", icon: Icon.Layers }, 
   { key: "promo", label: "โปรโมชั่น", icon: Icon.Tag },
@@ -287,9 +290,13 @@ export default function PosScreen() {
         </aside>
 
         <div className="pos-main">
-          <div className="pos-body" style={{ flexDirection: (activeNav === "promo" || activeNav === "manage" || activeNav === "manage_addon") ? "column" : "row" }}>
+          <div className="pos-body" style={{ flexDirection: (activeNav === "promo" || activeNav === "manage" || activeNav === "manage_addon" ||activeNav === "bill_mgmt") ? "column" : "row" }}>
+            {activeNav === "bill_mgmt" ? (
+              <BillManagementView 
+            />
+            ) :
 
-            {activeNav === "manage_addon" ? (
+            activeNav === "manage_addon" ? (
               <AddonManagementView 
                 addons={globalAddons}
                 onToggleStatus={(id) => {

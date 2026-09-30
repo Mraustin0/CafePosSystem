@@ -168,6 +168,17 @@ export default function PosScreen() {
         input:-webkit-autofill:active {
             -webkit-box-shadow: 0 0 0 30px white inset !important;
         }
+
+        /* 👉 ปรับสัดส่วนพื้นที่หน้าจอเป็น 60/40 */
+        .pos-menu {
+          flex: 6 !important;
+          min-width: 0;
+        }
+        .pos-order {
+          flex: 4 !important;
+          min-width: 400px !important;
+          max-width: 520px !important; 
+        }
       `}</style>
 
       <div className="pos-content">
@@ -498,7 +509,6 @@ export default function PosScreen() {
           cart={cart}
           onClose={() => setIsPaymentModalOpen(false)}
           onConfirmPayment={(data) => {
-            // 👉 แก้ตรงนี้: แนบ cart เข้าไปในข้อมูลที่ชำระเงินเสร็จด้วย
             setCompletedPaymentData({ ...data, cart: cart }); 
             setIsPaymentModalOpen(false); 
           }}

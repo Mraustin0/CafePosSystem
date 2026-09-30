@@ -36,7 +36,6 @@ export default function MenuManagementView({ menuItems, onToggleStatus, onDelete
   return (
     <div className="promo-view" style={{ width: '100%', display: 'flex', flexDirection: 'column', height: '100%' }}>
       
-      {/* 👇 เพิ่ม Style นี้เพื่อแก้ปัญหาพื้นหลังดำของ Input (ค้นหา) */}
       <style>{`
         .clean-search-input {
           background-color: #ffffff !important;
@@ -59,8 +58,6 @@ export default function MenuManagementView({ menuItems, onToggleStatus, onDelete
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          
-          {/* 👉 แก้ช่องค้นหาตรงนี้ */}
           <div style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #d1d5db', borderRadius: '8px', padding: '8px 12px', width: '300px' }}>
             <svg width="16" height="16" fill="none" stroke="#9ca3af" strokeWidth="2" viewBox="0 0 24 24" style={{marginRight: '8px'}}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input 
@@ -106,9 +103,23 @@ export default function MenuManagementView({ menuItems, onToggleStatus, onDelete
           ))}
         </div>
 
+        {/* 👉 ปรับสีปุ่ม "เพิ่มเมนูใหม่" เป็น #00694b ตามปุ่ม Add-on */}
         <button 
           onClick={onOpenAddMenuModal} 
-          style={{ background: '#059669', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)' }}
+          style={{ 
+            background: '#00694b', 
+            color: '#fff', 
+            border: 'none', 
+            padding: '10px 20px', 
+            borderRadius: '10px', 
+            fontSize: '14px', 
+            fontWeight: 600, 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px', 
+            cursor: 'pointer', 
+            boxShadow: '0 4px 6px -1px rgba(0, 105, 75, 0.2)' 
+          }}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
           เพิ่มเมนูใหม่

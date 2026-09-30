@@ -108,10 +108,7 @@ const calcVat = (total) => (total * 7) / 107;
 
 const summarize = (items) =>
   items
-    .map((it) => {
-      const name = it.name.replace(/^\d+\.\s*/, '').replace(/\s*\(.*\)\s*$/, '');
-      return name;
-    })
+    .map((it) => it.name.replace(/^\d+\.\s*/, '').replace(/\s*\(.*\)\s*$/, ''))
     .join(', ');
 
 const daysBetween = (isoA, isoB) =>
@@ -176,10 +173,15 @@ export default function BillManagementView() {
       {/* ---------------- ฝั่งซ้าย: รายการบิล ---------------- */}
       <section className="bm-list-pane">
         <header className="bm-list-header">
-          <div className="bm-title-wrap">
-            <span className="bm-title-bar" />
-            <h2 className="bm-title">รายการบิลทั้งหมด (Bill Management)</h2>
+          <div>
+            <h2 className="bm-title">
+              รายการบิลทั้งหมด <span>(Bill Management)</span>
+            </h2>
+            <p className="bm-subtitle">
+              ตรวจสอบประวัติการขาย ดูรายละเอียด และพิมพ์ใบเสร็จซ้ำ
+            </p>
           </div>
+
           <div className="bm-header-right">
             <span className="bm-count-pill">
               ทั้งหมด {visibleBills.length} บิล ({dateTitle})
@@ -228,7 +230,6 @@ export default function BillManagementView() {
                 className={`bm-tab ${dateTab === tab.key ? 'active' : ''}`}
                 onClick={() => setDateTab(tab.key)}
               >
-                {tab.key === 'custom' && <span aria-hidden="true">📅 </span>}
                 {tab.label}
               </button>
             ))}

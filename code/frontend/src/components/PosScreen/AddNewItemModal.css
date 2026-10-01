@@ -1,0 +1,389 @@
+/* Overlay ทำให้ Modal ลอยอยู่ตรงกลางจอ */
+.add-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.4);
+  padding: 20px;
+}
+
+/* ตัวกล่อง Modal */
+.add-modal {
+  width: 100%;
+  max-width: 768px;
+  background-color: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: "Noto Sans Thai", "Inter", sans-serif;
+}
+
+/* ---------------- Header ---------------- */
+.add-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 28px 32px 20px;
+}
+
+.add-modal__header-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.add-modal__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background-color: #10b981;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.add-modal__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.add-modal__subtitle {
+  font-size: 14px;
+  color: #94a3b8;
+  margin: 2px 0 0 0;
+}
+
+.add-modal__close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.add-modal__close:hover {
+  background-color: #f1f5f9;
+  color: #475569;
+}
+
+/* ---------------- Body ---------------- */
+.add-modal__body {
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 0 32px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.add-modal__row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+@media (min-width: 640px) {
+  .add-modal__row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Fields & Inputs */
+.add-field {
+  display: block;
+}
+
+.add-field__label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 6px;
+}
+
+.add-field__required {
+  color: #10b981;
+}
+
+.add-input {
+  width: 100%;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  padding: 0 14px;
+  font-size: 14px;
+  color: #1e293b;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.add-input:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.add-select-wrapper,
+.add-price-wrapper {
+  position: relative;
+}
+
+.add-select {
+  appearance: none;
+  padding-right: 36px;
+  cursor: pointer;
+}
+
+.add-select-icon {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.add-price-symbol {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.add-input--price {
+  padding-left: 32px;
+}
+
+/* Upload Box */
+.add-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+  margin: 0 0 8px 0;
+}
+
+.add-upload {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 2px dashed #e2e8f0;
+  background-color: #f8fafc;
+  border-radius: 16px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.add-upload:hover {
+  border-color: #34d399;
+  background-color: rgba(236, 253, 245, 0.5);
+}
+
+.add-upload__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  background-color: rgba(226, 232, 240, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.add-upload__text {
+  flex: 1;
+}
+
+.add-upload__title {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #475569;
+}
+
+.add-upload__desc {
+  display: block;
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.add-upload__btn {
+  border: 1px solid #10b981;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #059669;
+}
+
+.add-file-hidden {
+  display: none;
+}
+
+/* Checkboxes */
+.add-options {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 32px;
+  row-gap: 12px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.add-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #334155;
+  cursor: pointer;
+}
+
+.add-checkbox-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.add-checkbox-input {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  cursor: pointer;
+  appearance: none;
+  border-radius: 6px;
+  border: 2px solid #cbd5e1;
+  background-color: transparent;
+  transition: all 0.2s;
+  margin: 0;
+}
+
+.add-checkbox-input:checked {
+  border-color: #10b981;
+  background-color: #10b981;
+}
+
+.add-checkbox-icon {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 14px;
+  height: 14px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.add-checkbox-input:checked + .add-checkbox-icon {
+  opacity: 1;
+}
+
+/* Toggle Switch */
+.add-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 8px;
+}
+
+.add-toggle-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.add-toggle {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border-radius: 99px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+}
+
+.add-toggle.is-on { background-color: #10b981; }
+.add-toggle.is-off { background-color: #cbd5e1; }
+
+.add-toggle__circle {
+  position: absolute;
+  top: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: left 0.2s;
+}
+
+.add-toggle.is-on .add-toggle__circle { left: calc(100% - 22px); }
+.add-toggle.is-off .add-toggle__circle { left: 2px; }
+
+.add-toggle-text {
+  font-size: 14px;
+  color: #475569;
+}
+
+/* ---------------- Footer ---------------- */
+.add-modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 32px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.add-btn {
+  border-radius: 12px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.add-btn--ghost {
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  color: #475569;
+}
+
+.add-btn--ghost:hover {
+  background-color: #f8fafc;
+}
+
+.add-btn--solid {
+  border: none;
+  background-color: #0f3d2e; /* สีเขียวเข้มเหมือนในรูป */
+  color: #ffffff;
+}
+
+.add-btn--solid:hover {
+  background-color: #0c3325;
+}

@@ -15,15 +15,15 @@ import BillManagementView from "./BillManagementView";
 import DashboardView from "./DashboardView";
 import { listProducts, createProduct, updateProduct } from "../../api/products";
 import { listAddOns, createAddOn, setAddOnStatus, updateAddOn } from "../../api/addOns";
-import { getCategories } from "../../api/categories";
+import { getCategories, navKeyFor, categoryForNav } from "../../api/categories";
 import { createPromotion, updatePromotion } from "../../api/promotions";
 import { createOrder, applyDiscount } from "../../api/orders";
 import { payOrder } from "../../api/payment";
 import { useAuth } from "../../auth/useAuth";
 import { useNavigate } from "react-router-dom";
 
-// Backend category name -> UI nav key (Thana-nan's shape uses "coffee"/"tea"/"snack").
-const CATEGORY_TO_NAV = { Coffee: "coffee", Tea: "tea", Bakery: "snack" };
+// Backend category → UI nav key resolved via navKeyFor() (case-insensitive, substring-aware).
+// Kept here only so legacy lookups keep working if backend ever regresses to lowercase strings.
 
 // Default customization options — backend only stores product name/price/addons, so the UI
 // menus for serving/roast/sweetness are shared across products and populated from these
@@ -41,6 +41,8 @@ const DEFAULT_SWEETNESS = [
   { label: '100%', active: true }, { label: '75%', active: true },
   { label: '50%', active: true }, { label: '25%', active: true }, { label: '0%', active: true },
 ];
+// Reverse lookup — kept as a fallback hint; the authoritative source is the loaded `categories`
+// state, resolved via categoryForNav(categories, navKey).
 const NAV_TO_CATEGORY = { coffee: "Coffee", tea: "Tea", snack: "Bakery" };
 
 /* ---------------------------------------------------------
@@ -208,7 +210,7 @@ export default function PosScreen() {
       const page = await listProducts({ size: 200 });
       const items = (page?.content ?? []).map((p) => ({
         id: p.id,
-        category: CATEGORY_TO_NAV[p.category?.name] ?? "coffee",
+        category: navKeyFor(p.category?.name),
         name: p.name,
         price: p.price != null ? Number(p.price) : 0,
         qty: 0,
@@ -293,6 +295,20 @@ export default function PosScreen() {
     // P10: match backend BigDecimal scale=2 HALF_UP to avoid float precision mismatch on QR/CARD.
     const rawAmount = method === "CASH" ? paymentData.cashGiven : paymentData.totalAmount;
     const amountReceived = Number(Number(rawAmount).toFixed(2));
+    // Guard rails for backend contract: NaN/negative always rejected; CASH must cover total; non-CASH must equal exactly.
+    const dueTotal = Number(Number(paymentData.totalAmount ?? total).toFixed(2));
+    if (!Number.isFinite(amountReceived) || amountReceived < 0) {
+      alert('จำนวนเงินไม่ถูกต้อง');
+      return;
+    }
+    if (method === 'CASH' && amountReceived < dueTotal) {
+      alert(`เงินสดที่รับ (฿${amountReceived.toFixed(2)}) น้อยกว่ายอดที่ต้องชำระ (฿${dueTotal.toFixed(2)})`);
+      return;
+    }
+    if (method !== 'CASH' && amountReceived !== dueTotal) {
+      alert(`${method} ต้องชำระเท่ายอดเท่านั้น (฿${dueTotal.toFixed(2)})`);
+      return;
+    }
 
     setCheckoutBusy(true);
     try {
@@ -339,8 +355,7 @@ export default function PosScreen() {
 
   const handleSaveMenuConfig = async (id, data) => {
     const existing = menu.find((m) => m.id === id);
-    const backendCategoryName = NAV_TO_CATEGORY[existing?.category];
-    const cat = categories.find((c) => c.name === backendCategoryName);
+    const cat = categoryForNav(categories, existing?.category);
     try {
       await updateProduct(id, {
         categoryId: cat?.id,
@@ -779,9 +794,8 @@ export default function PosScreen() {
           activeCategory={NAV_TO_CATEGORY[activeNav] ? activeNav : "coffee"}
           onClose={() => setIsAddMenuOpen(false)}
           onSubmit={async (form) => {
-            const backendName = NAV_TO_CATEGORY[form.category];
-            const cat = categories.find((c) => c.name === backendName);
-            if (!cat) throw new Error(`ไม่พบหมวด "${backendName}" ในฐานข้อมูล`);
+            const cat = categoryForNav(categories, form.category);
+            if (!cat) throw new Error(`ไม่พบหมวดสำหรับ nav key "${form.category}" ในฐานข้อมูล`);
             try {
               await createProduct({ categoryId: cat.id, name: form.name, price: form.price, imageUrl: null, addOnIds: [] });
               window.dispatchEvent(new Event("products:reload"));

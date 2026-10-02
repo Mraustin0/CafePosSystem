@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './PromotionView.css';
 import { listProducts, setProductStatus } from '../../api/products';
-
-const CATEGORY_TO_NAV = { Coffee: 'coffee', Tea: 'tea', Bakery: 'snack' };
+import { navKeyFor } from '../../api/categories';
 
 export default function MenuManagementView({ onOpenAddMenuModal, onEditMenu }) {
   const [menu, setMenu] = useState([]);
@@ -20,11 +19,11 @@ export default function MenuManagementView({ onOpenAddMenuModal, onEditMenu }) {
       const page = await listProducts({ size: 200 });
       setMenu((page?.content ?? []).map((p) => ({
         id: p.id,
-        category: CATEGORY_TO_NAV[p.category?.name] ?? 'coffee',
+        category: navKeyFor(p.category?.name),
         name: p.name,
         price: p.price != null ? Number(p.price) : 0,
         imgSrc: p.imageUrl ?? null,
-        kind: p.category?.name === 'Tea' ? 'tea' : p.category?.name === 'Bakery' ? 'snack' : '',
+        kind: navKeyFor(p.category?.name) === 'coffee' ? '' : navKeyFor(p.category?.name),
         isActive: p.active,
       })));
       setLoadError(null);

@@ -45,10 +45,20 @@ export default function MainLayout({ activeNav, setActiveNav }) {
   };
 
   return (
-    <div className="pos">
-      <div className="pos-content">
-        {/* บาร์ซ้ายคงที่ตลอดเวลา */}
-        <aside className="pos-sidebar">
+    /* ล็อคความสูงหน้าจอ 100vh และห้ามไม่ให้ body/parent scroll */
+    <div className="pos" style={{ height: "100vh", width: "100vw", overflow: "hidden" }}>
+      <div className="pos-content" style={{ display: "flex", height: "100%", width: "100%" }}>
+        
+        {/* บาร์ซ้ายคงที่ตลอดเวลา ห้ามเลื่อน และไม่ให้หดขนาด (flexShrink: 0) */}
+        <aside 
+          className="pos-sidebar" 
+          style={{ 
+            height: "100vh", 
+            flexShrink: 0, 
+            overflowY: "auto",
+            zIndex: 10 
+          }}
+        >
           <nav className="pos-sidebar__nav">
             {NAV_ITEMS.map(({ key, label, icon: ItemIcon }) => (
               <button
@@ -79,19 +89,22 @@ export default function MainLayout({ activeNav, setActiveNav }) {
           </nav>
         </aside>
 
-        {/* พื้นที่แสดงผลส่วนขวา (สลับระหว่าง POS กับ Dashboard) */}
+        {/* พื้นที่แสดงผลส่วนขวา (สลับระหว่าง POS กับ Dashboard) รับหน้าที่ Scroll เพียงจุดเดียว */}
         <div 
           className="pos-main" 
           style={{ 
             flex: 1, 
             height: "100vh", 
             overflowY: "auto", 
-            backgroundColor: "#f8fafc", /* สีเทาอ่อนแบบรูปที่ 2 */
-            padding: "32px 24px" 
+            backgroundColor: "#f8fafc", 
+            padding: "24px 32px" 
           }}
         >
-          <Outlet />
+          <div style={{ maxWidth: "1280px", margin: "0 auto", width: "100%" }}>
+            <Outlet />
+          </div>
         </div>
+
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import com.cafepos.common.CurrentUser;
 import com.cafepos.domain.enums.OrderStatus;
 import com.cafepos.dto.request.ApplyDiscountRequest;
 import com.cafepos.dto.request.OrderItemsRequest;
+import com.cafepos.dto.response.OrderQuickStatsResponse;
 import com.cafepos.dto.response.OrderResponse;
 import com.cafepos.dto.response.OrderSummaryResponse;
 import com.cafepos.dto.response.PageResponse;
@@ -32,4 +33,7 @@ public interface OrderService {
     OrderResponse applyDiscount(Long id, ApplyDiscountRequest request, CurrentUser actor);
 
     OrderResponse cancel(Long id, CurrentUser actor);
+
+    /** Today's PAID/PENDING summary scoped to the current user (admin sees everyone). */
+    OrderQuickStatsResponse quickStatsToday(CurrentUser actor);
 }

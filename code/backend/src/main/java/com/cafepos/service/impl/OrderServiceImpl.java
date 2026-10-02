@@ -7,6 +7,8 @@ import com.cafepos.domain.enums.OrderStatus;
 import com.cafepos.dto.request.ApplyDiscountRequest;
 import com.cafepos.dto.request.OrderItemRequest;
 import com.cafepos.dto.request.OrderItemsRequest;
+import com.cafepos.common.ShopTime;
+import com.cafepos.dto.response.OrderQuickStatsResponse;
 import com.cafepos.dto.response.OrderResponse;
 import com.cafepos.dto.response.OrderSummaryResponse;
 import com.cafepos.dto.response.PageResponse;
@@ -124,6 +126,25 @@ public class OrderServiceImpl implements OrderService {
         Order order = getVisibleOrder(id, actor);
         order.cancel();
         return toResponse(order);
+    }
+
+    @Override
+    public OrderQuickStatsResponse quickStatsToday(CurrentUser actor) {
+        LocalDate today = LocalDate.now(ShopTime.ZONE);
+        Long cashierId = actor.admin() ? null : actor.id();
+        Page<Order> all = orderRepository.findAll(
+                OrderSpecifications.filter(null, today, today, cashierId),
+                Pageable.unpaged());
+        long paid = all.stream().filter(o -> o.getStatus() == OrderStatus.PAID).count();
+        long pending = all.stream().filter(o -> o.getStatus() == OrderStatus.PENDING).count();
+        BigDecimal net = all.stream()
+                .filter(o -> o.getStatus() == OrderStatus.PAID)
+                .map(Order::getTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+        BigDecimal avg = paid == 0 ? BigDecimal.ZERO.setScale(2)
+                : net.divide(BigDecimal.valueOf(paid), 2, RoundingMode.HALF_UP);
+        return new OrderQuickStatsResponse(paid, net, avg, pending);
     }
 
     // ----- helpers -----

@@ -1,5 +1,11 @@
 /* Overlay ทำให้ Modal ลอยอยู่ตรงกลางจอ */
 .add-modal-overlay {
+  /* สีหลักของแอป — แก้ที่นี่ที่เดียว */
+  --brand: #00694b;
+  --brand-dark: #005a40;
+  --brand-ring: rgba(0, 105, 75, 0.2);
+  --brand-tint: rgba(0, 105, 75, 0.06);
+
   position: fixed;
   inset: 0;
   z-index: 50;
@@ -42,7 +48,7 @@
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background-color: #10b981;
+  background-color: var(--brand);
   color: white;
   display: flex;
   align-items: center;
@@ -117,7 +123,7 @@
 }
 
 .add-field__required {
-  color: #10b981;
+  color: var(--brand);
 }
 
 .add-input {
@@ -134,8 +140,8 @@
 }
 
 .add-input:focus {
-  border-color: #10b981;
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+  border-color: var(--brand);
+  box-shadow: 0 0 0 2px var(--brand-ring);
 }
 
 .add-select-wrapper,
@@ -197,8 +203,8 @@
 }
 
 .add-upload:hover {
-  border-color: #34d399;
-  background-color: rgba(236, 253, 245, 0.5);
+  border-color: var(--brand);
+  background-color: var(--brand-tint);
 }
 
 .add-upload__icon {
@@ -232,12 +238,12 @@
 }
 
 .add-upload__btn {
-  border: 1px solid #10b981;
+  border: 1px solid var(--brand);
   border-radius: 8px;
   padding: 6px 14px;
   font-size: 12px;
   font-weight: 600;
-  color: #059669;
+  color: var(--brand);
 }
 
 .add-file-hidden {
@@ -283,8 +289,8 @@
 }
 
 .add-checkbox-input:checked {
-  border-color: #10b981;
-  background-color: #10b981;
+  border-color: var(--brand);
+  background-color: var(--brand);
 }
 
 .add-checkbox-icon {
@@ -327,7 +333,7 @@
   flex-shrink: 0;
 }
 
-.add-toggle.is-on { background-color: #10b981; }
+.add-toggle.is-on { background-color: var(--brand); }
 .add-toggle.is-off { background-color: #cbd5e1; }
 
 .add-toggle__circle {
@@ -380,10 +386,11 @@
 
 .add-btn--solid {
   border: none;
-  background-color: #0f3d2e; /* สีเขียวเข้มเหมือนในรูป */
+  background-color: var(--brand);
   color: #ffffff;
+  box-shadow: 0 4px 6px -1px var(--brand-ring);
 }
 
 .add-btn--solid:hover {
-  background-color: #0c3325;
+  background-color: var(--brand-dark);
 }

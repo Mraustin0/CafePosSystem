@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import './BillManagementView.css';
+import { printReceipt } from './Receiptprinter';
 
 /* ---------------------------------------------------------
    Mock data — ทุกบิลคือรายการที่ชำระเงินสำเร็จแล้วเท่านั้น
@@ -111,6 +112,34 @@ const summarize = (items) =>
     .map((it) => it.name.replace(/^\d+\.\s*/, '').replace(/\s*\(.*\)\s*$/, ''))
     .join(', ');
 
+// แปลงข้อมูลบิล -> รูปแบบที่ printReceipt ต้องการ
+// หมายเหตุ: mock data ยังไม่มี field qty จึงอ่านจากข้อความใน meta ("จำนวน 2 ...")
+// เมื่อต่อ API จริง ให้ส่ง qty / unitPrice มาใน items แล้วใช้ค่านั้นแทน
+const billToReceipt = (bill) => {
+  const cart = bill.items.map((it) => {
+    const qty = parseInt((it.meta.match(/จำนวน:?\s*(\d+)/) || [])[1], 10) || 1;
+    return {
+      name: it.name.replace(/^\d+\.\s*/, ''),
+      qty,
+      price: it.price / qty, // ราคาต่อหน่วย (printReceipt จะคูณ qty เอง)
+      detail: it.detail,
+    };
+  });
+  const seq = parseInt(bill.id.slice(-3), 10) || 1;
+
+  return {
+    totalAmount: bill.total,
+    method: bill.payment,
+    cart,
+    orderId: bill.id,
+    receiptNo: bill.id.replace('#', ''),
+    queueNo: `Q${seq}`,
+    cashierName: bill.cashier,
+    date: new Date(bill.timestamp),
+    isReprint: true,
+  };
+};
+
 const daysBetween = (isoA, isoB) =>
   Math.floor((new Date(isoA).setHours(0, 0, 0, 0) - new Date(isoB).setHours(0, 0, 0, 0)) / 86400000);
 
@@ -162,10 +191,19 @@ export default function BillManagementView() {
   const activeBill = visibleBills.find((b) => b.id === selectedId) || visibleBills[0] || null;
   const dateTitle = DATE_TABS.find((t) => t.key === dateTab).title;
 
+  const showToast = (msg) => {
+    setToast(msg);
+    window.setTimeout(() => setToast(''), 2500);
+  };
+
   const handleReprint = () => {
     if (!activeBill) return;
-    setToast(`ส่งพิมพ์ใบเสร็จ ${activeBill.id} เรียบร้อยแล้ว`);
-    window.setTimeout(() => setToast(''), 2500);
+    const opened = printReceipt(billToReceipt(activeBill));
+    showToast(
+      opened
+        ? `กำลังพิมพ์ใบเสร็จ ${activeBill.id}`
+        : 'บราวเซอร์บล็อก Pop-up อยู่ กรุณาอนุญาตเพื่อเปิดใบเสร็จ'
+    );
   };
 
   return (
@@ -401,7 +439,7 @@ export default function BillManagementView() {
                   <span className="bm-payment-value bm-payment-ok">✓ ชำระเงินเรียบร้อยแล้ว</span>
                 </div>
                 <div className="bm-payment-row">
-                  <span className="bm-payment-label">รหัสธุรกรรม / เวลา:</span>
+                  <span className="bm-payment-label">รหัสธุรกรรม: เวลา:</span>
                   <span className="bm-payment-value bm-mono">
                     {activeBill.txnId} • {activeBill.payTime}
                   </span>

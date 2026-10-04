@@ -4,7 +4,7 @@ export default function PaymentModal({ onClose, cart = [], onConfirmPayment, ord
   const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
   const itemCount = cart.length;
   // const quantityCount = cart.reduce((sum, item) => sum + item.qty, 0); 
-  
+
   const [activeMethod, setActiveMethod] = useState("cash");
   const [cashGiven, setCashGiven] = useState(totalAmount);
 
@@ -20,19 +20,19 @@ export default function PaymentModal({ onClose, cart = [], onConfirmPayment, ord
     }
   };
 
+  const nextHundred = Math.ceil(totalAmount / 100) * 100;
   const cashOptions = [
     { val: totalAmount, label: "พอดี" },
-    { val: 55, label: "" },
-    { val: Math.ceil(totalAmount / 100) * 100, label: `ทอน ฿${((Math.ceil(totalAmount / 100) * 100) - totalAmount).toFixed(2)}` },
-    { val: 500, label: `ทอน ฿${(500 - totalAmount).toFixed(2)}` },
-    { val: 1000, label: `ทอน ฿${(1000 - totalAmount).toFixed(2)}` },
+    ...(nextHundred > totalAmount ? [{ val: nextHundred, label: `ทอน ฿${(nextHundred - totalAmount).toFixed(2)}` }] : []),
+    ...(totalAmount <= 500 ? [{ val: 500, label: `ทอน ฿${(500 - totalAmount).toFixed(2)}` }] : []),
+    ...(totalAmount <= 1000 ? [{ val: 1000, label: `ทอน ฿${(1000 - totalAmount).toFixed(2)}` }] : []),
   ];
 
   const uniqueCashOptions = Array.from(new Map(cashOptions.map(item => [item.val, item])).values());
 
   return (
     <div style={{ position: 'fixed', inset: 0, backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', zIndex: 1200 }}>
-      
+
       <style>{`
         .payment-fullscreen {
           width: 100vw;
@@ -49,7 +49,7 @@ export default function PaymentModal({ onClose, cart = [], onConfirmPayment, ord
           overflow: hidden;
         }
 
-        /* 👉 ฝั่งซ้าย (ทวนออเดอร์) */
+        /*  ฝั่งซ้าย (ทวนออเดอร์) */
         .split-left {
           width: 40%;
           background: #ffffff;
@@ -242,9 +242,9 @@ export default function PaymentModal({ onClose, cart = [], onConfirmPayment, ord
       `}</style>
 
       <div className="payment-fullscreen">
-        
+
         <div className="fs-body">
-          
+
           {/* --- ฝั่งซ้าย: ทวนออเดอร์ --- */}
           <div className="split-left">
             <div className="order-header">
@@ -273,7 +273,7 @@ export default function PaymentModal({ onClose, cart = [], onConfirmPayment, ord
                 </div>
               ))}
             </div>
-            
+
             <div className="order-summary-footer">
               {/* 👉 ขยาย Summary (16px) */}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '16px', color: '#4b5563', marginBottom: '12px' }}>
@@ -313,22 +313,22 @@ export default function PaymentModal({ onClose, cart = [], onConfirmPayment, ord
             <h2 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 20px 0', color: '#111827' }}>เลือกวิธีชำระเงิน</h2>
 
             <div className="method-grid">
-              <button 
-                className={`method-btn ${activeMethod === 'cash' ? 'cash' : 'promptpay'}`} 
+              <button
+                className={`method-btn ${activeMethod === 'cash' ? 'cash' : 'promptpay'}`}
                 onClick={() => setActiveMethod('cash')}
               >
                 <div style={{ width: '40px', height: '40px', background: activeMethod === 'cash' ? '#00694b' : '#e5e7eb', color: activeMethod === 'cash' ? '#ffffff' : '#9ca3af', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                   <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+                  <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="6" width="20" height="12" rx="2" /><circle cx="12" cy="12" r="2" /><path d="M6 12h.01M18 12h.01" /></svg>
                 </div>
                 <span style={{ fontSize: '16px' }}>เงินสด</span>
               </button>
-              
-              <button 
-                className={`method-btn promptpay ${activeMethod === 'promptpay' ? 'active' : ''}`} 
+
+              <button
+                className={`method-btn promptpay ${activeMethod === 'promptpay' ? 'active' : ''}`}
                 onClick={() => setActiveMethod('promptpay')}
               >
                 <div style={{ width: '40px', height: '40px', background: activeMethod === 'promptpay' ? '#5b21b6' : '#e5e7eb', color: activeMethod === 'promptpay' ? '#ffffff' : '#9ca3af', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>
+                  <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" /></svg>
                 </div>
                 <span style={{ fontSize: '16px' }}>พร้อมเพย์</span>
               </button>
@@ -346,11 +346,11 @@ export default function PaymentModal({ onClose, cart = [], onConfirmPayment, ord
               {activeMethod === 'cash' ? (
                 <>
                   <div style={{ fontSize: '14px', fontWeight: 700, color: '#000000' }}>ยอดรับ: ฿{totalAmount.toFixed(2)}</div>
-                  
+
                   <div className="cash-grid">
                     {uniqueCashOptions.map((cash, i) => (
-                      <button 
-                        key={i} 
+                      <button
+                        key={i}
                         className={`cash-btn ${cashGiven === cash.val ? 'active' : ''}`}
                         onClick={() => setCashGiven(cash.val)}
                       >
@@ -367,7 +367,7 @@ export default function PaymentModal({ onClose, cart = [], onConfirmPayment, ord
               ) : (
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '200px' }}>
                   <div style={{ width: '140px', height: '140px', background: '#ffffff', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                    <svg width="60" height="60" fill="none" stroke="#e5e7eb" strokeWidth="1"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>
+                    <svg width="60" height="60" fill="none" stroke="#e5e7eb" strokeWidth="1"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" /></svg>
                   </div>
                   <div style={{ fontSize: '14px', color: '#4b5563' }}>รอการสแกนและยืนยันจากธนาคาร...</div>
                 </div>

@@ -1,6 +1,5 @@
 import React from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import "./PosScreen.css";
 
 /* Icons ดึงมาจาก PosScreen */
 const Icon = {
@@ -45,11 +44,10 @@ export default function MainLayout({ activeNav, setActiveNav }) {
   };
 
   return (
-    /* ล็อคความสูงหน้าจอ 100vh และห้ามไม่ให้ body/parent scroll */
     <div className="pos" style={{ height: "100vh", width: "100vw", overflow: "hidden" }}>
       <div className="pos-content" style={{ display: "flex", height: "100%", width: "100%" }}>
         
-        {/* บาร์ซ้ายคงที่ตลอดเวลา ห้ามเลื่อน และไม่ให้หดขนาด (flexShrink: 0) */}
+        {/* Sidebar */}
         <aside 
           className="pos-sidebar" 
           style={{ 
@@ -89,15 +87,17 @@ export default function MainLayout({ activeNav, setActiveNav }) {
           </nav>
         </aside>
 
-        {/* พื้นที่แสดงผลส่วนขวา (สลับระหว่าง POS กับ Dashboard) รับหน้าที่ Scroll เพียงจุดเดียว */}
+        {/* พื้นที่ฝั่งขวา — เพิ่ม minWidth: 0 และ boxSizing: "border-box" */}
         <div 
           className="pos-main" 
           style={{ 
             flex: 1, 
+            minWidth: 0, // << เพิ่มจุดนี้เพื่อป้องกัน Flexbox ขยายเกินขอบจอ
             height: "100vh", 
             overflowY: "auto", 
             backgroundColor: "#f8fafc", 
-            padding: "24px 32px" 
+            padding: "24px 32px",
+            boxSizing: "border-box"
           }}
         >
           <div style={{ maxWidth: "1280px", margin: "0 auto", width: "100%" }}>

@@ -26,7 +26,7 @@ const DATE_TABS = [
   { key: 'month', label: 'เดือนนี้', title: 'เดือนนี้' },
 ];
 
-const MOCK_BILLS = [
+export const MOCK_BILLS = [
   {
     id: '#INV-20260928-001',
     type: 'ทานที่ร้าน (โต๊ะ 3)',
@@ -96,6 +96,22 @@ const MOCK_BILLS = [
       { name: '1. Iced Americano', detail: 'คั่วเข้ม, หวาน 0%', meta: 'จำนวน: 2 แก้ว (แก้วละ ฿55.00)', price: 110.0 },
     ],
   },
+  {
+    id: '#INV-20260928-005',
+    type: 'ทานที่ร้าน (โต๊ะ 1)',
+    typeClass: 'dine-in',
+    cashier: 'Sarah',
+    payment: 'cash',
+    paymentLabel: 'เงินสด (Cash)',
+    timestamp: '2026-09-28T13:35',
+    datetime: '28/09/2026 13:35 น.',
+    txnId: 'TXN-20260928-884742',
+    payTime: '13:35:08 น.',
+    total: 150.0,
+    items: [
+      { name: '1. ชาเขียวมัทฉะ (Iced Matcha)', detail: 'หวาน 50%, ฟองนม', meta: 'จำนวน: 2 แก้ว (แก้วละ ฿75.00)', price: 150.0 },
+    ],
+  },
 ];
 
 /* ---------------------------------------------------------
@@ -160,9 +176,9 @@ const daysBetween = (isoA, isoB) =>
 /* ---------------------------------------------------------
    Component
 --------------------------------------------------------- */
-export default function BillManagementView() {
+export default function BillManagementView({ initialBillId = null }) {
   // ไม่เลือกบิลไว้ล่วงหน้า — ใบเสร็จฝั่งขวาจะแสดงเมื่อกดดูบิลเท่านั้น
-  const [selectedId, setSelectedId] = useState(null);
+  const [selectedId, setSelectedId] = useState(initialBillId);
   const [dateTab, setDateTab] = useState('today');
   const [customFrom, setCustomFrom] = useState(TODAY);
   const [customTo, setCustomTo] = useState(TODAY);

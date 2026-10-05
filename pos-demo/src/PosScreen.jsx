@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./PosScreen.css";
 
 import CoffeeModal from "./CoffeeModal";
@@ -12,6 +12,7 @@ import MenuConfigModal from "./MenuConfigModal";
 import AddonManagementView from "./AddonManagementView";
 import BillManagementView from "./BillManagementView";
 import UserManagementView from "./UserManagementView";
+import DashboardView from "./DashboardView";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
 
 /* 👉 นำเข้า PaymentModal และ PaymentSuccessModal */
@@ -107,6 +108,17 @@ export default function PosScreen() {
   const [promotions, setPromotions] = useState([]);
   const [editingPromo, setEditingPromo] = useState(null);
   const [users, setUsers] = useState(INITIAL_USERS);
+
+  // บิลที่ต้องเปิดค้างไว้ตอนข้ามมาจาก Dashboard
+  const [billToOpen, setBillToOpen] = useState(null);
+  useEffect(() => {
+    if (activeNav !== "bill_mgmt") setBillToOpen(null);
+  }, [activeNav]);
+
+  const handleViewBill = (billId) => {
+    setBillToOpen(billId ?? null);
+    setActiveNav("bill_mgmt");
+  };
 
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [completedPaymentData, setCompletedPaymentData] = useState(null);
@@ -350,8 +362,12 @@ export default function PosScreen() {
         </aside>
 
         <div className="pos-main">
-          <div className="pos-body" style={{ flexDirection: (activeNav === "promo" || activeNav === "manage" || activeNav === "manage_addon" || activeNav === "bill_mgmt" || activeNav === "users") ? "column" : "row" }}>
-            {activeNav === "users" ? (
+          <div className="pos-body" style={{ flexDirection: (activeNav === "promo" || activeNav === "manage" || activeNav === "manage_addon" || activeNav === "bill_mgmt" || activeNav === "users" || activeNav === "dashboard") ? "column" : "row" }}>
+            {activeNav === "dashboard" ? (
+              <DashboardView onViewBill={handleViewBill} />
+            ) :
+
+            activeNav === "users" ? (
               <UserManagementView
                 users={users}
                 onSaveUser={handleSaveUser}
@@ -362,7 +378,7 @@ export default function PosScreen() {
             ) :
 
             activeNav === "bill_mgmt" ? (
-              <BillManagementView />
+              <BillManagementView initialBillId={billToOpen} />
             ) :
 
               activeNav === "manage_addon" ? (

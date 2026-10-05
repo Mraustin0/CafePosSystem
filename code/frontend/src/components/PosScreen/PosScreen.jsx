@@ -9,11 +9,12 @@ import MenuManagementView from "./MenuManagementView";
 import { SelectPromotionModal } from "./SelectPromotionModal";
 import AddonManagementView from "./AddonManagementView";
 import MenuConfigModal from "./MenuConfigModal";
+import ConfirmDeleteModal from "./ConfirmDeleteModal";
 import PaymentModal from "./PaymentModal";
 import PaymentSuccessModal from "./PaymentSuccessModal";
 import BillManagementView from "./BillManagementView";
 import DashboardView from "./DashboardView";
-import { listProducts, createProduct, updateProduct } from "../../api/products";
+import { listProducts, createProduct, updateProduct, setProductStatus } from "../../api/products";
 import { listAddOns, createAddOn, setAddOnStatus, updateAddOn } from "../../api/addOns";
 import { getCategories, navKeyFor, categoryForNav } from "../../api/categories";
 import { createPromotion, updatePromotion } from "../../api/promotions";
@@ -190,6 +191,7 @@ export default function PosScreen() {
   const [selectedTeaForModal, setSelectedTeaForModal] = useState(null);
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [editingConfigItem, setEditingConfigItem] = useState(null);
+  const [menuToDelete, setMenuToDelete] = useState(null);
   const [globalAddons, setGlobalAddons] = useState([]);
 
   const [isAddPromoModalOpen, setIsAddPromoModalOpen] = useState(false);
@@ -564,6 +566,7 @@ export default function PosScreen() {
               <MenuManagementView
                 onOpenAddMenuModal={() => setIsAddMenuOpen(true)}
                 onEditMenu={(item) => setEditingConfigItem(item)}
+                onDeleteMenu={(target) => setMenuToDelete(target)}
               />
             ) :
 
@@ -859,6 +862,26 @@ export default function PosScreen() {
             setAppliedPromo(null);
             setCompletedPaymentData(null);
           }}
+        />
+      )}
+
+      {menuToDelete && (
+        <ConfirmDeleteModal
+          title="ลบเมนู? (Delete Item?)"
+          itemName={menuToDelete.name}
+          description="เมนูนี้จะถูกปิดการขาย — ลูกค้ามองไม่เห็นในหน้า POS แต่บิลเก่าที่ขายไปแล้วยังอยู่ครบ"
+          confirmText="ปิดการขาย"
+          onConfirm={async () => {
+            try {
+              await setProductStatus(menuToDelete.id, false);
+              window.dispatchEvent(new Event('products:reload'));
+            } catch (err) {
+              alert(err?.message ?? 'ปิดเมนูไม่สำเร็จ');
+            } finally {
+              setMenuToDelete(null);
+            }
+          }}
+          onCancel={() => setMenuToDelete(null)}
         />
       )}
 

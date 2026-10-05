@@ -3,7 +3,7 @@ import './PromotionView.css';
 import { listProducts, setProductStatus } from '../../api/products';
 import { navKeyFor } from '../../api/categories';
 
-export default function MenuManagementView({ onOpenAddMenuModal, onEditMenu }) {
+export default function MenuManagementView({ onOpenAddMenuModal, onEditMenu, onDeleteMenu }) {
   const [menu, setMenu] = useState([]);
   const [busy, setBusy] = useState(false);
   const [loadError, setLoadError] = useState(null);
@@ -76,6 +76,12 @@ export default function MenuManagementView({ onOpenAddMenuModal, onEditMenu }) {
   };
 
   const handleDeleteMenu = async (id) => {
+    // Delegate to parent (PosScreen) if it owns the confirm modal; otherwise fall back to native confirm.
+    if (onDeleteMenu) {
+      const item = menu.find((m) => m.id === id);
+      onDeleteMenu({ id, name: item?.name });
+      return;
+    }
     if (!window.confirm("ปิดการขายเมนูนี้ใช่หรือไม่?")) return;
     try {
       await setProductStatus(id, false);

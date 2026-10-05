@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import './BillManagementView.css';
 import { listOrders, getOrder } from '../../api/orders';
 import { getPayment } from '../../api/payment';
+import { printReceipt } from './Receiptprinter';
 
 /* ---------------------------------------------------------
    Backend contract:
@@ -222,7 +223,30 @@ export default function BillManagementView() {
 
   const handleReprint = () => {
     if (!activeBill) return;
-    setToast(`ส่งพิมพ์ใบเสร็จ ${activeBill.id} เรียบร้อยแล้ว`);
+    // Prefer backend-authoritative items from activeDetail; fall back to summary cart if detail not yet loaded.
+    const cart = activeDetail?.items
+      ? activeDetail.items.map((it) => ({
+          name: it.productName,
+          qty: it.quantity,
+          price: Number(it.unitPrice),
+          detail: (it.addOns || []).map((a) => a.name).join(', '),
+        }))
+      : (activeBill.items || []).map((it) => ({ name: it.name, qty: 1, price: it.price, detail: it.detail }));
+
+    const opened = printReceipt({
+      totalAmount: displayTotal,
+      method: activeBill.payment,
+      cart,
+      orderId: activeBill.id,
+      receiptNo: activeBill.id.replace('#', ''),
+      queueNo: `Q${activeBill.orderId}`,
+      cashierName: activeBill.cashier,
+      date: new Date(activeBill.timestamp),
+      isReprint: true,
+    });
+    setToast(opened
+      ? `กำลังพิมพ์ใบเสร็จ ${activeBill.id}`
+      : 'บราวเซอร์บล็อก Pop-up อยู่ กรุณาอนุญาตเพื่อเปิดใบเสร็จ');
     window.setTimeout(() => setToast(''), 2500);
   };
 

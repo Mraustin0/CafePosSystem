@@ -88,4 +88,44 @@ public interface ReportRepository extends Repository<Payment, Long> {
             group by p.method
             order by sum(o.total) desc""")
     List<MethodSales> salesByPaymentMethod(Instant start, Instant end);
+
+    interface PaymentDay {
+        Instant getPaidAt();
+        BigDecimal getTotal();
+    }
+
+    /** Raw payment timestamps + order totals — service groups by shop-day in-memory (TZ-safe). */
+    @Query("""
+            select p.paidAt as paidAt, o.total as total
+            from Payment p join p.order o
+            where p.paidAt >= :start and p.paidAt < :end""")
+    List<PaymentDay> paymentsInRange(Instant start, Instant end);
+
+    interface CategorySales {
+        Long getCategoryId();
+        String getCategoryName();
+        BigDecimal getRevenue();
+    }
+
+    /** Base revenue by category (quantity x unit price only); add-ons come from categoryAddOnRevenue(). */
+    @Query("""
+            select c.id as categoryId, c.name as categoryName,
+                   sum(i.quantity * i.unitPrice) as revenue
+            from Payment p join p.order o join o.items i join i.product pr join pr.category c
+            where p.paidAt >= :start and p.paidAt < :end
+            group by c.id, c.name""")
+    List<CategorySales> salesByCategory(Instant start, Instant end);
+
+    interface CategoryRevenue {
+        Long getCategoryId();
+        BigDecimal getRevenue();
+    }
+
+    // Separate join: putting add-ons in salesByCategory would inflate quantity (one row per add-on).
+    @Query("""
+            select c.id as categoryId, sum(i.quantity * a.price) as revenue
+            from Payment p join p.order o join o.items i join i.addOns a join i.product pr join pr.category c
+            where p.paidAt >= :start and p.paidAt < :end
+            group by c.id""")
+    List<CategoryRevenue> categoryAddOnRevenue(Instant start, Instant end);
 }

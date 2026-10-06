@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./PosScreen.css";
 
 import CoffeeModal from "./CoffeeModal";
@@ -11,6 +11,8 @@ import { SelectPromotionModal } from "./SelectPromotionModal";
 import MenuConfigModal from "./MenuConfigModal";
 import AddonManagementView from "./AddonManagementView";
 import BillManagementView from "./BillManagementView";
+import UserManagementView from "./UserManagementView";
+import DashboardView from "./DashboardView";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
 
 /* 👉 นำเข้า PaymentModal และ PaymentSuccessModal */
@@ -38,6 +40,7 @@ const Icon = {
   Print: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><path d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-2M6 14h12v7H6z" strokeLinejoin="round" /></svg>,
   Card: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><rect x="2.5" y="5" width="19" height="14" rx="2" /><path d="M2.5 10h19" /></svg>,
   Edit: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><path d="M12 20h9" strokeLinecap="round" strokeLinejoin="round" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" strokeLinecap="round" strokeLinejoin="round" /></svg>,
+  Users: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><circle cx="9" cy="8" r="3.2" /><path d="M3 20c1.2-3.4 3.8-5 6-5s4.8 1.6 6 5" strokeLinecap="round" /><path d="M16 5.2a3.2 3.2 0 0 1 0 5.6M18 15.4c1.6.7 2.7 2.3 3.3 4.6" strokeLinecap="round" /></svg>,
   Receipt: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><path d="M21 2v20l-5-4-5 4-5-4-5 4V2a1 1 0 0 1 1-1h18a1 1 0 0 1 1 1z" strokeLinejoin="round" /><path d="M7 10h10M7 14h6" strokeLinecap="round" /></svg>,
 };
 
@@ -52,6 +55,7 @@ const NAV_FOOTER = [
   { key: "manage", label: "จัดการเมนู", icon: Icon.Edit },
   { key: "manage_addon", label: "จัดการท็อปปิ้ง", icon: Icon.Layers },
   { key: "promo", label: "โปรโมชั่น", icon: Icon.Tag },
+  { key: "users", label: "จัดการพนักงาน", icon: Icon.Users },
   { key: "dashboard", label: "Dashboard", icon: Icon.Grid },
 ];
 
@@ -62,6 +66,14 @@ const INITIAL_MENU = [
   { id: 4, category: "tea", name: "ชาเขียวมัทฉะ", price: 75, qty: 0, stock: null, config: null, isActive: true, imgSrc: "https://placehold.co/400x300/bbf7d0/15803d?text=Matcha", kind: "tea" },
   { id: 5, category: "snack", name: "คุกกี้ช็อกโกแลต", price: 45, qty: 0, stock: 5, config: null, isActive: true, imgSrc: "https://placehold.co/400x300/fef08a/a16207?text=Cookie", kind: "snack" },
   { id: 6, category: "snack", name: "ครัวซองต์เนยสด", price: 65, qty: 0, stock: 0, config: null, isActive: true, imgSrc: "https://placehold.co/400x300/fef08a/a16207?text=Croissant", kind: "snack" },
+];
+
+const INITIAL_USERS = [
+  { id: 1, code: "EMP-001", firstName: "สมชาย", lastName: "ใจดี", username: "somchai.j", role: "admin", status: "active", credentialSet: true },
+  { id: 2, code: "EMP-002", firstName: "วิภาวดี", lastName: "รักงาน", username: "wipawadee.r", role: "manager", status: "active", credentialSet: true },
+  { id: 3, code: "EMP-003", firstName: "Alex", lastName: "Srisuk", username: "alex.s", role: "cashier", status: "active", credentialSet: true },
+  { id: 4, code: "EMP-004", firstName: "Sarah", lastName: "Kaewmanee", username: "sarah.k", role: "cashier", status: "active", credentialSet: true },
+  { id: 5, code: "EMP-005", firstName: "นภัสสร", lastName: "มั่นคง", username: "napatsorn.m", role: "cashier", status: "inactive", credentialSet: false },
 ];
 
 const INITIAL_CART = [];
@@ -95,6 +107,18 @@ export default function PosScreen() {
   const [appliedPromo, setAppliedPromo] = useState(null);
   const [promotions, setPromotions] = useState([]);
   const [editingPromo, setEditingPromo] = useState(null);
+  const [users, setUsers] = useState(INITIAL_USERS);
+
+  // บิลที่ต้องเปิดค้างไว้ตอนข้ามมาจาก Dashboard
+  const [billToOpen, setBillToOpen] = useState(null);
+  useEffect(() => {
+    if (activeNav !== "bill_mgmt") setBillToOpen(null);
+  }, [activeNav]);
+
+  const handleViewBill = (billId) => {
+    setBillToOpen(billId ?? null);
+    setActiveNav("bill_mgmt");
+  };
 
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [completedPaymentData, setCompletedPaymentData] = useState(null);
@@ -158,6 +182,26 @@ export default function PosScreen() {
     );
   };
 
+  // ---- พนักงาน ----
+  // บันทึก: ถ้า id ซ้ำให้แทนที่ (แก้ไข) ไม่ซ้ำให้เพิ่มใหม่
+  const handleSaveUser = (user) =>
+    setUsers(prev =>
+      prev.some(u => u.id === user.id)
+        ? prev.map(u => (u.id === user.id ? user : u))
+        : [...prev, user]
+    );
+
+  const handleDeleteUser = (id) => setUsers(prev => prev.filter(u => u.id !== id));
+
+  const handleToggleUserStatus = (id) =>
+    setUsers(prev => prev.map(u =>
+      u.id === id ? { ...u, status: u.status === "active" ? "inactive" : "active" } : u
+    ));
+
+  // ไม่เก็บค่ารหัสไว้ใน state — ตอนต่อ Backend ให้ส่งไปเข้ารหัสที่เซิร์ฟเวอร์
+  const handleResetUserPassword = (id, { type }) =>
+    setUsers(prev => prev.map(u => (u.id === id ? { ...u, credentialSet: true, credentialType: type } : u)));
+
   const closePromoModal = () => {
     setIsAddPromoModalOpen(false);
     setEditingPromo(null);
@@ -178,6 +222,11 @@ export default function PosScreen() {
 
       {/* 👉 เพิ่ม CSS สำหรับขยายฝั่งขวา */}
       <style>{`
+        /* เมนูด้านข้างมีหลายรายการ: ลดช่องว่างและให้เลื่อนได้ถ้าหน้าจอเตี้ย */
+        .pos-sidebar { overflow-y: auto; }
+        .pos-sidebar__nav,
+        .pos-sidebar__footer { gap: 12px; }
+
         .clean-search-input {
           background-color: transparent !important;
           color: #111827 !important;
@@ -313,9 +362,23 @@ export default function PosScreen() {
         </aside>
 
         <div className="pos-main">
-          <div className="pos-body" style={{ flexDirection: (activeNav === "promo" || activeNav === "manage" || activeNav === "manage_addon" || activeNav === "bill_mgmt") ? "column" : "row" }}>
-            {activeNav === "bill_mgmt" ? (
-              <BillManagementView />
+          <div className="pos-body" style={{ flexDirection: (activeNav === "promo" || activeNav === "manage" || activeNav === "manage_addon" || activeNav === "bill_mgmt" || activeNav === "users" || activeNav === "dashboard") ? "column" : "row" }}>
+            {activeNav === "dashboard" ? (
+              <DashboardView onViewBill={handleViewBill} />
+            ) :
+
+            activeNav === "users" ? (
+              <UserManagementView
+                users={users}
+                onSaveUser={handleSaveUser}
+                onDeleteUser={handleDeleteUser}
+                onToggleStatus={handleToggleUserStatus}
+                onResetPassword={handleResetUserPassword}
+              />
+            ) :
+
+            activeNav === "bill_mgmt" ? (
+              <BillManagementView initialBillId={billToOpen} />
             ) :
 
               activeNav === "manage_addon" ? (

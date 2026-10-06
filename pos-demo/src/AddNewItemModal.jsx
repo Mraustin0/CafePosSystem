@@ -29,13 +29,13 @@ const MENU_CONFIG = {
     ]
   },
   snack: {
-    serving: [] 
+    serving: []
   }
 };
 
 // 👉 เพิ่ม props 'editingItem' เพื่อรองรับการกดแก้ไขจากปุ่มดินสอ
 export function AddNewItemModal({ activeCategory = "coffee", onClose, onSave, editingItem }) {
-  
+
   // 👉 ถ้าเป็นการแก้ไข ให้ดึงข้อมูลเก่ามาแสดง ถ้าไม่ใช่ก็ใช้ค่าเริ่มต้น
   const [selectedCategory, setSelectedCategory] = useState(editingItem ? editingItem.category : (activeCategory === 'all' ? 'coffee' : activeCategory));
   const [menuNameTh, setMenuNameTh] = useState(editingItem ? editingItem.name : '');
@@ -104,19 +104,19 @@ export function AddNewItemModal({ activeCategory = "coffee", onClose, onSave, ed
         <div className="add-modal__body">
           <div className="add-modal__row">
             <Field label="ชื่อเมนูภาษาไทย (Thai Name)" required>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={menuNameTh}
                 onChange={(e) => setMenuNameTh(e.target.value)}
-                placeholder={currentPlaceholder.th} 
-                className="add-input" 
+                placeholder={currentPlaceholder.th}
+                className="add-input"
               />
             </Field>
             <Field label="ชื่อภาษาอังกฤษ (English Name)" required>
-              <input 
-                type="text" 
-                placeholder={currentPlaceholder.en} 
-                className="add-input" 
+              <input
+                type="text"
+                placeholder={currentPlaceholder.en}
+                className="add-input"
               />
             </Field>
           </div>
@@ -124,9 +124,9 @@ export function AddNewItemModal({ activeCategory = "coffee", onClose, onSave, ed
           <div className="add-modal__row">
             <Field label="หมวดหมู่ (Category)" required>
               <div className="add-select-wrapper">
-                <select 
-                  className="add-input add-select" 
-                  value={selectedCategory} 
+                <select
+                  className="add-input add-select"
+                  value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
                 >
                   <option value="coffee"> กาแฟ (Coffee)</option>
@@ -142,12 +142,12 @@ export function AddNewItemModal({ activeCategory = "coffee", onClose, onSave, ed
             <Field label="ราคาขายปกติ (฿)" required>
               <div className="add-price-wrapper">
                 <span className="add-price-symbol">฿</span>
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   value={menuPrice}
                   onChange={(e) => setMenuPrice(e.target.value)}
-                  placeholder="85" 
-                  className="add-input add-input--price" 
+                  placeholder="85"
+                  className="add-input add-input--price"
                 />
               </div>
             </Field>
@@ -160,9 +160,9 @@ export function AddNewItemModal({ activeCategory = "coffee", onClose, onSave, ed
             <button type="button" onClick={() => fileInputRef.current?.click()} className="add-upload">
               <span className="add-upload__icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
-                  <circle cx="9" cy="9" r="2"/>
-                  <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                  <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                  <circle cx="9" cy="9" r="2" />
+                  <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
                 </svg>
               </span>
               <span className="add-upload__text">
@@ -198,7 +198,7 @@ export function AddNewItemModal({ activeCategory = "coffee", onClose, onSave, ed
             ยกเลิก
           </button>
           <button type="button" className="add-btn add-btn--solid" onClick={handleSubmit}>
-             {/* เปลี่ยนข้อความปุ่มอัตโนมัติ */}
+            {/* เปลี่ยนข้อความปุ่มอัตโนมัติ */}
             {editingItem ? "บันทึกการแก้ไข" : "บันทึกเมนูใหม่"}
           </button>
         </footer>

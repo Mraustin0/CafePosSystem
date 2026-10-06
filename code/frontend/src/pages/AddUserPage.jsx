@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserPlus, Eye, EyeOff, Info, Check } from 'lucide-react';
+import { createUser } from '../api/users';
 
 export default function AddUserPage() {
   const navigate = useNavigate();
@@ -14,15 +15,35 @@ export default function AddUserPage() {
   });
 
   const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('บันทึกข้อมูล:', formData);
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await createUser({
+        username: formData.username,
+        password: formData.password,
+        role: formData.role,
+        fullName: formData.fullName,
+        phone: formData.phone || null,
+        email: formData.email || null,
+      });
+      alert('เพิ่มผู้ใช้สำเร็จ');
+      navigate('/pos', { replace: true });
+    } catch (err) {
+      if (err?.status === 403) alert('ต้อง login เป็น ADMIN');
+      else if (err?.status === 409) alert(`ชื่อผู้ใช้ซ้ำ: "${formData.username}"`);
+      else alert(`บันทึกไม่สำเร็จ (${err?.status ?? 'no status'}): ${err?.message ?? err}`);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

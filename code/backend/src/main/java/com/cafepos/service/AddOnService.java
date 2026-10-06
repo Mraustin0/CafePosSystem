@@ -17,4 +17,7 @@ public interface AddOnService {
     AddOnResponse update(Long id, AddOnRequest request);
 
     AddOnResponse updateStatus(Long id, boolean active);
+
+    /** 409 if the add-on has order history; use updateStatus(false) to soft-delete instead. */
+    void delete(Long id);
 }

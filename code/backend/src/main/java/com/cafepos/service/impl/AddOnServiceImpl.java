@@ -7,6 +7,7 @@ import com.cafepos.exception.ConflictException;
 import com.cafepos.exception.ResourceNotFoundException;
 import com.cafepos.mapper.AddOnMapper;
 import com.cafepos.repository.AddOnRepository;
+import com.cafepos.repository.OrderRepository;
 import com.cafepos.service.AddOnService;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -21,10 +22,12 @@ public class AddOnServiceImpl implements AddOnService {
     private static final Sort BY_NAME = Sort.by("name");
 
     private final AddOnRepository addOnRepository;
+    private final OrderRepository orderRepository;
     private final AddOnMapper addOnMapper;
 
-    public AddOnServiceImpl(AddOnRepository addOnRepository, AddOnMapper addOnMapper) {
+    public AddOnServiceImpl(AddOnRepository addOnRepository, OrderRepository orderRepository, AddOnMapper addOnMapper) {
         this.addOnRepository = addOnRepository;
+        this.orderRepository = orderRepository;
         this.addOnMapper = addOnMapper;
     }
 
@@ -67,6 +70,17 @@ public class AddOnServiceImpl implements AddOnService {
         AddOn addOn = getAddOn(id);
         addOn.setActive(active);
         return addOnMapper.toResponse(addOn);
+    }
+
+    @Override
+    @Transactional
+    public void delete(Long id) {
+        AddOn addOn = getAddOn(id);
+        // BE-05: block hard-delete once the add-on has been attached to any order item (keeps bill history intact).
+        if (orderRepository.existsOrderItemByAddOnId(id)) {
+            throw new ConflictException("Add-on has order history; use PATCH /status to soft-delete instead");
+        }
+        addOnRepository.delete(addOn);
     }
 
     private AddOn getAddOn(Long id) {

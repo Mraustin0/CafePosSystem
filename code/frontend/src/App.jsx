@@ -9,9 +9,9 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/add-user" element={<AddUserPage />} />
       <Route element={<RequireAuth />}>
         <Route path="/pos" element={<PosPage />} />
+        <Route path="/add-user" element={<AddUserPage />} />
         <Route path="*" element={<Navigate to="/pos" replace />} />
       </Route>
     </Routes>

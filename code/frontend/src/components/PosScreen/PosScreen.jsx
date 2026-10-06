@@ -9,16 +9,41 @@ import MenuManagementView from "./MenuManagementView";
 import { SelectPromotionModal } from "./SelectPromotionModal";
 import AddonManagementView from "./AddonManagementView";
 import MenuConfigModal from "./MenuConfigModal";
-import { listProducts, createProduct, updateProduct } from "../../api/products";
-import { listAddOns, createAddOn, setAddOnStatus } from "../../api/addOns";
-import { getCategories } from "../../api/categories";
+import ConfirmDeleteModal from "./ConfirmDeleteModal";
+import PaymentModal from "./PaymentModal";
+import PaymentSuccessModal from "./PaymentSuccessModal";
+import BillManagementView from "./BillManagementView";
+import DashboardView from "./DashboardView";
+import { listProducts, createProduct, updateProduct, setProductStatus } from "../../api/products";
+import { listAddOns, createAddOn, setAddOnStatus, updateAddOn } from "../../api/addOns";
+import { getCategories, navKeyFor, categoryForNav } from "../../api/categories";
 import { createPromotion, updatePromotion } from "../../api/promotions";
 import { createOrder, applyDiscount } from "../../api/orders";
 import { payOrder } from "../../api/payment";
 import { useAuth } from "../../auth/useAuth";
+import { useNavigate } from "react-router-dom";
 
-// Backend category name -> UI nav key (Thana-nan's shape uses "coffee"/"tea"/"snack").
-const CATEGORY_TO_NAV = { Coffee: "coffee", Tea: "tea", Bakery: "snack" };
+// Backend category → UI nav key resolved via navKeyFor() (case-insensitive, substring-aware).
+// Kept here only so legacy lookups keep working if backend ever regresses to lowercase strings.
+
+// Default customization options — backend only stores product name/price/addons, so the UI
+// menus for serving/roast/sweetness are shared across products and populated from these
+// defaults every load. addOns are still driven by the backend association.
+const DEFAULT_SERVING = [
+  { id: 'iced', label: 'เย็น (Iced)', price: 0, active: true },
+  { id: 'hot', label: 'ร้อน (Hot)', price: 0, active: true },
+  { id: 'frappe', label: 'ปั่น (Frappe +฿15)', price: 15, active: true },
+];
+const DEFAULT_ROASTS = [
+  { id: 'medium', label: 'คั่วกลาง (Medium Roast)', desc: 'Nutty, Caramel, Balanced acidity', active: true },
+  { id: 'dark', label: 'คั่วเข้ม (Dark Roast)', desc: 'Bold, Smokey, Dark Chocolate', active: true },
+];
+const DEFAULT_SWEETNESS = [
+  { label: '100%', active: true }, { label: '75%', active: true },
+  { label: '50%', active: true }, { label: '25%', active: true }, { label: '0%', active: true },
+];
+// Reverse lookup — kept as a fallback hint; the authoritative source is the loaded `categories`
+// state, resolved via categoryForNav(categories, navKey).
 const NAV_TO_CATEGORY = { coffee: "Coffee", tea: "Tea", snack: "Bakery" };
 
 /* ---------------------------------------------------------
@@ -126,6 +151,12 @@ const Icon = {
       <polyline points="2 17 12 22 22 17"/>
     </svg>
   ),
+  Receipt: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}>
+      <path d="M21 2v20l-5-4-5 4-5-4-5 4V2a1 1 0 0 1 1-1h18a1 1 0 0 1 1 1z" strokeLinejoin="round" />
+      <path d="M7 10h10M7 14h6" strokeLinecap="round" />
+    </svg>
+  ),
 };
 
 /* ---------------------------------------------------------
@@ -138,6 +169,7 @@ const NAV_ITEMS = [
 ];
 
 const NAV_FOOTER = [
+  { key: "bill_mgmt", label: "จัดการบิล", icon: Icon.Receipt },
   { key: "manage", label: "จัดการเมนู", icon: Icon.Edit },
   { key: "manage_addon", label: "จัดการท็อปปิ้ง", icon: Icon.Layers },
   { key: "promo", label: "โปรโมชั่น", icon: Icon.Tag },
@@ -147,6 +179,7 @@ const NAV_FOOTER = [
 
 export default function PosScreen() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [activeNav, setActiveNav] = useState("coffee");
   const [menu, setMenu] = useState([]);
   const [cart, setCart] = useState([]);
@@ -158,10 +191,17 @@ export default function PosScreen() {
   const [selectedTeaForModal, setSelectedTeaForModal] = useState(null);
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [editingConfigItem, setEditingConfigItem] = useState(null);
+  const [menuToDelete, setMenuToDelete] = useState(null);
   const [globalAddons, setGlobalAddons] = useState([]);
 
   const [isAddPromoModalOpen, setIsAddPromoModalOpen] = useState(false);
   const [isSelectPromoModalOpen, setIsSelectPromoModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [completedPaymentData, setCompletedPaymentData] = useState(null);
+  // P04: cache order id across payment retries — if createOrder succeeded but payOrder failed,
+  // the next confirm should retry payment on the same order (not create a duplicate).
+  const [pendingOrder, setPendingOrder] = useState(null);
+  const [menuSearch, setMenuSearch] = useState("");
 
   // 👉 State เก็บข้อมูลโปรโมชั่นที่ลูกค้าเลือก
   const [appliedPromo, setAppliedPromo] = useState(null);
@@ -172,7 +212,7 @@ export default function PosScreen() {
       const page = await listProducts({ size: 200 });
       const items = (page?.content ?? []).map((p) => ({
         id: p.id,
-        category: CATEGORY_TO_NAV[p.category?.name] ?? "coffee",
+        category: navKeyFor(p.category?.name),
         name: p.name,
         price: p.price != null ? Number(p.price) : 0,
         qty: 0,
@@ -182,7 +222,12 @@ export default function PosScreen() {
              : p.category?.name === "Tea" ? "tea"
              : p.category?.name === "Bakery" ? "snack" : "",
         active: p.active,
-        config: { addonIds: (p.addOns ?? []).map(a => a.id) },
+        config: {
+          serving: DEFAULT_SERVING,
+          roasts: p.category?.name === "Coffee" ? DEFAULT_ROASTS : [],
+          sweetness: DEFAULT_SWEETNESS,
+          addonIds: (p.addOns ?? []).map(a => a.id),
+        },
       }));
       setMenu(items);
       setLoadError(null);
@@ -234,50 +279,74 @@ export default function PosScreen() {
 
   const cashierName = user?.fullName || user?.username || "แคชเชียร์";
 
-  const handleCheckout = async () => {
+  // P05: explicit method mapping — fail loud on unknown values instead of silently defaulting to CASH.
+  const METHOD_MAP = { cash: "CASH", promptpay: "QR_CODE", card: "CARD" };
+
+  // Called from PaymentModal after user picks method + confirms. Wires PaymentModal UI to backend
+  // (createOrder + applyDiscount + payOrder), then opens PaymentSuccessModal on success.
+  // paymentData shape from PaymentModal: { method: 'cash'|'promptpay'|'card', totalAmount, cashGiven, changeAmount }
+  // P04: if createOrder+applyDiscount already succeeded on a prior attempt, reuse pendingOrder so
+  //      a payment retry doesn't create a duplicate order.
+  const handleConfirmPayment = async (paymentData) => {
     if (cart.length === 0) return;
-    const method = (window.prompt("วิธีชำระเงิน (CASH / QR_CODE / CARD)", "CASH") || "").trim().toUpperCase();
-    if (!["CASH", "QR_CODE", "CARD"].includes(method)) {
-      if (method) alert("วิธีชำระเงินไม่ถูกต้อง");
+    const method = METHOD_MAP[paymentData.method];
+    if (!method) {
+      alert(`วิธีชำระเงินไม่รองรับ: ${paymentData.method}`);
       return;
     }
-    const defaultAmt = method === "CASH" ? String(Math.ceil(total)) : total.toFixed(2);
-    const amtInput = window.prompt(
-      method === "CASH" ? `รับเงิน (บาท) — ยอด ฿${total.toFixed(2)}` : `จำนวนต้องเท่ากับ ฿${total.toFixed(2)}`,
-      defaultAmt
-    );
-    if (amtInput == null) return;
-    const amountReceived = Number(amtInput);
-    if (Number.isNaN(amountReceived) || amountReceived < 0) { alert("จำนวนเงินไม่ถูกต้อง"); return; }
+    // P10: match backend BigDecimal scale=2 HALF_UP to avoid float precision mismatch on QR/CARD.
+    const rawAmount = method === "CASH" ? paymentData.cashGiven : paymentData.totalAmount;
+    const amountReceived = Number(Number(rawAmount).toFixed(2));
+    // Guard rails for backend contract: NaN/negative always rejected; CASH must cover total; non-CASH must equal exactly.
+    const dueTotal = Number(Number(paymentData.totalAmount ?? total).toFixed(2));
+    if (!Number.isFinite(amountReceived) || amountReceived < 0) {
+      alert('จำนวนเงินไม่ถูกต้อง');
+      return;
+    }
+    if (method === 'CASH' && amountReceived < dueTotal) {
+      alert(`เงินสดที่รับ (฿${amountReceived.toFixed(2)}) น้อยกว่ายอดที่ต้องชำระ (฿${dueTotal.toFixed(2)})`);
+      return;
+    }
+    if (method !== 'CASH' && amountReceived !== dueTotal) {
+      alert(`${method} ต้องชำระเท่ายอดเท่านั้น (฿${dueTotal.toFixed(2)})`);
+      return;
+    }
 
     setCheckoutBusy(true);
     try {
-      // Fold local cart items down to backend order items. Multiple customized entries of the same
-      // product are summed by productId; per-entry customizations (serving/sweetness/add-ons) stay
-      // client-side for now — backend Order + OrderItem don't carry them yet.
-      // Ticket-01: cart entries carry the local unique `id` (Date.now-based) so React can key them,
-      // but the real product id lives in `productId`. Use it here or the order fails validation.
-      const byProduct = new Map();
-      for (const c of cart) {
-        const pId = c.productId ?? c.id;
-        const prev = byProduct.get(pId) ?? { productId: pId, quantity: 0, addOnIds: [] };
-        prev.quantity += c.qty;
-        byProduct.set(pId, prev);
-      }
-      let order = await createOrder([...byProduct.values()]);
-      // Ticket-03: sync the on-screen discount to the backend so the persisted total matches the
-      // amount the cashier actually collected. Only send when the discount actually applies
-      // (promoDiscount > 0 means the min-order rule passed too).
-      if (appliedPromo && promoDiscount > 0) {
-        order = await applyDiscount(order.id, {
-          type: appliedPromo.discountType,
-          value: Number(appliedPromo.discountValue),
-        });
+      let order = pendingOrder;
+      if (!order) {
+        const byProduct = new Map();
+        for (const c of cart) {
+          const pId = c.productId ?? c.id;
+          const prev = byProduct.get(pId) ?? { productId: pId, quantity: 0, addOnIds: [] };
+          prev.quantity += c.qty;
+          byProduct.set(pId, prev);
+        }
+        order = await createOrder([...byProduct.values()]);
+        if (appliedPromo && promoDiscount > 0) {
+          order = await applyDiscount(order.id, {
+            type: appliedPromo.discountType,
+            value: Number(appliedPromo.discountValue),
+          });
+        }
+        setPendingOrder(order);
       }
       const payment = await payOrder(order.id, { method, amountReceived });
       setCurrentOrder({ ...order, payment });
-      setCart([]);
-      setAppliedPromo(null);
+      setPendingOrder(null);
+      setIsPaymentModalOpen(false);
+      // P06/P07/P09: hand PaymentSuccessModal the backend-authoritative values
+      // (change, orderNumber) plus the cashier from the session so the receipt reflects real data.
+      setCompletedPaymentData({
+        ...paymentData,
+        changeAmount: payment?.change != null ? Number(payment.change) : paymentData.changeAmount,
+        orderId: order?.orderNumber ?? paymentData.orderId,
+        cashierName: user?.username ?? user?.name ?? user?.email ?? 'Cashier',
+        cart,
+        order,
+        payment,
+      });
     } catch (err) {
       console.error("checkout failed:", err);
       alert(`Checkout ล้มเหลว (${err?.status ?? "no status"}): ${err?.message ?? err}`);
@@ -287,15 +356,21 @@ export default function PosScreen() {
   };
 
   const handleSaveMenuConfig = async (id, data) => {
+    const existing = menu.find((m) => m.id === id);
+    const cat = categoryForNav(categories, existing?.category);
     try {
-      await updateProduct(id, { name: data.name, price: data.price });
+      await updateProduct(id, {
+        categoryId: cat?.id,
+        name: data.name,
+        price: data.price,
+        imageUrl: null,
+        addOnIds: data.config?.addonIds ?? [],
+      });
+      await loadProducts();
     } catch (err) {
       alert(err?.message ?? 'บันทึกเมนูไม่สำเร็จ');
       return;
     }
-    setMenu((prev) => prev.map((item) =>
-      item.id === id ? { ...item, config: data.config, price: data.price, name: data.name } : item
-    ));
     setEditingConfigItem(null);
   };
 
@@ -331,6 +406,81 @@ export default function PosScreen() {
         input:-webkit-autofill:active {
           -webkit-box-shadow: 0 0 0 30px white inset !important;
         }
+        .clean-search-input {
+          background-color: transparent !important;
+          color: #111827 !important;
+        }
+        .clean-search-input:focus {
+          background-color: transparent !important;
+          -webkit-box-shadow: none !important;
+        }
+        .clean-search-input::placeholder {
+          color: #9ca3af !important;
+        }
+
+        /* -------------------------------------------
+           สไตล์ส่วนขยายฝั่งตะกร้า (Cart Panel) — ported from Thana-nan pos-demo
+           ------------------------------------------- */
+        .custom-cart-icon {
+          width: 36px !important;
+          height: 36px !important;
+          font-size: 15px !important;
+          border-radius: 10px !important;
+        }
+        .custom-cart-name {
+          font-size: 16px !important;
+          font-weight: 700 !important;
+        }
+        .custom-cart-price {
+          font-size: 18px !important;
+          font-weight: 800 !important;
+          color: #ea580c !important;
+        }
+        .custom-cart-detail {
+          font-size: 13px !important;
+          margin-top: 4px;
+        }
+        .custom-new-badge {
+          font-size: 11px !important;
+          padding: 4px 8px !important;
+          border-radius: 6px !important;
+        }
+        .custom-stepper {
+          height: 36px !important;
+          border-radius: 10px !important;
+        }
+        .custom-stepper button {
+          width: 36px !important;
+          height: 36px !important;
+        }
+        .custom-stepper span {
+          font-size: 16px !important;
+          font-weight: 700 !important;
+          min-width: 32px !important;
+        }
+        .custom-trash-btn {
+          width: 36px !important;
+          height: 36px !important;
+          border-radius: 10px !important;
+        }
+        .custom-trash-btn svg {
+          width: 18px;
+          height: 18px;
+        }
+        .custom-payment-btn {
+          height: 64px !important;
+          font-size: 18px !important;
+          border-radius: 12px !important;
+          background-color: #00694b !important;
+          color: #ffffff !important;
+          border: none !important;
+          box-shadow: 0 4px 6px -1px rgba(0, 105, 75, 0.2) !important;
+        }
+        .custom-total-value {
+          font-size: 32px !important;
+          font-weight: 800 !important;
+          color: #00694b !important;
+        }
       `}</style>
 
       <div className="pos-content">
@@ -359,14 +509,31 @@ export default function PosScreen() {
                 <span>{label}</span>
               </button>
             ))}
+            {user?.role === 'ADMIN' && (
+              <button
+                className="pos-navitem pos-navitem--muted"
+                onClick={() => navigate('/add-user')}
+              >
+                <Icon.User className="pos-navitem__icon" />
+                <span>เพิ่มผู้ใช้</span>
+              </button>
+            )}
           </nav>
         </aside>
 
         {/* -------- Main column -------- */}
         <div className="pos-main">
-          <div className="pos-body" style={{ flexDirection: (activeNav === "promo" || activeNav === "manage" || activeNav === "manage_addon") ? "column" : "row" }}>
+          <div className="pos-body" style={{ flexDirection: (activeNav === "promo" || activeNav === "manage" || activeNav === "manage_addon" || activeNav === "bill_mgmt" || activeNav === "dashboard") ? "column" : "row" }}>
 
-            {activeNav === "manage_addon" ? (
+            {activeNav === "dashboard" ? (
+              <DashboardView />
+            ) :
+
+            activeNav === "bill_mgmt" ? (
+              <BillManagementView />
+            ) :
+
+            activeNav === "manage_addon" ? (
               <AddonManagementView
                 addons={globalAddons}
                 onToggleStatus={async (id) => {
@@ -376,6 +543,14 @@ export default function PosScreen() {
                 }}
                 onAddAddon={async (newAddon) => {
                   try { await createAddOn({ name: newAddon.label, price: newAddon.price }); await loadAddons(); } catch (err) { alert(err?.message ?? 'สร้าง Add-on ไม่สำเร็จ'); }
+                }}
+                onEditAddon={async (patch) => {
+                  // Backend only persists name + price; desc/category stay client-side.
+                  try { await updateAddOn(patch.id, { name: patch.label, price: patch.price }); await loadAddons(); } catch (err) { alert(err?.message ?? 'แก้ไข Add-on ไม่สำเร็จ'); }
+                }}
+                onDeleteAddon={async (id) => {
+                  // No hard-delete endpoint; soft-delete via setAddOnStatus(false).
+                  try { await setAddOnStatus(id, false); await loadAddons(); } catch (err) { alert(err?.message ?? 'ลบ Add-on ไม่สำเร็จ'); }
                 }}
               />
             ) :
@@ -391,6 +566,7 @@ export default function PosScreen() {
               <MenuManagementView
                 onOpenAddMenuModal={() => setIsAddMenuOpen(true)}
                 onEditMenu={(item) => setEditingConfigItem(item)}
+                onDeleteMenu={(target) => setMenuToDelete(target)}
               />
             ) :
 
@@ -414,21 +590,28 @@ export default function PosScreen() {
 
                     <div className="pos-search pos-search--inline" style={{ margin: 0, maxWidth: '340px', width: '340px' }}>
                       <Icon.Search className="pos-search__icon" />
-                      <input type="text" placeholder="ค้นหาเมนู (Search menu)..." />
+                      <input type="text" placeholder="ค้นหาเมนู (Search menu)..." className="clean-search-input" autoComplete="off" value={menuSearch} onChange={(e) => setMenuSearch(e.target.value)} />
                     </div>
 
                   </div>
 
                   <div className="pos-menu__grid">
                     {menu
-                      .filter((item) => item.category === activeNav)
-                      .map((item) => (
+                      .filter((item) => item.category === activeNav && item.active && (menuSearch.trim() === "" || item.name?.toLowerCase().includes(menuSearch.trim().toLowerCase())))
+                      .map((item) => {
+                        const isOutOfStock = item.stock !== undefined && item.stock <= 0;
+                        return (
                         <article
                           className="pos-card"
                           key={item.id}
-                          onClick={() => activeNav === "tea" ? setSelectedTeaForModal(item) : setSelectedItemForModal(item)}
-                          style={{ cursor: 'pointer' }}
+                          onClick={() => { if (!isOutOfStock) { activeNav === "tea" ? setSelectedTeaForModal(item) : setSelectedItemForModal(item); } }}
+                          style={{ opacity: isOutOfStock ? 0.6 : 1, position: 'relative', cursor: isOutOfStock ? 'not-allowed' : 'pointer' }}
                         >
+                          {isOutOfStock && (
+                            <div style={{ position: 'absolute', top: 12, right: 12, background: '#ef4444', color: '#fff', fontSize: '12px', fontWeight: 700, padding: '4px 10px', borderRadius: '20px', zIndex: 10, boxShadow: '0 2px 4px rgba(239, 68, 68, 0.4)' }}>
+                              Sold Out
+                            </div>
+                          )}
                           <div className={`pos-card__image ${item.kind ? `is-${item.kind}` : ""}`}>
                             {item.imgSrc ? (
                               <img src={item.imgSrc} alt={item.name} className="pos-real-image" />
@@ -451,123 +634,124 @@ export default function PosScreen() {
                             </div>
                           </div>
                         </article>
-                      ))}
+                        ); })}
                   </div>
                 </section>
 
-                <aside className="pos-order">
-                  <div className="pos-order__meta">
-                    <div>
-                      <div className="pos-order__invoice">Invoice No: {currentOrder?.id ?? "—"}</div>
-                    </div>
-                    <div className="pos-order__date">{new Date(currentOrder?.createdAt ?? Date.now()).toLocaleString("th-TH")}</div>
-                  </div>
+                <aside className="pos-order" style={{ display: 'flex', flexDirection: 'column' }}>
 
-                  <div className="pos-order__shop">
-                    <div className="pos-order__shoplogo">EP</div>
-                    <div className="pos-order__shopinfo">
-                      <div className="pos-order__shopname">Easy POS Studio</div>
-                      <div className="pos-order__shopemail">easypos@gmail.com</div>
-                    </div>
-                    <div className="pos-pill">Order: {currentOrder?.orderNumber ?? "#—"}</div>
-                  </div>
-
-                  <div className="pos-order__items">
+                  <div className="pos-order__items custom-scrollbar" style={{ flex: 1, overflowY: 'auto', marginTop: 0, marginBottom: '20px', paddingRight: '4px' }}>
                     {cart.map((item) => (
                       <div className="pos-orderitem" key={item.id}>
-                        <div className="pos-orderitem__icon">
-                          <Icon.Coffee />
+                        {/* 👉 แทนที่ไอคอนด้วยป้าย 1x */}
+                        <div className="pos-orderitem__icon custom-cart-icon" style={{ background: '#e6f7f1', color: '#00694b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                          {item.qty}x
                         </div>
                         <div className="pos-orderitem__body">
                           <div className="pos-orderitem__row">
-                            <div className="pos-orderitem__name">
+                            <div className="pos-orderitem__name custom-cart-name">
                               {item.name}
-                              {item.isNew && <span className="pos-badge">ใหม่</span>}
+                              {item.isNew && <span className="pos-badge custom-new-badge" style={{ background: '#f97316', color: '#fff' }}>ใหม่</span>}
                             </div>
-                            <div className="pos-orderitem__price">${item.price.toFixed(2)}</div>
+                            <div className="pos-orderitem__price custom-cart-price">฿{(item.price * item.qty).toFixed(2)}</div>
                           </div>
-                          <div className="pos-orderitem__detail">{item.detail}</div>
-                          <div className="pos-orderitem__extras">{item.extras}</div>
-                          {item.note && <div className="pos-orderitem__note">{item.note}</div>}
 
-                          <div className="pos-orderitem__footer">
-                            <div className="pos-stepper pos-stepper--panel">
-                              <button onClick={() => changeCartQty(item.id, -1)} aria-label="ลดจำนวน"><Icon.Minus /></button>
+                          {/* 👉 รายละเอียดเมนูที่ใหญ่ขึ้น */}
+                          <div className="pos-orderitem__detail custom-cart-detail">{item.detail}</div>
+                          {item.extras && <div className="pos-orderitem__extras custom-cart-detail" style={{ color: '#059669', marginTop: '2px' }}>{item.extras}</div>}
+                          {item.note && <div className="pos-orderitem__note custom-cart-detail" style={{ color: '#ea580c', marginTop: '2px' }}>* {item.note}</div>}
+
+                          <div className="pos-orderitem__footer" style={{ marginTop: '16px' }}>
+                            <div className="pos-stepper pos-stepper--panel custom-stepper">
+                              <button onClick={() => changeCartQty(item.id, -1)} aria-label="ลดจำนวน" style={{ color: '#ef4444' }}><Icon.Minus /></button>
                               <span>{item.qty}</span>
-                              <button onClick={() => changeCartQty(item.id, 1)} aria-label="เพิ่มจำนวน"><Icon.Plus /></button>
+                              <button onClick={() => changeCartQty(item.id, 1)} aria-label="เพิ่มจำนวน" style={{ color: '#f97316' }}><Icon.Plus /></button>
                             </div>
-                            <button className="pos-iconbtn" onClick={() => removeCartItem(item.id)} aria-label="ลบรายการ">
+                            <button className="pos-iconbtn custom-trash-btn" onClick={() => removeCartItem(item.id)} aria-label="ลบรายการ">
                               <Icon.Trash />
                             </button>
                           </div>
                         </div>
                       </div>
                     ))}
-                    {cart.length === 0 && <div className="pos-order__empty">ยังไม่มีรายการสั่งซื้อ</div>}
-                  </div>
-
-                  <div className="pos-promo">
-                    <div className="pos-promo__head">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Icon.Tag className="pos-promo__icon" />
-                        <span>โปรโมชั่น (Promotion)</span>
-                      </div>
-                      
-                      {/* 👉 ถ้ามีโปรโมชั่นถูกเลือก ให้แสดงป้ายสีเขียวที่เขียนว่า "ประหยัด..." */}
-                      {appliedPromo ? (
-                        <span className="pos-pill pos-pill--green">ประหยัด {appliedPromo.value.replace('-', '')}</span>
-                      ) : (
-                        <span 
-                          className="pos-pill pos-pill--green" 
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => setIsSelectPromoModalOpen(true)}
-                        >
-                          + เพิ่มส่วนลด
-                        </span>
-                      )}
-                    </div>
-
-                    {/* 👉 ดึงข้อมูลจริงจาก State `appliedPromo` มาแสดงแทนข้อความเดิมที่โดนล็อก */}
-                    {appliedPromo ? (
-                      <>
-                        <div className="pos-promo__row">
-                          <div className="pos-promo__label">
-                            <span className="pos-dot pos-dot--green" />
-                            {appliedPromo.title}
-                          </div>
-                          <div className="pos-promo__value" style={{ color: 'var(--green-600)', fontWeight: 'bold' }}>{appliedPromo.value}</div>
-                        </div>
-                        <div className="pos-promo__row pos-promo__row--sub">
-                          <span>โค้ด: {appliedPromo.code}</span>
-                          <button className="pos-linkbtn" onClick={() => setAppliedPromo(null)}>ยกเลิกส่วนลด</button>
-                        </div>
-                      </>
-                    ) : (
-                      <div style={{ padding: '16px 0 8px', textAlign: 'center', color: '#9ca3af', fontSize: '13px' }}>
-                        ยังไม่มีการเลือกโปรโมชั่น
+                    {cart.length === 0 && (
+                      <div className="pos-order__empty" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af' }}>
+                        ยังไม่มีรายการสั่งซื้อ
                       </div>
                     )}
                   </div>
 
-                  <div className="pos-total">
-                    <div>
-                      <div className="pos-total__label">Total</div>
-                      <div className="pos-total__meta">
-                        Items: {itemCount}, Quantity: {quantityCount}
-                      </div>
-                    </div>
-                    <div className="pos-total__value">${total.toFixed(2)}</div>
-                  </div>
+                  <div style={{ flexShrink: 0 }}>
+                    <div className="pos-promo">
+                      <div className="pos-promo__head">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <Icon.Tag className="pos-promo__icon" />
+                          <span style={{ fontSize: '15px', fontWeight: 600 }}>โปรโมชั่น (Promotion)</span>
+                        </div>
 
-                  <div className="pos-order__buttons">
-                    <button className="pos-btn pos-btn--outline" onClick={() => window.print()} disabled={!currentOrder}>
-                      <Icon.Print />
-                      Print Invoice
-                    </button>
-                    <button className="pos-btn pos-btn--solid pos-btn--full" onClick={handleCheckout} disabled={cart.length === 0 || checkoutBusy}>
-                      <Icon.Card />
-                      {checkoutBusy ? "..." : "Payments"}
-                    </button>
+                        {appliedPromo ? (
+                          <span className="pos-pill pos-pill--green" style={{ fontSize: '13px', padding: '6px 12px' }}>ประหยัด {appliedPromo.value.replace('-', '')}</span>
+                        ) : (
+                          <span
+                            className="pos-pill pos-pill--green"
+                            style={{ cursor: 'pointer', fontSize: '13px', padding: '6px 12px' }}
+                            onClick={() => setIsSelectPromoModalOpen(true)}
+                          >
+                            + เพิ่มส่วนลด
+                          </span>
+                        )}
+                      </div>
+
+                      {appliedPromo ? (
+                        <>
+                          <div className="pos-promo__row">
+                            <div className="pos-promo__label">
+                              <span className="pos-dot pos-dot--green" />
+                              {appliedPromo.title}
+                            </div>
+                            <div className="pos-promo__value" style={{ color: 'var(--green-600)', fontWeight: 'bold' }}>{appliedPromo.value}</div>
+                          </div>
+                          <div className="pos-promo__row pos-promo__row--sub">
+                            <span>โค้ด: {appliedPromo.code}</span>
+                            <button className="pos-linkbtn" onClick={() => setAppliedPromo(null)}>ยกเลิกส่วนลด</button>
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ padding: '16px 0 8px', textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
+                          ยังไม่มีการเลือกโปรโมชั่น
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="pos-total" style={{ padding: '24px 0 16px' }}>
+                      <div>
+                        <div className="pos-total__label" style={{ fontSize: '18px', fontWeight: 700, color: '#111827' }}>Total</div>
+                        <div className="pos-total__meta" style={{ fontSize: '13px' }}>
+                          Items: {itemCount}, Quantity: {quantityCount}
+                        </div>
+                      </div>
+                      <div className="pos-total__value custom-total-value">฿{total.toFixed(2)}</div>
+                    </div>
+
+                    <div className="pos-order__buttons">
+
+                      <button
+                        className="pos-btn pos-btn--solid pos-btn--full custom-payment-btn"
+                        style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}
+                        onClick={() => {
+                          if (cart.length > 0) {
+                            setIsPaymentModalOpen(true);
+                          } else {
+                            alert("กรุณาเพิ่มรายการสั่งซื้อก่อนชำระเงิน");
+                          }
+                        }}
+                        disabled={cart.length === 0 || checkoutBusy}
+                      >
+                        <Icon.Card />
+                        {checkoutBusy ? "..." : "Payments"}
+                      </button>
+
+                    </div>
                   </div>
                 </aside>
               </>
@@ -613,9 +797,8 @@ export default function PosScreen() {
           activeCategory={NAV_TO_CATEGORY[activeNav] ? activeNav : "coffee"}
           onClose={() => setIsAddMenuOpen(false)}
           onSubmit={async (form) => {
-            const backendName = NAV_TO_CATEGORY[form.category];
-            const cat = categories.find((c) => c.name === backendName);
-            if (!cat) throw new Error(`ไม่พบหมวด "${backendName}" ในฐานข้อมูล`);
+            const cat = categoryForNav(categories, form.category);
+            if (!cat) throw new Error(`ไม่พบหมวดสำหรับ nav key "${form.category}" ในฐานข้อมูล`);
             try {
               await createProduct({ categoryId: cat.id, name: form.name, price: form.price, imageUrl: null, addOnIds: [] });
               window.dispatchEvent(new Event("products:reload"));
@@ -656,6 +839,49 @@ export default function PosScreen() {
             setAppliedPromo(promo); // เซ็ตโปรที่เลือกลง State
             setIsSelectPromoModalOpen(false); // ปิด Modal
           }}
+        />
+      )}
+
+      {isPaymentModalOpen && (
+        <PaymentModal
+          cart={cart}
+          subtotal={subtotal}
+          discountAmount={promoDiscount}
+          promoName={appliedPromo?.title ?? appliedPromo?.name ?? null}
+          onClose={() => { setIsPaymentModalOpen(false); setPendingOrder(null); }}
+          onConfirmPayment={handleConfirmPayment}
+        />
+      )}
+
+      {completedPaymentData && (
+        <PaymentSuccessModal
+          paymentData={completedPaymentData}
+          onClose={() => setCompletedPaymentData(null)}
+          onNewOrder={() => {
+            setCart([]);
+            setAppliedPromo(null);
+            setCompletedPaymentData(null);
+          }}
+        />
+      )}
+
+      {menuToDelete && (
+        <ConfirmDeleteModal
+          title="ลบเมนู? (Delete Item?)"
+          itemName={menuToDelete.name}
+          description="เมนูนี้จะถูกปิดการขาย — ลูกค้ามองไม่เห็นในหน้า POS แต่บิลเก่าที่ขายไปแล้วยังอยู่ครบ"
+          confirmText="ปิดการขาย"
+          onConfirm={async () => {
+            try {
+              await setProductStatus(menuToDelete.id, false);
+              window.dispatchEvent(new Event('products:reload'));
+            } catch (err) {
+              alert(err?.message ?? 'ปิดเมนูไม่สำเร็จ');
+            } finally {
+              setMenuToDelete(null);
+            }
+          }}
+          onCancel={() => setMenuToDelete(null)}
         />
       )}
 

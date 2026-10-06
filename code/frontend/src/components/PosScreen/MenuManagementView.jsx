@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './PromotionView.css';
 import { listProducts, setProductStatus } from '../../api/products';
+import { navKeyFor } from '../../api/categories';
 
-const CATEGORY_TO_NAV = { Coffee: 'coffee', Tea: 'tea', Bakery: 'snack' };
-
-export default function MenuManagementView({ onOpenAddMenuModal, onEditMenu }) {
+export default function MenuManagementView({ onOpenAddMenuModal, onEditMenu, onDeleteMenu }) {
   const [menu, setMenu] = useState([]);
   const [busy, setBusy] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ACTIVE');
   const [stockOverrides, setStockOverrides] = useState({});
   const [stockModalItem, setStockModalItem] = useState(null);
   const [tempStockValue, setTempStockValue] = useState("");
@@ -18,11 +19,11 @@ export default function MenuManagementView({ onOpenAddMenuModal, onEditMenu }) {
       const page = await listProducts({ size: 200 });
       setMenu((page?.content ?? []).map((p) => ({
         id: p.id,
-        category: CATEGORY_TO_NAV[p.category?.name] ?? 'coffee',
+        category: navKeyFor(p.category?.name),
         name: p.name,
         price: p.price != null ? Number(p.price) : 0,
         imgSrc: p.imageUrl ?? null,
-        kind: p.category?.name === 'Tea' ? 'tea' : p.category?.name === 'Bakery' ? 'snack' : '',
+        kind: navKeyFor(p.category?.name) === 'coffee' ? '' : navKeyFor(p.category?.name),
         isActive: p.active,
       })));
       setLoadError(null);
@@ -52,13 +53,18 @@ export default function MenuManagementView({ onOpenAddMenuModal, onEditMenu }) {
     } finally { setBusy(false); }
   };
 
-  const filteredMenu = menu.filter(item => categoryFilter === 'all' || item.category === categoryFilter);
+  const q = search.trim().toLowerCase();
+  const filteredMenu = menu.filter(item =>
+    (categoryFilter === 'all' || item.category === categoryFilter)
+    && (q === '' || item.name?.toLowerCase().includes(q))
+    && (statusFilter === 'ACTIVE' ? item.isActive : !item.isActive)
+  );
 
   const getCategoryStyle = (cat) => {
     switch(cat) {
-      case 'coffee': return { bg: '#fef3c7', color: '#92400e', label: '☕️ กาแฟ' };
-      case 'tea': return { bg: '#ecfdf5', color: '#059669', label: '🍵 ชา' };
-      case 'snack': return { bg: '#ffedd5', color: '#c2410c', label: '🥐 ขนม' };
+      case 'coffee': return { bg: '#fef3c7', color: '#92400e', label: 'กาแฟ' };
+      case 'tea': return { bg: '#ecfdf5', color: '#059669', label: 'ชา' };
+      case 'snack': return { bg: '#ffedd5', color: '#c2410c', label: 'ขนม' };
       default: return { bg: '#f3f4f6', color: '#4b5563', label: 'ทั่วไป' };
     }
   };
@@ -70,6 +76,12 @@ export default function MenuManagementView({ onOpenAddMenuModal, onEditMenu }) {
   };
 
   const handleDeleteMenu = async (id) => {
+    // Delegate to parent (PosScreen) if it owns the confirm modal; otherwise fall back to native confirm.
+    if (onDeleteMenu) {
+      const item = menu.find((m) => m.id === id);
+      onDeleteMenu({ id, name: item?.name });
+      return;
+    }
     if (!window.confirm("ปิดการขายเมนูนี้ใช่หรือไม่?")) return;
     try {
       await setProductStatus(id, false);
@@ -95,15 +107,25 @@ export default function MenuManagementView({ onOpenAddMenuModal, onEditMenu }) {
           </h2>
           <p style={{ fontSize: '13px', color: '#6b7280', margin: 0 }}>จัดการรายการสินค้า ตั้งค่าราคา และเปิด/ปิดเมนูหน้าร้าน</p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #d1d5db', borderRadius: '8px', padding: '8px 12px', width: '300px' }}>
-          <svg width="16" height="16" fill="none" stroke="#9ca3af" strokeWidth="2" viewBox="0 0 24 24" style={{ marginRight: '8px' }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" placeholder="ค้นหาเมนู (Search menu)..." autoComplete="off" style={{ border: 'none', outline: 'none', width: '100%', fontSize: '14px', background: 'transparent' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #d1d5db', borderRadius: '8px', padding: '8px 12px', width: '300px' }}>
+            <svg width="16" height="16" fill="none" stroke="#9ca3af" strokeWidth="2" viewBox="0 0 24 24" style={{ marginRight: '8px' }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" placeholder="ค้นหาเมนู (Search menu)..." className="clean-search-input" autoComplete="off" value={search} onChange={(e) => setSearch(e.target.value)} style={{ border: 'none', outline: 'none', width: '100%', fontSize: '14px', background: 'transparent' }} />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#374151', fontSize: '14px', fontWeight: 600 }}>
+            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ border: 'none', background: 'transparent', outline: 'none', fontWeight: 600, color: '#111827', cursor: 'pointer' }}>
+               <option value="ACTIVE">เปิดใช้งาน (Active)</option>
+               <option value="INACTIVE">ปิดใช้งาน (Inactive)</option>
+            </select>
+          </div>
         </div>
       </header>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexShrink: 0 }}>
         <div style={{ display: 'flex', gap: '8px' }}>
-          {[{ id: 'all', label: 'ทั้งหมด (All)' }, { id: 'coffee', label: '☕️ กาแฟ' }, { id: 'tea', label: '🍵 ชา' }, { id: 'snack', label: '🥐 ขนม' }].map(tab => (
+          {[{ id: 'all', label: 'ทั้งหมด (All)' }, { id: 'coffee', label: 'กาแฟ' }, { id: 'tea', label: 'ชา' }, { id: 'snack', label: 'ขนม' }].map(tab => (
             <button key={tab.id} onClick={() => setCategoryFilter(tab.id)} style={{ padding: '8px 16px', borderRadius: '20px', border: '1px solid #e5e7eb', background: categoryFilter === tab.id ? '#111827' : '#fff', color: categoryFilter === tab.id ? '#fff' : '#4b5563', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease' }}>
               {tab.label}
             </button>

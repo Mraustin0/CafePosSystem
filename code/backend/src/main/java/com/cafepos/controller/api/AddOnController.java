@@ -50,4 +50,11 @@ public class AddOnController {
     public AddOnResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest request) {
         return addOnService.updateStatus(id, request.active());
     }
+
+    /** BE-05: hard-delete. 409 if the add-on already has order history; soft-delete via PATCH /status in that case. */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        addOnService.delete(id);
+        return ResponseEntity.noContent().build();
+    }
 }

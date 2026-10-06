@@ -58,4 +58,11 @@ public class ProductController {
     public ProductResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest request) {
         return productService.updateStatus(id, request.active());
     }
+
+    /** BE-05: hard-delete. 409 if the product already has order history; soft-delete via PATCH /status in that case. */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        productService.delete(id);
+        return ResponseEntity.noContent().build();
+    }
 }

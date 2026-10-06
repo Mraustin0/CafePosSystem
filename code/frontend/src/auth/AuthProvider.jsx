@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import * as authApi from '../api/auth'
+import { getMe } from '../api/users'
 import { TOKEN_KEY } from '../api/client'
 import { AuthContext } from './useAuth'
 
@@ -37,6 +38,31 @@ export function AuthProvider({ children }) {
     window.addEventListener('auth:expired', logout)
     return () => window.removeEventListener('auth:expired', logout)
   }, [logout])
+
+  // K04/B07: refresh cached user snapshot on boot + window focus so an admin role change
+  // reflects without a re-login. Silent on failure — 401 already handled by auth:expired.
+  const accessToken = session?.accessToken
+  useEffect(() => {
+    if (!accessToken) return
+    let cancelled = false
+    const refresh = async () => {
+      try {
+        const me = await getMe()
+        if (cancelled) return
+        setSession((prev) => {
+          if (!prev) return prev
+          const next = { ...prev, user: me }
+          localStorage.setItem(TOKEN_KEY, JSON.stringify(next))
+          return next
+        })
+      } catch {
+        // 401 → apiRequest fires auth:expired → logout
+      }
+    }
+    refresh()
+    window.addEventListener('focus', refresh)
+    return () => { cancelled = true; window.removeEventListener('focus', refresh) }
+  }, [accessToken])
 
   const value = useMemo(
     () => ({ user: session?.user ?? null, isAuthenticated: !!session, login, logout }),

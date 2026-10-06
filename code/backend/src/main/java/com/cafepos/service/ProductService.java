@@ -17,4 +17,7 @@ public interface ProductService {
     ProductResponse update(Long id, ProductRequest request);
 
     ProductResponse updateStatus(Long id, boolean active);
+
+    /** 409 if the product has order history; use updateStatus(false) to soft-delete instead. */
+    void delete(Long id);
 }

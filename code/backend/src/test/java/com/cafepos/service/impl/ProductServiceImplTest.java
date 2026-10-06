@@ -12,6 +12,7 @@ import com.cafepos.mapper.CategoryMapper;
 import com.cafepos.mapper.ProductMapper;
 import com.cafepos.repository.AddOnRepository;
 import com.cafepos.repository.CategoryRepository;
+import com.cafepos.repository.OrderRepository;
 import com.cafepos.repository.ProductRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,8 @@ class ProductServiceImplTest {
     private CategoryRepository categoryRepository;
     @Mock
     private AddOnRepository addOnRepository;
+    @Mock
+    private OrderRepository orderRepository;
 
     private ProductServiceImpl productService;
 
@@ -48,7 +51,7 @@ class ProductServiceImplTest {
     @BeforeEach
     void setUp() {
         ProductMapper mapper = new ProductMapper(new CategoryMapper(), new AddOnMapper());
-        productService = new ProductServiceImpl(productRepository, categoryRepository, addOnRepository, mapper);
+        productService = new ProductServiceImpl(productRepository, categoryRepository, addOnRepository, orderRepository, mapper);
     }
 
     @Test

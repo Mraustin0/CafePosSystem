@@ -7,6 +7,7 @@ import com.cafepos.exception.ConflictException;
 import com.cafepos.exception.ResourceNotFoundException;
 import com.cafepos.mapper.AddOnMapper;
 import com.cafepos.repository.AddOnRepository;
+import com.cafepos.repository.OrderRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,12 +29,14 @@ class AddOnServiceImplTest {
 
     @Mock
     private AddOnRepository addOnRepository;
+    @Mock
+    private OrderRepository orderRepository;
 
     private AddOnServiceImpl addOnService;
 
     @BeforeEach
     void setUp() {
-        addOnService = new AddOnServiceImpl(addOnRepository, new AddOnMapper());
+        addOnService = new AddOnServiceImpl(addOnRepository, orderRepository, new AddOnMapper());
     }
 
     @Test

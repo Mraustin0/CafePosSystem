@@ -36,6 +36,7 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
+    private final AddOnRepository addOnRepository;
     private final UserRepository userRepository;
     private final UserProfileRepository profileRepository;
     private final PaymentRepository paymentRepository;
@@ -44,6 +45,7 @@ public class OrderServiceImpl implements OrderService {
 
     public OrderServiceImpl(OrderRepository orderRepository,
                             ProductRepository productRepository,
+                            AddOnRepository addOnRepository,
                             UserRepository userRepository,
                             UserProfileRepository profileRepository,
                             PaymentRepository paymentRepository,
@@ -51,6 +53,7 @@ public class OrderServiceImpl implements OrderService {
                             List<DiscountStrategy> discountStrategies) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
+        this.addOnRepository = addOnRepository;
         this.userRepository = userRepository;
         this.profileRepository = profileRepository;
         this.paymentRepository = paymentRepository;
@@ -161,7 +164,7 @@ public class OrderServiceImpl implements OrderService {
             item.setQuantity(request.quantity());
             item.setUnitPrice(product.getPrice());
             for (Long addOnId : Optional.ofNullable(request.addOnIds()).orElse(Set.of())) {
-                AddOn addOn = allowedAddOn(product, addOnId);
+                AddOn addOn = allowedAddOn(addOnId);
                 item.getAddOns().add(new OrderItemAddOn(addOn, addOn.getPrice()));
             }
             order.addItem(item);
@@ -179,13 +182,17 @@ public class OrderServiceImpl implements OrderService {
         return products;
     }
 
-    /** The add-on must be linked to the product (product_add_ons) and active. */
-    private static AddOn allowedAddOn(Product product, Long addOnId) {
-        return product.getAddOns().stream()
-                .filter(a -> a.getId().equals(addOnId) && a.isActive())
-                .findFirst()
-                .orElseThrow(() -> new BadRequestException(
-                        "Add-on " + addOnId + " is not available for " + product.getName()));
+    // BE-02: Add-ons are a global catalog (the "จัดการท็อปปิ้ง" UI maintains it) that any product can use.
+    // The old product_add_ons link was blocking real-world flows: new menu items ship with addOnIds=[]
+    // so cashiers couldn't attach boba / extra shot without an admin pre-linking every combo. Now we
+    // only enforce that the add-on exists and is active; the product-level link is no longer required.
+    private AddOn allowedAddOn(Long addOnId) {
+        AddOn addOn = addOnRepository.findById(addOnId)
+                .orElseThrow(() -> new ResourceNotFoundException("AddOn", addOnId));
+        if (!addOn.isActive()) {
+            throw new BadRequestException("Add-on is not available: " + addOn.getName());
+        }
+        return addOn;
     }
 
     /** Recalculates subtotal, discount and total; remembers type/value so later item changes can reuse them. */

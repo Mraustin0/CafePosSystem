@@ -6,10 +6,12 @@ import com.cafepos.domain.entity.Product;
 import com.cafepos.dto.request.ProductRequest;
 import com.cafepos.dto.response.PageResponse;
 import com.cafepos.dto.response.ProductResponse;
+import com.cafepos.exception.ConflictException;
 import com.cafepos.exception.ResourceNotFoundException;
 import com.cafepos.mapper.ProductMapper;
 import com.cafepos.repository.AddOnRepository;
 import com.cafepos.repository.CategoryRepository;
+import com.cafepos.repository.OrderRepository;
 import com.cafepos.repository.ProductRepository;
 import com.cafepos.repository.ProductSpecifications;
 import com.cafepos.service.ProductService;
@@ -28,15 +30,18 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final AddOnRepository addOnRepository;
+    private final OrderRepository orderRepository;
     private final ProductMapper productMapper;
 
     public ProductServiceImpl(ProductRepository productRepository,
                               CategoryRepository categoryRepository,
                               AddOnRepository addOnRepository,
+                              OrderRepository orderRepository,
                               ProductMapper productMapper) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.addOnRepository = addOnRepository;
+        this.orderRepository = orderRepository;
         this.productMapper = productMapper;
     }
 
@@ -74,6 +79,17 @@ public class ProductServiceImpl implements ProductService {
         Product product = getProduct(id);
         product.setActive(active);
         return productMapper.toResponse(product);
+    }
+
+    @Override
+    @Transactional
+    public void delete(Long id) {
+        Product product = getProduct(id);
+        // BE-05: block hard-delete once the product has been sold so historical bills / reports stay complete.
+        if (orderRepository.existsOrderItemByProductId(id)) {
+            throw new ConflictException("Product has order history; use PATCH /status to soft-delete instead");
+        }
+        productRepository.delete(product);
     }
 
     private Product getProduct(Long id) {

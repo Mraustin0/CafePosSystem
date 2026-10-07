@@ -107,6 +107,18 @@ public class UserServiceImpl implements UserService {
         return userMapper.toResponse(profile);
     }
 
+    @Override
+    @Transactional
+    public void resetPassword(Long id, ResetPasswordRequest request, Long actorId) {
+        // Admins route their own password through changePassword (requires current). This path is
+        // for issuing a credential to someone else only.
+        if (id.equals(actorId)) {
+            throw new BadRequestException("Use /me/password to change your own password");
+        }
+        UserProfile profile = getProfile(id);
+        profile.getUser().setPasswordHash(passwordEncoder.encode(request.newPassword()));
+    }
+
     private UserProfile getProfile(Long userId) {
         return profileRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));

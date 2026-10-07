@@ -3,6 +3,7 @@ import './BillManagementView.css';
 import { printReceipt } from './Receiptprinter';
 import { listOrders, getOrder } from '../../api/orders';
 import { getPayment } from '../../api/payment';
+import { printReceipt } from './Receiptprinter';
 
 /* ---------------------------------------------------------
    ตั้งค่าวันที่ปัจจุบัน
@@ -285,8 +286,46 @@ export default function BillManagementView({ initialBillId = null }) {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+<<<<<<< Updated upstream
   const showToast = (msg) => {
     setToast(msg);
+=======
+  const activeBill = visibleBills.find((b) => b.id === selectedId) || visibleBills[0] || null;
+  const dateTitle = DATE_TABS.find((t) => t.key === dateTab)?.title || 'ช่วงกำหนดเอง';
+
+  // Use backend order detail for items/subtotal/discount; fall back to bill summary if not loaded yet.
+  const displayItems = activeDetail ? orderToBillItems(activeDetail) : (activeBill?.items || []);
+  const displaySubtotal = activeDetail ? Number(activeDetail.subtotal) : (activeBill?.total || 0);
+  const displayDiscount = activeDetail ? Number(activeDetail.discountAmount || 0) : 0;
+  const displayTotal = activeDetail ? Number(activeDetail.total) : (activeBill?.total || 0);
+
+  const handleReprint = () => {
+    if (!activeBill) return;
+    // Prefer backend-authoritative items from activeDetail; fall back to summary cart if detail not yet loaded.
+    const cart = activeDetail?.items
+      ? activeDetail.items.map((it) => ({
+          name: it.productName,
+          qty: it.quantity,
+          price: Number(it.unitPrice),
+          detail: (it.addOns || []).map((a) => a.name).join(', '),
+        }))
+      : (activeBill.items || []).map((it) => ({ name: it.name, qty: 1, price: it.price, detail: it.detail }));
+
+    const opened = printReceipt({
+      totalAmount: displayTotal,
+      method: activeBill.payment,
+      cart,
+      orderId: activeBill.id,
+      receiptNo: activeBill.id.replace('#', ''),
+      queueNo: `Q${activeBill.orderId}`,
+      cashierName: activeBill.cashier,
+      date: new Date(activeBill.timestamp),
+      isReprint: true,
+    });
+    setToast(opened
+      ? `กำลังพิมพ์ใบเสร็จ ${activeBill.id}`
+      : 'บราวเซอร์บล็อก Pop-up อยู่ กรุณาอนุญาตเพื่อเปิดใบเสร็จ');
+>>>>>>> Stashed changes
     window.setTimeout(() => setToast(''), 2500);
   };
 

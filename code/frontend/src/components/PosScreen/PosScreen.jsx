@@ -14,8 +14,11 @@ import PaymentModal from "./PaymentModal";
 import PaymentSuccessModal from "./PaymentSuccessModal";
 import BillManagementView from "./BillManagementView";
 import DashboardView from "./DashboardView";
+<<<<<<< Updated upstream
 import UserManagementView from "./UserManagementView";
 import SettingsView from "./SettingsView";
+=======
+>>>>>>> Stashed changes
 import { listProducts, createProduct, updateProduct, setProductStatus } from "../../api/products";
 import { listAddOns, createAddOn, setAddOnStatus, updateAddOn } from "../../api/addOns";
 import { getCategories, navKeyFor, categoryForNav } from "../../api/categories";
@@ -682,12 +685,16 @@ export default function PosScreen() {
                 onToggleStatus={handleToggleMenuStatus}
                 onOpenAddMenuModal={() => setIsAddMenuOpen(true)}
                 onEditMenu={(item) => setEditingConfigItem(item)}
+<<<<<<< Updated upstream
                 onDeleteMenu={(id) => {
                   // Kawinthida's MenuManagementView now calls onDeleteMenu(id); normalize into our { id, name } shape.
                   const target = menu.find((m) => m.id === id);
                   if (target) setMenuToDelete({ id, name: target.name });
                 }}
                 onUpdateStock={handleUpdateMenuStock}
+=======
+                onDeleteMenu={(target) => setMenuToDelete(target)}
+>>>>>>> Stashed changes
               />
             ) :
 

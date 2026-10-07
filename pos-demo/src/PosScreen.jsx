@@ -16,7 +16,6 @@ import DashboardView from "./DashboardView";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
 import SettingsView from "./SettingsView";
 
-/* 👉 นำเข้า PaymentModal และ PaymentSuccessModal */
 import PaymentModal from "./PaymentModal";
 import PaymentSuccessModal from "./PaymentSuccessModal";
 
@@ -111,7 +110,6 @@ export default function PosScreen() {
   const [editingPromo, setEditingPromo] = useState(null);
   const [users, setUsers] = useState(INITIAL_USERS);
 
-  // บิลที่ต้องเปิดค้างไว้ตอนข้ามมาจาก Dashboard
   const [billToOpen, setBillToOpen] = useState(null);
   useEffect(() => {
     if (activeNav !== "bill_mgmt") setBillToOpen(null);
@@ -133,7 +131,10 @@ export default function PosScreen() {
     );
   };
 
+<<<<<<< Updated upstream
   // เปิด Modal ยืนยันการลบ
+=======
+>>>>>>> Stashed changes
   const handleDeleteMenu = (id) => {
     const target = menu.find(item => item.id === id);
     if (target) setMenuToDelete(target);
@@ -215,8 +216,14 @@ export default function PosScreen() {
   const quantityCount = cart.reduce((sum, item) => sum + item.qty, 0);
   const currentNavLabel = NAV_ITEMS.find((nav) => nav.key === activeNav)?.label || "เมนู";
 
+  const isManagementTab = activeNav === "promo" || activeNav === "manage" || activeNav === "manage_addon" || activeNav === "bill_mgmt" || activeNav === "users" || activeNav === "dashboard";
+
   return (
     <div className="pos">
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
       <style>{`
         .pos-sidebar { overflow-y: auto; }
         .pos-sidebar__nav,
@@ -240,16 +247,34 @@ export default function PosScreen() {
             -webkit-box-shadow: 0 0 0 30px white inset !important;
         }
 
-        .pos-menu {
-          flex: 6 !important;
-          min-width: 0;
-        }
-        .pos-order {
-          flex: 4 !important;
-          min-width: 400px !important;
-          max-width: 520px !important; 
+        .pos-menu { flex: 6 !important; min-width: 0; }
+        .pos-order { flex: 4 !important; min-width: 400px !important; max-width: 520px !important; }
+
+        .custom-cart-icon { width: 36px !important; height: 36px !important; font-size: 15px !important; border-radius: 10px !important; }
+        .custom-cart-name { font-size: 16px !important; font-weight: 700 !important; }
+        .custom-cart-price { font-size: 18px !important; font-weight: 800 !important; color: #ea580c !important; }
+        .custom-cart-detail { font-size: 13px !important; margin-top: 4px; }
+        .custom-new-badge { font-size: 11px !important; padding: 4px 8px !important; border-radius: 6px !important; }
+
+        .custom-stepper { height: 36px !important; border-radius: 10px !important; }
+        .custom-stepper button { width: 36px !important; height: 36px !important; }
+        .custom-stepper span { font-size: 16px !important; font-weight: 700 !important; min-width: 32px !important; }
+        .custom-trash-btn { width: 36px !important; height: 36px !important; border-radius: 10px !important; }
+        .custom-trash-btn svg { width: 18px; height: 18px; }
+
+        .custom-payment-btn { height: 64px !important; font-size: 18px !important; border-radius: 12px !important; background-color: #00694b !important; color: #ffffff !important; border: none !important; box-shadow: 0 4px 6px -1px rgba(0, 105, 75, 0.2) !important; }
+        .custom-total-value { font-size: 32px !important; font-weight: 800 !important; color: #00694b !important; }
+
+        /* 👉 Override pos-body เพื่อให้หน้าต่างๆ กางเต็มจอ แต่ยังรักษา Padding ด้านข้างเอาไว้ไม่ให้ชิดขอบเกินไป */
+        .pos-body-management {
+          padding: 24px 32px !important; /* คืนค่า Padding ให้ดูมีพื้นที่ (Breathing room) เหมือนเดิม */
+          flex-direction: column;
+          width: 100%;
+          height: 100%;
+          box-sizing: border-box;
         }
 
+<<<<<<< Updated upstream
         .custom-cart-icon {
           width: 36px !important;
           height: 36px !important;
@@ -314,6 +339,14 @@ export default function PosScreen() {
           font-size: 32px !important;
           font-weight: 800 !important;
           color: #00694b !important;
+=======
+        /* 
+          สำหรับหน้า Bill Management (และหน้าที่ออกแบบ layout ใหม่แล้ว) 
+          เราลบ Padding ของมันเองออก เพื่อไม่ให้ Padding ซ้อนทับกันสองรอบ
+        */
+        .bm-container .bm-list-pane {
+           padding: 0 !important; 
+>>>>>>> Stashed changes
         }
 
         /*
@@ -355,6 +388,7 @@ export default function PosScreen() {
         </aside>
 
         <div className="pos-main">
+<<<<<<< Updated upstream
           <div
             className="pos-body"
             style={{
@@ -370,6 +404,10 @@ export default function PosScreen() {
                   : "row",
             }}
           >
+=======
+          <div className={isManagementTab ? "pos-body pos-body-management" : "pos-body"} style={{ flexDirection: isManagementTab ? "column" : "row" }}>
+            
+>>>>>>> Stashed changes
             {activeNav === "dashboard" ? (
               <DashboardView onViewBill={handleViewBill} />
             ) : activeNav === "settings" ? (
@@ -384,6 +422,7 @@ export default function PosScreen() {
               />
             ) : activeNav === "bill_mgmt" ? (
               <BillManagementView initialBillId={billToOpen} />
+<<<<<<< Updated upstream
             ) : activeNav === "manage_addon" ? (
               <AddonManagementView
                 addons={globalAddons}
@@ -395,6 +434,21 @@ export default function PosScreen() {
                 onAddAddon={(newAddon) => setGlobalAddons((prev) => [...prev, newAddon])}
               />
             ) : activeNav === "promo" ? (
+=======
+            ) :
+
+            activeNav === "manage_addon" ? (
+              <AddonManagementView
+                addons={globalAddons}
+                onToggleStatus={(id) => {
+                  setGlobalAddons(prev => prev.map(a => a.id === id ? { ...a, isActive: !a.isActive } : a))
+                }}
+                onAddAddon={(newAddon) => setGlobalAddons(prev => [...prev, newAddon])}
+              />
+            ) :
+
+            activeNav === "promo" ? (
+>>>>>>> Stashed changes
               <PromotionView
                 promotions={promotions}
                 onOpenAddPromoModal={() => {
@@ -406,6 +460,7 @@ export default function PosScreen() {
                   setIsAddPromoModalOpen(true);
                 }}
               />
+<<<<<<< Updated upstream
             ) : activeNav === "manage" ? (
               <MenuManagementView
                 menuItems={menu}
@@ -473,6 +528,59 @@ export default function PosScreen() {
                       .map((item) => {
                         const isOutOfStock = item.stock !== null && item.stock <= 0;
 
+=======
+            ) :
+
+            activeNav === "manage" ? (
+              <MenuManagementView
+                menuItems={menu}
+                onToggleStatus={handleToggleMenuStatus}
+                onDeleteMenu={handleDeleteMenu}
+                onOpenAddMenuModal={() => {
+                  setIsAddMenuOpen(true);
+                }}
+                onEditMenu={(item) => {
+                  setEditingConfigItem(item);
+                }}
+                onUpdateStock={handleUpdateMenuStock}
+              />
+            ) :
+
+            (
+              <>
+                <section className="pos-menu">
+                  <div className="pos-menu__head" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                    <div className="pos-menu__header-info">
+                      <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 4px 0', color: 'var(--gray-900)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        หมวด{currentNavLabel}
+                        <span style={{ fontWeight: 500, color: 'var(--gray-600)', fontSize: '16px' }}>
+                          ({activeNav === 'coffee' ? 'Coffee Menu' : activeNav === 'tea' ? 'Tea Menu' : 'Snacks & Bakery'})
+                        </span>
+                      </h2>
+                      <p style={{ fontSize: '13px', color: 'var(--gray-600)', margin: 0 }}>
+                        จัดการรายการสินค้า ค้นหาเมนู และเพิ่มลงในออเดอร์ของลูกค้า
+                      </p>
+                    </div>
+
+                    <div className="pos-search pos-search--inline" style={{ margin: 0, maxWidth: '340px', width: '340px' }}>
+                      <Icon.Search className="pos-search__icon" />
+
+                      <input
+                        type="text"
+                        placeholder="ค้นหาเมนู (Search menu)..."
+                        className="clean-search-input"
+                        autoComplete="off"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pos-menu__grid">
+                    {menu
+                      .filter((item) => item.category === activeNav && item.isActive)
+                      .map((item) => {
+                        const isOutOfStock = item.stock !== null && item.stock <= 0;
+
+>>>>>>> Stashed changes
                         return (
                           <article
                             className="pos-card"
@@ -484,6 +592,7 @@ export default function PosScreen() {
                             }}
                             style={{
                               opacity: isOutOfStock ? 0.6 : 1,
+<<<<<<< Updated upstream
                               position: "relative",
                               cursor: isOutOfStock ? "not-allowed" : "pointer",
                             }}
@@ -504,6 +613,14 @@ export default function PosScreen() {
                                   boxShadow: "0 2px 4px rgba(239, 68, 68, 0.4)",
                                 }}
                               >
+=======
+                              position: 'relative',
+                              cursor: isOutOfStock ? 'not-allowed' : 'pointer'
+                            }}
+                          >
+                            {isOutOfStock && (
+                              <div style={{ position: 'absolute', top: 12, right: 12, background: '#ef4444', color: '#fff', fontSize: '12px', fontWeight: 700, padding: '4px 10px', borderRadius: '20px', zIndex: 10, boxShadow: '0 2px 4px rgba(239, 68, 68, 0.4)' }}>
+>>>>>>> Stashed changes
                                 Sold Out
                               </div>
                             )}
@@ -517,7 +634,11 @@ export default function PosScreen() {
                             </div>
 
                             <div className="pos-card__body">
+<<<<<<< Updated upstream
                               {item.price !== null ? <h3>{item.name}</h3> : <h3 className="pos-skeleton pos-skeleton--title" />}
+=======
+                              {item.price !== null ? (<h3>{item.name}</h3>) : (<h3 className="pos-skeleton pos-skeleton--title" />)}
+>>>>>>> Stashed changes
                               <div className="pos-card__row">
                                 <div className="pos-card__price">
                                   <span className="pos-card__pricelabel">ราคา</span>
@@ -534,13 +655,18 @@ export default function PosScreen() {
                       })}
 
                     {menu.filter((item) => item.category === activeNav && item.isActive).length === 0 && (
+<<<<<<< Updated upstream
                       <div style={{ padding: "40px", textAlign: "center", color: "#9ca3af", width: "100%", gridColumn: "1 / -1" }}>
+=======
+                      <div style={{ padding: '40px', textAlign: 'center', color: '#9ca3af', width: '100%', gridColumn: '1 / -1' }}>
+>>>>>>> Stashed changes
                         ไม่มีเมนูเปิดขายในหมวดหมู่นี้
                       </div>
                     )}
                   </div>
                 </section>
 
+<<<<<<< Updated upstream
                 <aside className="pos-order" style={{ display: "flex", flexDirection: "column" }}>
                   <div
                     className="pos-order__items custom-scrollbar"
@@ -552,18 +678,31 @@ export default function PosScreen() {
                           className="pos-orderitem__icon custom-cart-icon"
                           style={{ background: "#e6f7f1", color: "#00694b", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold" }}
                         >
+=======
+                <aside className="pos-order" style={{ display: 'flex', flexDirection: 'column' }}>
+
+                  <div className="pos-order__items custom-scrollbar" style={{ flex: 1, overflowY: 'auto', marginTop: 0, marginBottom: '20px', paddingRight: '4px' }}>
+                    {cart.map((item) => (
+                      <div className="pos-orderitem" key={item.id}>
+                        <div className="pos-orderitem__icon custom-cart-icon" style={{ background: '#e6f7f1', color: '#00694b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+>>>>>>> Stashed changes
                           {item.qty}x
                         </div>
                         <div className="pos-orderitem__body">
                           <div className="pos-orderitem__row">
                             <div className="pos-orderitem__name custom-cart-name">
                               {item.name}
+<<<<<<< Updated upstream
                               {item.isNew && <span className="pos-badge custom-new-badge" style={{ background: "#f97316", color: "#fff" }}>ใหม่</span>}
+=======
+                              {item.isNew && <span className="pos-badge custom-new-badge" style={{ background: '#f97316', color: '#fff' }}>ใหม่</span>}
+>>>>>>> Stashed changes
                             </div>
                             <div className="pos-orderitem__price custom-cart-price">฿{(item.price * item.qty).toFixed(2)}</div>
                           </div>
 
                           <div className="pos-orderitem__detail custom-cart-detail">{item.detail}</div>
+<<<<<<< Updated upstream
                           {item.extras && <div className="pos-orderitem__extras custom-cart-detail" style={{ color: "#059669", marginTop: "2px" }}>{item.extras}</div>}
                           {item.note && <div className="pos-orderitem__note custom-cart-detail" style={{ color: "#ea580c", marginTop: "2px" }}>{item.note}</div>}
 
@@ -576,6 +715,16 @@ export default function PosScreen() {
                               <button onClick={() => changeCartQty(item.id, 1)} aria-label="เพิ่มจำนวน" style={{ color: "#f97316" }}>
                                 <Icon.Plus />
                               </button>
+=======
+                          {item.extras && <div className="pos-orderitem__extras custom-cart-detail" style={{ color: '#059669', marginTop: '2px' }}>{item.extras}</div>}
+                          {item.note && <div className="pos-orderitem__note custom-cart-detail" style={{ color: '#ea580c', marginTop: '2px' }}>* {item.note}</div>}
+
+                          <div className="pos-orderitem__footer" style={{ marginTop: '16px' }}>
+                            <div className="pos-stepper pos-stepper--panel custom-stepper">
+                              <button onClick={() => changeCartQty(item.id, -1)} aria-label="ลดจำนวน" style={{ color: '#ef4444' }}><Icon.Minus /></button>
+                              <span>{item.qty}</span>
+                              <button onClick={() => changeCartQty(item.id, 1)} aria-label="เพิ่มจำนวน" style={{ color: '#f97316' }}><Icon.Plus /></button>
+>>>>>>> Stashed changes
                             </div>
                             <button className="pos-iconbtn custom-trash-btn" onClick={() => removeCartItem(item.id)} aria-label="ลบรายการ">
                               <Icon.Trash />
@@ -585,7 +734,11 @@ export default function PosScreen() {
                       </div>
                     ))}
                     {cart.length === 0 && (
+<<<<<<< Updated upstream
                       <div className="pos-order__empty" style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af" }}>
+=======
+                      <div className="pos-order__empty" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af' }}>
+>>>>>>> Stashed changes
                         ยังไม่มีรายการสั่งซื้อ
                       </div>
                     )}
@@ -594,6 +747,7 @@ export default function PosScreen() {
                   <div style={{ flexShrink: 0 }}>
                     <div className="pos-promo">
                       <div className="pos-promo__head">
+<<<<<<< Updated upstream
                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                           <Icon.Tag className="pos-promo__icon" />
                           <span style={{ fontSize: "15px", fontWeight: 600 }}>โปรโมชั่น (Promotion)</span>
@@ -607,6 +761,19 @@ export default function PosScreen() {
                           <span
                             className="pos-pill pos-pill--green"
                             style={{ cursor: "pointer", fontSize: "13px", padding: "6px 12px" }}
+=======
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <Icon.Tag className="pos-promo__icon" />
+                          <span style={{ fontSize: '15px', fontWeight: 600 }}>โปรโมชั่น (Promotion)</span>
+                        </div>
+
+                        {appliedPromo ? (
+                          <span className="pos-pill pos-pill--green" style={{ fontSize: '13px', padding: '6px 12px' }}>ประหยัด {appliedPromo.value.replace('-', '')}</span>
+                        ) : (
+                          <span
+                            className="pos-pill pos-pill--green"
+                            style={{ cursor: 'pointer', fontSize: '13px', padding: '6px 12px' }}
+>>>>>>> Stashed changes
                             onClick={() => setIsSelectPromoModalOpen(true)}
                           >
                             + เพิ่มส่วนลด
@@ -621,9 +788,13 @@ export default function PosScreen() {
                               <span className="pos-dot pos-dot--green" />
                               {appliedPromo.title}
                             </div>
+<<<<<<< Updated upstream
                             <div className="pos-promo__value" style={{ color: "var(--green-600)", fontWeight: "bold" }}>
                               {appliedPromo.value}
                             </div>
+=======
+                            <div className="pos-promo__value" style={{ color: 'var(--green-600)', fontWeight: 'bold' }}>{appliedPromo.value}</div>
+>>>>>>> Stashed changes
                           </div>
                           <div className="pos-promo__row pos-promo__row--sub">
                             <span>โค้ด: {appliedPromo.code}</span>
@@ -631,12 +802,17 @@ export default function PosScreen() {
                           </div>
                         </>
                       ) : (
+<<<<<<< Updated upstream
                         <div style={{ padding: "16px 0 8px", textAlign: "center", color: "#9ca3af", fontSize: "14px" }}>
+=======
+                        <div style={{ padding: '16px 0 8px', textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
+>>>>>>> Stashed changes
                           ยังไม่มีการเลือกโปรโมชั่น
                         </div>
                       )}
                     </div>
 
+<<<<<<< Updated upstream
                     <div className="pos-total" style={{ padding: "24px 0 16px" }}>
                       <div>
                         <div className="pos-total__label">Total</div>
@@ -656,6 +832,36 @@ export default function PosScreen() {
                       <Icon.Card className="w-6 h-6" />
                       <span>Payments</span>
                     </button>
+=======
+                    <div className="pos-total" style={{ padding: '24px 0 16px' }}>
+                      <div>
+                        <div className="pos-total__label" style={{ fontSize: '18px', fontWeight: 700, color: '#111827' }}>Total</div>
+                        <div className="pos-total__meta" style={{ fontSize: '13px' }}>
+                          Items: {itemCount}, Quantity: {quantityCount}
+                        </div>
+                      </div>
+                      <div className="pos-total__value custom-total-value">฿{cart.reduce((s, i) => s + (i.price * i.qty), 0).toFixed(2)}</div>
+                    </div>
+
+                    <div className="pos-order__buttons">
+
+                      <button
+                        className="pos-btn pos-btn--solid pos-btn--full custom-payment-btn"
+                        style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}
+                        onClick={() => {
+                          if (cart.length > 0) {
+                            setIsPaymentModalOpen(true);
+                          } else {
+                            alert("กรุณาเพิ่มรายการสั่งซื้อก่อนชำระเงิน");
+                          }
+                        }}
+                      >
+                        <Icon.Card />
+                        Payments
+                      </button>
+
+                    </div>
+>>>>>>> Stashed changes
                   </div>
                 </aside>
               </>
@@ -748,10 +954,36 @@ export default function PosScreen() {
 
       {completedPaymentData && (
         <PaymentSuccessModal
+<<<<<<< Updated upstream
           data={completedPaymentData}
           onClose={() => setCompletedPaymentData(null)}
         />
       )}
+=======
+          paymentData={completedPaymentData}
+          onClose={() => {
+            setCompletedPaymentData(null);
+          }}
+          onNewOrder={() => {
+            setCart([]); 
+            setAppliedPromo(null); 
+            setCompletedPaymentData(null); 
+          }}
+        />
+      )}
+
+      {menuToDelete && (
+        <ConfirmDeleteModal
+          title="ลบเมนู? (Delete Item?)"
+          itemName={menuToDelete.name}
+          description="การกระทำนี้ไม่สามารถย้อนกลับได้"
+          confirmText="ลบเมนู"
+          onConfirm={confirmDeleteMenu}
+          onCancel={() => setMenuToDelete(null)}
+        />
+      )}
+
+>>>>>>> Stashed changes
     </div>
   );
 }

@@ -1,6 +1,15 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "./DashboardView.css";
-import { MOCK_BILLS } from "./BillManagementView";
+import { listOrders } from "../../api/orders";
+import { quickStatsToday } from "../../api/orders";
+import {
+  salesSummary,
+  topProducts,
+  salesByCashier,
+  salesByPaymentMethod,
+  salesByDay,
+  salesByCategory,
+} from "../../api/reports";
 
 /* =========================================================
    ข้อมูลตัวอย่าง (Mock) — แทนที่ด้วยข้อมูลจาก API ภายหลัง
@@ -70,7 +79,7 @@ const summarize = (items) =>
   items.map((it) => it.name.replace(/^\d+\.\s*/, "").replace(/\s*\(.*\)\s*$/, "")).join(", ");
 
 const THAI_DAYS = ["อา.", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."];
-const weekData = () => {
+const weekData = (WEEK_VALUES = [9850, 10420, 9210, 11300, 14850, 11100, 12480]) => {
   const end = new Date(`${TODAY_ISO}T00:00:00`);
   return WEEK_VALUES.map((value, i) => {
     const d = new Date(end);
@@ -200,24 +209,74 @@ function BarChart({ data }) {
 export default function DashboardView({ onViewBill }) {
   const [compare, setCompare] = useState("week"); // 'week' | 'month'
 
-  const avgTicket = TODAY.revenue / TODAY.orders;
+  // Backend-loaded overlays — fall back to mock constants if the API is unavailable so the
+  // dashboard still renders something during offline / 403 / startup.
+  const [today, setToday] = useState(TODAY);
+  const [weekValues, setWeekValues] = useState(WEEK_VALUES);
+  const [topDrinks, setTopDrinks] = useState(TOP_DRINKS);
+  const [recentBills, setRecentBills] = useState([]);
+
+  useEffect(() => {
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - 6);
+    const weekFromIso = weekStart.toISOString().slice(0, 10);
+
+    quickStatsToday().then((s) => {
+      setToday((prev) => ({ ...prev, revenue: Number(s.netSales), orders: s.orderCount }));
+    }).catch(() => {});
+
+    salesSummary(todayIso, todayIso).then((s) => {
+      setToday((prev) => ({ ...prev, discount: Number(s.totalDiscount || 0) }));
+    }).catch(() => {});
+
+    salesByPaymentMethod(todayIso, todayIso).then((rows) => {
+      const cash = Number(rows.find((r) => r.method === 'CASH')?.amount || 0);
+      const qr = Number(rows.find((r) => r.method === 'QR_CODE')?.amount || 0);
+      setToday((prev) => ({ ...prev, cash, promptpay: qr }));
+    }).catch(() => {});
+
+    salesByDay(weekFromIso, todayIso).then((days) => {
+      if (days && days.length) setWeekValues(days.map((d) => Number(d.netSales)));
+    }).catch(() => {});
+
+    topProducts(todayIso, todayIso, 5).then((list) => {
+      if (list && list.length) {
+        setTopDrinks(list.map((p) => ({ name: p.productName, qty: Number(p.quantitySold), revenue: Number(p.revenue) })));
+      }
+    }).catch(() => {});
+
+    listOrders({ status: 'PAID', from: todayIso, to: todayIso, size: 5, sort: 'createdAt,desc' })
+      .then((page) => {
+        const bills = (page?.content || []).map((o) => ({
+          id: o.orderNumber,
+          total: Number(o.total),
+          timestamp: o.createdAt,
+          datetime: new Date(o.createdAt).toLocaleString('th-TH'),
+          cashier: o.cashierName,
+          typeClass: 'dine-in',
+          type: `${o.itemCount} รายการ`,
+          paymentLabel: '',
+          items: [{ name: `${o.itemCount} รายการ` }],
+        }));
+        if (bills.length) setRecentBills(bills);
+      })
+      .catch(() => {});
+  }, []);
+
+  const avgTicket = today.revenue && today.orders ? today.revenue / today.orders : 0;
   const avgYesterday = YESTERDAY.revenue / YESTERDAY.orders;
-  const cashPct = (TODAY.cash / TODAY.revenue) * 100;
+  const cashPct = today.revenue > 0 ? (today.cash / today.revenue) * 100 : 0;
   const promptpayPct = 100 - cashPct;
 
   const peak = HOURLY.reduce((a, b) => (b.value > a.value ? b : a));
   const peakEnd = `${String(parseInt(peak.label, 10) + 1).padStart(2, "0")}:00`;
 
-  const bars = useMemo(() => (compare === "week" ? weekData() : monthData()), [compare]);
-  const weekTotal = WEEK_VALUES.reduce((s, v) => s + v, 0);
+  const bars = useMemo(() => (compare === "week" ? weekData(weekValues) : monthData()), [compare, weekValues]);
+  const weekTotal = weekValues.reduce((s, v) => s + v, 0);
   const monthGrowth = growth(MONTHS[MONTHS.length - 1].value, MONTHS[MONTHS.length - 2].value);
 
-  const recentBills = useMemo(
-    () => [...MOCK_BILLS].sort((a, b) => b.timestamp.localeCompare(a.timestamp)).slice(0, 5),
-    []
-  );
-
-  const maxDrink = Math.max(...TOP_DRINKS.map((d) => d.qty));
+  const maxDrink = Math.max(...topDrinks.map((d) => d.qty));
   const maxAddon = Math.max(...TOP_ADDONS.map((a) => a.qty));
   const topSweet = Math.max(...SWEETNESS.map((s) => s.pct));
 
@@ -248,11 +307,11 @@ export default function DashboardView({ onViewBill }) {
             <span className="db-kpi__label">ยอดขายรวม (Total Revenue)</span>
             <span className="db-kpi__icon"><WalletIcon /></span>
           </div>
-          <div className="db-kpi__value">{baht(TODAY.revenue)}</div>
+          <div className="db-kpi__value">{baht(today.revenue)}</div>
           <div className="db-kpi__meta">
-            <Growth value={growth(TODAY.revenue, YESTERDAY.revenue)} />
+            <Growth value={growth(today.revenue, YESTERDAY.revenue)} />
             <span>เทียบเมื่อวาน</span>
-            <span className="db-badge db-badge--down">ส่วนลด −{baht(TODAY.discount, 0)}</span>
+            <span className="db-badge db-badge--down">ส่วนลด −{baht(today.discount, 0)}</span>
           </div>
         </article>
 
@@ -261,11 +320,11 @@ export default function DashboardView({ onViewBill }) {
             <span className="db-kpi__label">จำนวนออเดอร์ (Total Orders)</span>
             <span className="db-kpi__icon"><ReceiptIcon /></span>
           </div>
-          <div className="db-kpi__value">{TODAY.orders}<small>บิล</small></div>
+          <div className="db-kpi__value">{today.orders}<small>บิล</small></div>
           <div className="db-kpi__meta">
-            <Growth value={growth(TODAY.orders, YESTERDAY.orders)} />
+            <Growth value={growth(today.orders, YESTERDAY.orders)} />
             <span>เทียบเมื่อวาน</span>
-            <span className="db-badge db-badge--down">ยกเลิกบิล {TODAY.cancelled}</span>
+            <span className="db-badge db-badge--down">ยกเลิกบิล {today.cancelled}</span>
           </div>
         </article>
 
@@ -294,13 +353,13 @@ export default function DashboardView({ onViewBill }) {
             <div className="db-split-row">
               <span className="db-split-dot" style={{ background: "var(--db-brand)" }} />
               <span className="db-split-name">PromptPay QR</span>
-              <span className="db-split-val">{baht(TODAY.promptpay, 0)}</span>
+              <span className="db-split-val">{baht(today.promptpay, 0)}</span>
               <span className="db-split-pct">{promptpayPct.toFixed(0)}%</span>
             </div>
             <div className="db-split-row">
               <span className="db-split-dot" style={{ background: "#f59e0b" }} />
               <span className="db-split-name">เงินสด (Cash)</span>
-              <span className="db-split-val">{baht(TODAY.cash, 0)}</span>
+              <span className="db-split-val">{baht(today.cash, 0)}</span>
               <span className="db-split-pct">{cashPct.toFixed(0)}%</span>
             </div>
           </div>
@@ -336,7 +395,7 @@ export default function DashboardView({ onViewBill }) {
           <BarChart data={bars} />
           <div className="db-peak-note">
             {compare === "week" ? (
-              <>รวม 7 วัน <strong>{baht(weekTotal, 0)}</strong> · เฉลี่ย {baht(weekTotal / WEEK_VALUES.length, 0)}/วัน</>
+              <>รวม 7 วัน <strong>{baht(weekTotal, 0)}</strong> · เฉลี่ย {baht(weekTotal / Math.max(1, weekValues.length), 0)}/วัน</>
             ) : (
               <>เดือนนี้เทียบเดือนก่อน <Growth value={monthGrowth} /></>
             )}
@@ -354,7 +413,7 @@ export default function DashboardView({ onViewBill }) {
             </div>
           </div>
           <ol className="db-rank">
-            {TOP_DRINKS.map((d, i) => (
+            {topDrinks.map((d, i) => (
               <li className="db-rank__item" key={d.name}>
                 <span className="db-rank__no">{i + 1}</span>
                 <span className="db-rank__name">{d.name}</span>

@@ -22,7 +22,7 @@ import { getCategories, navKeyFor, categoryForNav } from "../../api/categories";
 import { createPromotion, updatePromotion } from "../../api/promotions";
 import { createOrder, applyDiscount } from "../../api/orders";
 import { payOrder } from "../../api/payment";
-import { listUsers, createUser, updateUser, setUserStatus } from "../../api/users";
+import { listUsers, createUser, updateUser, setUserStatus, resetUserPassword } from "../../api/users";
 import { useAuth } from "../../auth/useAuth";
 import { useNavigate } from "react-router-dom";
 
@@ -466,10 +466,16 @@ export default function PosScreen() {
     catch (err) { alert(err?.message ?? 'เปลี่ยนสถานะไม่สำเร็จ'); }
   };
 
-  // Backend has no admin-side password reset endpoint yet — tracked as BE-08. UI collects the new
-  // credential locally so the modal flow is testable; wire this once the endpoint ships.
-  const handleResetUserPassword = (id, payload) => {
-    alert(`ตั้งรหัสใหม่สำหรับผู้ใช้ #${id} ยังไม่รองรับใน backend (BE-08 pending)`);
+  // BE-08: admin-side password reset. UserManagementView sends { type: 'password'|'pin', value }.
+  // Backend takes any 8+ char string — PIN is a shorter credential UX but stored as a password.
+  const handleResetUserPassword = async (id, payload) => {
+    const newPassword = payload?.value ?? payload?.newPassword;
+    if (!newPassword || String(newPassword).length < 8) {
+      alert('รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร');
+      return;
+    }
+    try { await resetUserPassword(id, String(newPassword)); alert('ตั้งรหัสใหม่สำเร็จ'); }
+    catch (err) { alert(err?.message ?? 'ตั้งรหัสใหม่ไม่สำเร็จ'); }
   };
 
   // Toggle product active/inactive from MenuManagementView.

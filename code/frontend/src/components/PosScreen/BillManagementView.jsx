@@ -1,6 +1,8 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import './BillManagementView.css';
 import { printReceipt } from './Receiptprinter';
+import { listOrders, getOrder } from '../../api/orders';
+import { getPayment } from '../../api/payment';
 
 /* ---------------------------------------------------------
    ตั้งค่าวันที่ปัจจุบัน
@@ -159,6 +161,43 @@ const daysBetween = (isoA, isoB) =>
 /* ---------------------------------------------------------
    Component
 --------------------------------------------------------- */
+// Map backend OrderSummaryResponse → the bill shape the view already uses.
+const summaryToBill = (row, paymentMethod) => {
+  const method = paymentMethod === 'QR_CODE' ? 'promptpay' : paymentMethod === 'CARD' ? 'card' : 'cash';
+  const methodLabel = method === 'promptpay' ? 'PromptPay QR' : method === 'card' ? 'บัตรเครดิต (Card)' : 'เงินสด (Cash)';
+  const date = row.createdAt ? new Date(row.createdAt) : new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const dateStr = `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
+  const timeStr = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return {
+    id: row.orderNumber || `#${row.id}`,
+    orderId: row.id,
+    type: `${row.itemCount || 0} รายการ`,
+    typeClass: 'dine-in',
+    cashier: row.cashierName || 'Cashier',
+    payment: method,
+    paymentLabel: methodLabel,
+    timestamp: (row.createdAt || date.toISOString()).slice(0, 16),
+    datetime: `${dateStr} ${timeStr} น.`,
+    txnId: `TXN-${row.id}`,
+    payTime: `${timeStr}:00 น.`,
+    total: Number(row.total || 0),
+    itemCount: row.itemCount || 0,
+    items: [{ name: `${row.itemCount || 0} รายการ`, detail: '', meta: '', price: Number(row.total || 0) }],
+  };
+};
+
+const orderToItems = (order) =>
+  (order?.items || []).map((it, i) => {
+    const addOns = (it.addOns || []).map((a) => `${a.name} (+฿${Number(a.price).toFixed(2)})`).join(', ');
+    return {
+      name: `${i + 1}. ${it.productName}`,
+      detail: addOns,
+      meta: `จำนวน ${it.quantity} • ราคา/หน่วย ฿${Number(it.unitPrice).toFixed(2)}`,
+      price: Number(it.lineTotal ?? it.unitPrice * it.quantity),
+    };
+  });
+
 export default function BillManagementView({ initialBillId = null }) {
   const [selectedId, setSelectedId] = useState(initialBillId);
   const [dateTab, setDateTab] = useState('today');
@@ -168,11 +207,49 @@ export default function BillManagementView({ initialBillId = null }) {
   const [paymentFilter, setPaymentFilter] = useState('all');
   const [sortBy, setSortBy] = useState('latest');
   const [toast, setToast] = useState('');
+  const [bills, setBills] = useState([]);
+  const [activeDetail, setActiveDetail] = useState(null);
+
+  // Compute the API date range from the current tab.
+  const [fromDate, toDate] = useMemo(() => {
+    const now = new Date();
+    const iso = (d) => d.toISOString().slice(0, 10);
+    if (dateTab === 'today') return [iso(now), iso(now)];
+    if (dateTab === 'week') {
+      const s = new Date(now); s.setDate(now.getDate() - 6); return [iso(s), iso(now)];
+    }
+    if (dateTab === 'month') {
+      const s = new Date(now.getFullYear(), now.getMonth(), 1); return [iso(s), iso(now)];
+    }
+    return [customFrom, customTo];
+  }, [dateTab, customFrom, customTo]);
+
+  const loadBills = useCallback(async () => {
+    try {
+      const page = await listOrders({ status: 'PAID', from: fromDate, to: toDate, size: 200, sort: 'createdAt,desc' });
+      const rows = page?.content ?? [];
+      const payments = await Promise.all(rows.map((r) => getPayment(r.id).catch(() => null)));
+      setBills(rows.map((r, i) => summaryToBill(r, payments[i]?.method)));
+    } catch (err) {
+      console.error('listOrders failed:', err);
+      setBills([]);
+    }
+  }, [fromDate, toDate]);
+
+  useEffect(() => { loadBills(); }, [loadBills]);
+
+  // Lazy-load the full OrderResponse so the receipt pane shows real items.
+  useEffect(() => {
+    const bill = bills.find((b) => b.id === selectedId);
+    if (!bill) { setActiveDetail(null); return; }
+    let cancelled = false;
+    getOrder(bill.orderId).then((d) => { if (!cancelled) setActiveDetail(d); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [selectedId, bills]);
 
   const visibleBills = useMemo(() => {
     const q = search.trim().toLowerCase();
-
-    const list = MOCK_BILLS.filter((bill) => {
+    const list = bills.filter((bill) => {
       const day = bill.timestamp.slice(0, 10);
       const age = daysBetween(TODAY, day);
 
@@ -215,7 +292,18 @@ export default function BillManagementView({ initialBillId = null }) {
 
   const handleReprint = () => {
     if (!activeBill) return;
-    const opened = printReceipt(billToReceipt(activeBill));
+    // If the full order detail is loaded, print with real items (name/qty/unitPrice/add-ons);
+    // otherwise fall back to the summary-only cart from billToReceipt.
+    const cart = activeDetail?.items
+      ? activeDetail.items.map((it) => ({
+          name: it.productName,
+          qty: it.quantity,
+          price: Number(it.unitPrice),
+          detail: (it.addOns || []).map((a) => a.name).join(', '),
+        }))
+      : billToReceipt(activeBill).cart;
+    const payload = { ...billToReceipt(activeBill), cart };
+    const opened = printReceipt(payload);
     showToast(
       opened
         ? `กำลังพิมพ์ใบเสร็จ ${activeBill.id}`
@@ -334,7 +422,8 @@ export default function BillManagementView({ initialBillId = null }) {
             </div>
 
             <div className="bm-items">
-              {activeBill.items.map((item, idx) => {
+              {/* Prefer backend-authoritative items from activeDetail (real qty + unitPrice + add-on names) when loaded. */}
+              {(activeDetail ? orderToItems(activeDetail) : activeBill.items).map((item, idx) => {
                 const qty = parseQty(item.meta);
                 const detail = (item.detail || '').split(',').map((t) => t.trim()).filter(Boolean).join(' • ');
                 const note = noteFromMeta(item.meta);

@@ -9,11 +9,9 @@ const Icon = {
   Pencil: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><path d="M12 20h9" strokeLinecap="round" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" strokeLinecap="round" strokeLinejoin="round" /></svg>,
   Key: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><circle cx="7.5" cy="15.5" r="4.5" /><path d="m21 2-9.6 9.6" strokeLinecap="round" /><path d="m15.5 7.5 3 3L22 7l-3-3" strokeLinecap="round" strokeLinejoin="round" /></svg>,
   Users: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
-  Store: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><path d="m2 7 1 12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2l1-12"/><path d="M2 7h20M12 7V3M2 7l3-4h14l3 4"/></svg>,
-  Receipt: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>,
-  Printer: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>,
   Search: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...p}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>,
   X: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...p}><path d="M18 6 6 18M6 6l12 12" strokeLinecap="round" /></svg>,
+  LogOut: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
 };
 
 /* ---------- Mock Data ---------- */
@@ -24,53 +22,21 @@ const INITIAL_USERS = [
   { id: 4, fullName: "ทิพย์ วงศ์งาม", username: "Tzoey", role: "CASHIER", active: false },
 ];
 
-const INITIAL_DEVICES = [
-  { id: 1, name: "POS Thermal Printer 80mm", type: "เครื่องพิมพ์ใบเสร็จ", status: "online", connected: true },
-  { id: 2, name: "Kitchen Barcode Printer", type: "เครื่องพิมพ์ห้องครัว", status: "offline", connected: false },
-  { id: 3, name: "Cash Drawer RJ11", type: "ลิ้นชักเก็บเงิน", status: "online", connected: true },
-];
-
 /* ---------- Sub Components ---------- */
-function StatusPill({ active, onChange }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    function onOutside(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
-    document.addEventListener("mousedown", onOutside);
-    return () => document.removeEventListener("mousedown", onOutside);
-  }, []);
-
+function ToggleSwitch({ checked, onChange }) {
   return (
-    <div className="st-menu" ref={ref}>
-      <button
-        type="button"
-        className={`st-tag ${active ? "st-tag--green" : "st-tag--orange"}`}
-        onClick={() => setOpen((v) => !v)}
-      >
-        {active ? "เปิดใช้งาน" : "ปิดใช้งาน"}
-        <Icon.Chevron className="st-tag__chevron" />
-      </button>
-
-      {open && (
-        <div className="st-menu__panel">
-          <button type="button" className="st-menu__item" onClick={() => { if (!active) onChange(true); setOpen(false); }}>
-            <span className="st-menu__dot st-menu__dot--green" /> เปิดใช้งาน
-          </button>
-          <button
-            type="button"
-            className="st-menu__item"
-            onClick={() => {
-              if (active) {
-                if (window.confirm("ระงับผู้ใช้นี้? ผู้ใช้จะเข้าสู่ระบบไม่ได้ทันที")) onChange(false);
-              }
-              setOpen(false);
-            }}
-          >
-            <span className="st-menu__dot st-menu__dot--orange" /> ปิดใช้งาน
-          </button>
-        </div>
-      )}
+    <div className="st-status-cell">
+      <label className="st-switch">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+        />
+        <span className="st-slider" />
+      </label>
+      <span className={`st-status-label ${checked ? "is-active" : "is-inactive"}`}>
+        {checked ? "Active" : "Inactive"}
+      </span>
     </div>
   );
 }
@@ -107,25 +73,28 @@ function RowMenu({ onEdit, onResetPassword }) {
 
 /* ---------- Main Component ---------- */
 export default function SettingsView() {
-  const [activeTab, setActiveTab] = useState("users");
+  const [activeTab, setActiveTab] = useState("profile");
   const [users, setUsers] = useState(INITIAL_USERS);
   const [searchQuery, setSearchQuery] = useState("");
   const [toast, setToast] = useState(null);
 
-  // Modal States
   const [userModal, setUserModal] = useState({ open: false, data: null });
   const [passwordModal, setPasswordModal] = useState({ open: false, data: null });
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  // Store Settings Form State
+  const [profileData, setProfileData] = useState({
+    fullName: "ผู้ดูแลระบบ (Admin)",
+    username: "admin_pos",
+    email: "admin@cafepos.com",
+    phone: "089-999-8888",
+  });
+
   const [storeData, setStoreData] = useState({
     name: "ร้านกาแฟคราฟต์ & เบเกอรี่",
     taxId: "0105560000000",
     phone: "081-234-5678",
     address: "123/45 ถนนมิตรภาพ อ.เมือง จ.ขอนแก่น 40000",
     vatRate: "7",
-    receiptHeader: "ยินดีต้อนรับสู่ร้านกาแฟคราฟต์",
-    receiptFooter: "ขอบคุณที่อุดหนุน โอกาสหน้าเชิญใหม่ค่ะ",
-    paperSize: "80mm",
   });
   const [isDirty, setIsDirty] = useState(false);
 
@@ -147,11 +116,9 @@ export default function SettingsView() {
     const role = formData.get("role");
 
     if (userModal.data) {
-      // Edit
       setUsers((prev) => prev.map((u) => (u.id === userModal.data.id ? { ...u, fullName, username, role } : u)));
       showToast("แก้ไขข้อมูลผู้ใช้งานสำเร็จ");
     } else {
-      // Add
       const newUser = { id: Date.now(), fullName, username, role, active: true };
       setUsers((prev) => [...prev, newUser]);
       showToast("เพิ่มผู้ใช้งานใหม่เรียบร้อยแล้ว");
@@ -175,33 +142,49 @@ export default function SettingsView() {
     showToast("บันทึกข้อมูลการตั้งค่าเรียบร้อยแล้ว");
   };
 
+  const handleSaveProfile = (e) => {
+    e.preventDefault();
+    showToast("อัปเดตข้อมูลโปรไฟล์เรียบร้อยแล้ว");
+  };
+
+  const handleLogoutConfirm = () => {
+    setShowLogoutModal(false);
+    showToast("ออกจากระบบเรียบร้อยแล้ว");
+  };
+
   const filteredUsers = users.filter(
     (u) => u.fullName.includes(searchQuery) || u.username.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
     <div className="st-container">
-      {/* Toast Notification */}
       {toast && <div className="st-toast">{toast}</div>}
 
-      {/* Header */}
       <div className="st-header">
         <h2 className="st-title">
           การตั้งค่า <span>Settings</span>
         </h2>
-        <p className="st-subtitle">จัดการข้อมูลร้าน สิทธิ์ผู้ใช้งาน ใบเสร็จ และการเชื่อมต่ออุปกรณ์</p>
+        <p className="st-subtitle">จัดการข้อมูลส่วนตัว ข้อมูลร้าน และสิทธิ์ผู้ใช้งาน</p>
       </div>
 
-      {/* Main Layout */}
       <div className="st-layout">
-        {/* Navigation Tabs */}
         <aside className="st-tabs">
+          <button
+            type="button"
+            className={`st-tab ${activeTab === "profile" ? "active" : ""}`}
+            onClick={() => setActiveTab("profile")}
+          >
+            <div>
+              <span className="st-tab__label">จัดการโปรไฟล์</span>
+              <span className="st-tab__sub">ข้อมูลส่วนตัว, รหัสผ่าน</span>
+            </div>
+          </button>
+
           <button
             type="button"
             className={`st-tab ${activeTab === "users" ? "active" : ""}`}
             onClick={() => setActiveTab("users")}
           >
-            <div className="st-tab__icon"><Icon.Users /></div>
             <div>
               <span className="st-tab__label">ผู้ใช้งาน & สิทธิ์</span>
               <span className="st-tab__sub">ผู้ดูแลระบบ, แคชเชียร์</span>
@@ -213,7 +196,6 @@ export default function SettingsView() {
             className={`st-tab ${activeTab === "store" ? "active" : ""}`}
             onClick={() => setActiveTab("store")}
           >
-            <div className="st-tab__icon"><Icon.Store /></div>
             <div>
               <span className="st-tab__label">ข้อมูลร้านค้า</span>
               <span className="st-tab__sub">ชื่อร้าน, ที่อยู่, เลขภาษี</span>
@@ -222,33 +204,80 @@ export default function SettingsView() {
 
           <button
             type="button"
-            className={`st-tab ${activeTab === "receipt" ? "active" : ""}`}
-            onClick={() => setActiveTab("receipt")}
+            className="st-tab st-tab--danger"
+            onClick={() => setShowLogoutModal(true)}
           >
-            <div className="st-tab__icon"><Icon.Receipt /></div>
             <div>
-              <span className="st-tab__label">ใบเสร็จรับเงิน</span>
-              <span className="st-tab__sub">ข้อความหัว/ท้าย, ขนาดกระดาษ</span>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            className={`st-tab ${activeTab === "devices" ? "active" : ""}`}
-            onClick={() => setActiveTab("devices")}
-          >
-            <div className="st-tab__icon"><Icon.Printer /></div>
-            <div>
-              <span className="st-tab__label">อุปกรณ์ฮาร์ดแวร์</span>
-              <span className="st-tab__sub">เครื่องพิมพ์, ลิ้นชักเก็บเงิน</span>
+              <span className="st-tab__label st-tab__label--danger">ออกจากระบบ</span>
+              <span className="st-tab__sub">จบการทำงาน, สลับบัญชี</span>
             </div>
           </button>
         </aside>
 
-        {/* Content Area */}
         <main className="st-content">
           <div className="st-scroll">
-            {/* TAB 1: USERS */}
+            {activeTab === "profile" && (
+              <div className="st-group">
+                <div className="st-section-head">
+                  <h3 className="st-section-title">จัดการโปรไฟล์ส่วนตัว</h3>
+                  <p className="st-section-desc">แก้ไขข้อมูลบัญชีผู้ใช้และเปลี่ยนรหัสผ่านของคุณ</p>
+                </div>
+
+                <form onSubmit={handleSaveProfile} className="st-grid">
+                  <div className="st-field full">
+                    <label className="st-label">ชื่อ-นามสกุล <span className="st-req">*</span></label>
+                    <input
+                      type="text"
+                      className="st-input"
+                      value={profileData.fullName}
+                      onChange={(e) => setProfileData({ ...profileData, fullName: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className="st-field">
+                    <label className="st-label">ชื่อผู้ใช้ (Username)</label>
+                    <input
+                      type="text"
+                      className="st-input"
+                      value={profileData.username}
+                      disabled
+                    />
+                  </div>
+
+                  <div className="st-field">
+                    <label className="st-label">เบอร์โทรศัพท์</label>
+                    <input
+                      type="text"
+                      className="st-input"
+                      value={profileData.phone}
+                      onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="st-field full" style={{ marginTop: "16px", paddingTop: "16px", borderTop: "1px dashed var(--st-line)" }}>
+                    <h4 style={{ margin: "0 0 12px", fontSize: "15px", fontWeight: 700 }}>เปลี่ยนรหัสผ่าน</h4>
+                  </div>
+
+                  <div className="st-field">
+                    <label className="st-label">รหัสผ่านปัจจุบัน</label>
+                    <input type="password" className="st-input" placeholder="••••••••" />
+                  </div>
+
+                  <div className="st-field">
+                    <label className="st-label">รหัสผ่านใหม่</label>
+                    <input type="password" className="st-input" placeholder="อย่างน้อย 6 ตัวอักษร" />
+                  </div>
+
+                  <div className="st-field full" style={{ marginTop: "12px" }}>
+                    <button type="submit" className="st-btn st-btn--solid">
+                      บันทึกโปรไฟล์
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
             {activeTab === "users" && (
               <>
                 <div className="st-section-head">
@@ -262,7 +291,7 @@ export default function SettingsView() {
                       <Icon.Search className="st-search__icon" />
                       <input
                         type="text"
-                        className="st-search__input"
+                        className="st-search__input st-input"
                         placeholder="ค้นหาชื่อ หรือชื่อผู้ใช้..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -303,7 +332,10 @@ export default function SettingsView() {
                               </span>
                             </td>
                             <td>
-                              <StatusPill active={u.active} onChange={(value) => toggleActive(u.id, value)} />
+                              <ToggleSwitch
+                                checked={u.active}
+                                onChange={(value) => toggleActive(u.id, value)}
+                              />
                             </td>
                             <td className="is-right">
                               <RowMenu
@@ -330,12 +362,11 @@ export default function SettingsView() {
               </>
             )}
 
-            {/* TAB 2: STORE INFO */}
             {activeTab === "store" && (
               <div className="st-group">
                 <div className="st-section-head">
                   <h3 className="st-section-title">ข้อมูลร้านค้า</h3>
-                  <p className="st-section-desc">ข้อมูลส่วนนี้จะถูกใช้อ้างอิงในเอกสารการขายและใบเสร็จรับเงิน</p>
+                  <p className="st-section-desc">ข้อมูลส่วนนี้จะถูกใช้อ้างอิงในเอกสารการขาย</p>
                 </div>
 
                 <div className="st-grid">
@@ -393,129 +424,9 @@ export default function SettingsView() {
                 </div>
               </div>
             )}
-
-            {/* TAB 3: RECEIPT */}
-            {activeTab === "receipt" && (
-              <div className="st-split">
-                <div>
-                  <div className="st-section-head">
-                    <h3 className="st-section-title">ตั้งค่าใบเสร็จรับเงิน</h3>
-                    <p className="st-section-desc">ปรับแต่งข้อความและรูปแบบของใบเสร็จกระดาษความร้อน</p>
-                  </div>
-
-                  <div className="st-group">
-                    <h4 className="st-group__title">ขนาดกระดาษพิมพ์</h4>
-                    <div className="st-choices">
-                      <button
-                        type="button"
-                        className={`st-choice ${storeData.paperSize === "80mm" ? "active" : ""}`}
-                        onClick={() => handleStoreChange("paperSize", "80mm")}
-                      >
-                        <span className="st-choice__name">กระดาษ 80 mm</span>
-                        <span className="st-choice__desc">ขนาดมาตรฐานสำหรับสลิป POS ร้านค้าทั่วไป</span>
-                      </button>
-                      <button
-                        type="button"
-                        className={`st-choice ${storeData.paperSize === "58mm" ? "active" : ""}`}
-                        onClick={() => handleStoreChange("paperSize", "58mm")}
-                      >
-                        <span className="st-choice__name">กระดาษ 58 mm</span>
-                        <span className="st-choice__desc">ขนาดกะทัดรัด สำหรับเครื่องพิมพ์พกพา</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="st-group">
-                    <h4 className="st-group__title">ข้อความในใบเสร็จ</h4>
-                    <div className="st-grid">
-                      <div className="st-field full">
-                        <label className="st-label">ข้อความหัวใบเสร็จ (Header)</label>
-                        <input
-                          type="text"
-                          className="st-input"
-                          value={storeData.receiptHeader}
-                          onChange={(e) => handleStoreChange("receiptHeader", e.target.value)}
-                        />
-                      </div>
-                      <div className="st-field full">
-                        <label className="st-label">ข้อความท้ายใบเสร็จ (Footer)</label>
-                        <textarea
-                          className="st-textarea"
-                          value={storeData.receiptFooter}
-                          onChange={(e) => handleStoreChange("receiptFooter", e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Live Receipt Preview */}
-                <aside className="st-aside">
-                  <p className="st-preview__title">ตัวอย่างใบเสร็จ (Preview)</p>
-                  <div className={`st-receipt ${storeData.paperSize === "58mm" ? "narrow" : ""}`}>
-                    <div className="st-receipt__name">{storeData.name || "ชื่อร้านค้า"}</div>
-                    <div className="st-receipt__small">{storeData.address}</div>
-                    <div className="st-receipt__small">โทร: {storeData.phone}</div>
-                    {storeData.taxId && <div className="st-receipt__small">เลขผู้เสียภาษี: {storeData.taxId}</div>}
-                    
-                    <hr />
-                    <div className="st-receipt__tag">{storeData.receiptHeader}</div>
-                    <hr />
-
-                    <div className="st-receipt__line">
-                      <span>1x อเมริกาโน่เย็น</span>
-                      <span>65.00</span>
-                    </div>
-                    <div className="st-receipt__line">
-                      <span>1x ครัวซองต์เนยสด</span>
-                      <span>85.00</span>
-                    </div>
-                    <hr />
-                    <div className="st-receipt__line bold">
-                      <span>รวมทั้งสิ้น</span>
-                      <span>150.00</span>
-                    </div>
-                    <div className="st-receipt__line muted">
-                      <span>รวม VAT {storeData.vatRate}%</span>
-                      <span>9.81</span>
-                    </div>
-                    <hr />
-                    <div className="st-receipt__foot">{storeData.receiptFooter}</div>
-                  </div>
-                </aside>
-              </div>
-            )}
-
-            {/* TAB 4: DEVICES */}
-            {activeTab === "devices" && (
-              <>
-                <div className="st-section-head">
-                  <h3 className="st-section-title">อุปกรณ์ฮาร์ดแวร์</h3>
-                  <p className="st-section-desc">ตรวจสอบสถานะการเชื่อมต่อเครื่องพิมพ์และอุปกรณ์ต่อพ่วง</p>
-                </div>
-
-                <div className="st-device-grid">
-                  {INITIAL_DEVICES.map((dev) => (
-                    <div key={dev.id} className={`st-device-card ${dev.connected ? "connected" : ""}`}>
-                      <div className="st-device-card__icon">
-                        <Icon.Printer />
-                      </div>
-                      <div className="st-device-card__info">
-                        <div className="st-device-card__name">{dev.name}</div>
-                        <div className="st-device-card__status">
-                          <span className={`st-status-dot ${dev.status}`} />
-                          {dev.connected ? "พร้อมใช้งาน" : "ไม่ได้เชื่อมต่อ"}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
           </div>
 
-          {/* Bottom Save Bar (แสดงเมื่อมีการเปลี่ยนแปลงข้อมูลร้าน) */}
-          {(activeTab === "store" || activeTab === "receipt") && (
+          {activeTab === "store" && (
             <div className={`st-savebar ${isDirty ? "dirty" : ""}`}>
               <div className="st-savebar__status">
                 <span className="st-savebar__dot" />
@@ -544,7 +455,6 @@ export default function SettingsView() {
         </main>
       </div>
 
-      {/* ---------- MODAL: ADD / EDIT USER ---------- */}
       {userModal.open && (
         <div className="st-modal-overlay">
           <div className="st-modal">
@@ -624,7 +534,6 @@ export default function SettingsView() {
         </div>
       )}
 
-      {/* ---------- MODAL: RESET PASSWORD ---------- */}
       {passwordModal.open && (
         <div className="st-modal-overlay">
           <div className="st-modal st-modal--sm">
@@ -661,6 +570,50 @@ export default function SettingsView() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showLogoutModal && (
+        <div className="st-modal-overlay">
+          <div className="st-modal st-modal--sm">
+            <div className="st-modal__head">
+              <h3 className="st-modal__title">ออกจากระบบ</h3>
+              <button
+                type="button"
+                className="st-modal__close"
+                onClick={() => setShowLogoutModal(false)}
+              >
+                <Icon.X />
+              </button>
+            </div>
+            <div className="st-modal__body" style={{ textAlign: "center", padding: "32px 24px" }}>
+              <div className="st-logout-icon">
+                <Icon.LogOut />
+              </div>
+              <h3 style={{ margin: "16px 0 8px", fontSize: "18px", fontWeight: 700, color: "var(--st-ink)" }}>
+                ยืนยันการออกจากระบบ
+              </h3>
+              <p style={{ margin: 0, fontSize: "13px", color: "var(--st-muted)" }}>
+                คุณต้องการออกจากระบบการทำงานปัจจุบันใช่หรือไม่?
+              </p>
+            </div>
+            <div className="st-modal__foot">
+              <button
+                type="button"
+                className="st-btn st-btn--ghost"
+                onClick={() => setShowLogoutModal(false)}
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                className="st-btn st-btn--danger"
+                onClick={handleLogoutConfirm}
+              >
+                <Icon.LogOut /> ออกจากระบบ
+              </button>
+            </div>
           </div>
         </div>
       )}

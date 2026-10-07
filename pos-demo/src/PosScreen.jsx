@@ -315,6 +315,14 @@ export default function PosScreen() {
           font-weight: 800 !important;
           color: #00694b !important;
         }
+
+        /*
+          Ported from Thana-nan's refactor (PR #37): the Bill Management view redesigned its own
+          layout + padding, so .pos-body's wrapper padding would stack on top. Zero it here.
+        */
+        .bm-container .bm-list-pane {
+          padding: 0 !important;
+        }
       `}</style>
 
       <div className="pos-content">
@@ -419,7 +427,7 @@ export default function PosScreen() {
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      justify: "space-between",
+                      justifyContent: "space-between",
                       marginBottom: "20px",
                     }}
                   >

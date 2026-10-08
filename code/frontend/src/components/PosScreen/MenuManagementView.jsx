@@ -1,13 +1,8 @@
 import React, { useState } from 'react';
 
-<<<<<<< Updated upstream
-export default function MenuManagementView({ menuItems, onToggleStatus, onDeleteMenu, onOpenAddMenuModal, onEditMenu, onUpdateStock }) {
-=======
-export default function MenuManagementView({ onOpenAddMenuModal, onEditMenu, onDeleteMenu }) {
-  const [menu, setMenu] = useState([]);
-  const [busy, setBusy] = useState(false);
-  const [loadError, setLoadError] = useState(null);
->>>>>>> Stashed changes
+// Props-based view: PosScreen owns the data (menu/handlers) and passes it in.
+// Backend wiring lives in PosScreen's handleToggleMenuStatus / handleUpdateMenuStock / etc.
+export default function MenuManagementView({ menuItems = [], onToggleStatus, onDeleteMenu, onOpenAddMenuModal, onEditMenu, onUpdateStock }) {
   const [categoryFilter, setCategoryFilter] = useState('all');
 
   const [stockModalItem, setStockModalItem] = useState(null);
@@ -29,28 +24,7 @@ export default function MenuManagementView({ onOpenAddMenuModal, onEditMenu, onD
 
   const handleOpenStockModal = (item) => {
     setStockModalItem(item);
-<<<<<<< Updated upstream
     setTempStockValue(item.stock == null ? "" : item.stock.toString());
-=======
-    const current = stockOverrides[item.id];
-    setTempStockValue(current == null ? "" : String(current));
-  };
-
-  const handleDeleteMenu = async (id) => {
-    // Delegate to parent (PosScreen) if it owns the confirm modal; otherwise fall back to native confirm.
-    if (onDeleteMenu) {
-      const item = menu.find((m) => m.id === id);
-      onDeleteMenu({ id, name: item?.name });
-      return;
-    }
-    if (!window.confirm("ปิดการขายเมนูนี้ใช่หรือไม่?")) return;
-    try {
-      await setProductStatus(id, false);
-      await load();
-    } catch (err) {
-      alert(err?.message ?? 'ปิดเมนูไม่สำเร็จ');
-    }
->>>>>>> Stashed changes
   };
 
   const handleSaveStock = () => {

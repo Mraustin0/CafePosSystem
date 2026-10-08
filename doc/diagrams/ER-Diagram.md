@@ -1,0 +1,107 @@
+# ER Diagram — Cafe POS
+
+Source of truth: `code/backend/src/main/resources/db/migration/V1__init_schema.sql`
+
+```mermaid
+erDiagram
+    users ||--|| user_profiles : "has"
+    users ||--o{ orders : "creates (cashier)"
+    categories ||--o{ products : "contains"
+    products ||--o{ product_add_ons : ""
+    add_ons ||--o{ product_add_ons : ""
+    orders ||--|{ order_items : "contains"
+    products ||--o{ order_items : "ordered as"
+    orders ||--o| payments : "paid by"
+    order_items ||--o{ order_item_add_ons : "has selected"
+    add_ons ||--o{ order_item_add_ons : "selected as"
+
+    users {
+        BIGINT id PK
+        VARCHAR username UK
+        VARCHAR password_hash
+        VARCHAR role "ADMIN | CASHIER"
+        BOOLEAN active
+        TIMESTAMPTZ created_at
+    }
+    user_profiles {
+        BIGINT user_id PK, FK
+        VARCHAR full_name
+        VARCHAR phone
+        VARCHAR email
+    }
+    categories {
+        BIGINT id PK
+        VARCHAR name UK
+    }
+    products {
+        BIGINT id PK
+        BIGINT category_id FK
+        VARCHAR name
+        NUMERIC price
+        VARCHAR image_url
+        BOOLEAN active
+    }
+    add_ons {
+        BIGINT id PK
+        VARCHAR name UK
+        NUMERIC price
+        BOOLEAN active
+    }
+    product_add_ons {
+        BIGINT product_id PK, FK
+        BIGINT add_on_id PK, FK
+    }
+    orders {
+        BIGINT id PK
+        VARCHAR order_number UK
+        BIGINT cashier_id FK
+        VARCHAR status "PENDING | PAID | CANCELLED"
+        NUMERIC subtotal
+        NUMERIC discount_amount
+        NUMERIC total
+        TIMESTAMPTZ created_at
+    }
+    order_items {
+        BIGINT id PK
+        BIGINT order_id FK
+        BIGINT product_id FK
+        INT quantity
+        NUMERIC unit_price
+    }
+    order_item_add_ons {
+        BIGINT order_item_id PK, FK
+        BIGINT add_on_id PK, FK
+        NUMERIC price "snapshot"
+    }
+    payments {
+        BIGINT id PK
+        BIGINT order_id FK, UK
+        VARCHAR method "CASH | QR_CODE | CARD"
+        NUMERIC amount
+        TIMESTAMPTZ paid_at
+    }
+```
+
+## Relationships
+
+| ประเภท | ตาราง | Cardinality | JPA Mapping | Fetch / Cascade | เหตุผล |
+| ------ | ----- | ----------- | ----------- | --------------- | ------ |
+| One-to-One | `users` — `user_profiles` | 1 : 1 | `UserProfile.user` `@OneToOne @MapsId` | LAZY / DB `ON DELETE CASCADE` | Shared PK — profile ไม่มีความหมายถ้าไม่มี user |
+| One-to-One | `orders` — `payments` | 1 : 0..1 | `Payment.order` `@OneToOne` (`order_id` UNIQUE) | LAZY / ไม่มี cascade | ออเดอร์ที่ยัง PENDING ยังไม่มี payment, จ่ายได้ครั้งเดียว |
+| One-to-Many | `categories` → `products` | 1 : N | `Product.category` `@ManyToOne` | LAZY / ไม่มี cascade | ลบหมวดที่ยังมีสินค้าไม่ได้ (FK RESTRICT) |
+| One-to-Many | `users` → `orders` | 1 : N | `Order.cashier` `@ManyToOne` | LAZY / ไม่มี cascade | เก็บว่าใครเปิดบิล, ลบ user ที่มีบิลไม่ได้ |
+| One-to-Many | `orders` → `order_items` | 1 : 1..N | `Order.items` `@OneToMany(mappedBy)` ↔ `OrderItem.order` | LAZY / `CascadeType.ALL` + `orphanRemoval` | รายการในบิลเกิดและตายพร้อมออเดอร์ |
+| One-to-Many | `products` → `order_items` | 1 : N | `OrderItem.product` `@ManyToOne` | LAZY / ไม่มี cascade | สินค้าที่เคยขายห้ามลบจริง (ใช้ `active=false`) |
+| One-to-Many | `order_items` → `order_item_add_ons` | 1 : 0..N | `OrderItem.addOns` `@ElementCollection` ของ `@Embeddable OrderItemAddOn` | LAZY (default) / DB `ON DELETE CASCADE` | add-on ที่เลือกเกิดและตายพร้อมรายการในบิล ไม่มี entity / repository แยก |
+| One-to-Many | `add_ons` → `order_item_add_ons` | 1 : 0..N | FK `add_on_id` ใน `@Embeddable OrderItemAddOn` | ไม่มี cascade | add-on ที่เคยขายห้ามลบจริง (ใช้ `active=false`) |
+| Many-to-Many | `products` — `add_ons` | M : N | `Product.addOns` `@ManyToMany @JoinTable` | LAZY (default) / ไม่มี cascade | add-on จัดการแยก, ตาราง join ไม่มีข้อมูลเพิ่ม |
+
+## หมายเหตุ: `product_add_ons` vs `order_item_add_ons`
+
+| ตาราง | ความหมาย | มีข้อมูลเพิ่ม |
+| ----- | -------- | ------------- |
+| `product_add_ons` | "เลือกได้อะไรบ้าง" ของสินค้านั้น | ไม่มี (ตาราง join ล้วน) |
+| `order_item_add_ons` | "เลือกไปแล้วอะไรบ้าง" ในรายการของบิล | `price` (snapshot ราคา ณ เวลาที่สั่ง ต่อ 1 หน่วยสินค้า) |
+
+- PK `(order_item_id, add_on_id)` → add-on ตัวเดียวกันเลือกได้ครั้งเดียวต่อรายการ
+- add-on ที่เลือกได้ต้อง `active = true` และอยู่ใน `product_add_ons` ของสินค้านั้น (ตรวจใน Service → 400)

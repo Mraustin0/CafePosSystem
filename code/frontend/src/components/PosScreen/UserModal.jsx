@@ -3,9 +3,9 @@ import "./AddNewItemModal.css";
 import "./UserManagementView.css";
 
 /* บทบาทของพนักงาน — คำอธิบายสิทธิ์เป็นข้อความตัวอย่าง ปรับให้ตรงกับระบบจริงได้ */
+// Backend only recognizes ADMIN + CASHIER (Role enum). Keep client in sync.
 export const ROLE_OPTIONS = [
   { key: "admin", label: "Admin", desc: "จัดการระบบและพนักงานได้ทั้งหมด" },
-  { key: "manager", label: "Manager", desc: "จัดการเมนู โปรโมชั่น และบิล" },
   { key: "cashier", label: "Cashier", desc: "ขายและรับชำระเงินหน้าร้าน" },
 ];
 

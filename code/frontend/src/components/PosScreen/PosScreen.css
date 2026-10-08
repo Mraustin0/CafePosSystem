@@ -50,8 +50,11 @@
   border-right: 1px solid var(--gray-200);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  padding: 20px 0 28px;
+  justify-content: flex-start;
+  padding: 20px 0 20px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 100%;
 }
 
 .pos-sidebar__nav,
@@ -59,7 +62,13 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 18px;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.pos-sidebar__footer {
+  margin-top: auto;
+  padding-top: 20px;
 }
 
 .pos-navitem {

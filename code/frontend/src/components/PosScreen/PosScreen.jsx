@@ -739,7 +739,10 @@ export default function PosScreen() {
                     {menu
                       .filter((item) => item.category === activeNav && item.active && (menuSearch.trim() === "" || item.name?.toLowerCase().includes(menuSearch.trim().toLowerCase())))
                       .map((item) => {
-                        const isOutOfStock = item.stock !== undefined && item.stock <= 0;
+                        // stock=null means "unlimited" (backend doesn't track stock yet); only
+                        // treat it as sold-out when stock is a real number <= 0. The old `!== undefined`
+                        // check was treating null as 0 because `null <= 0` is true in JS.
+                        const isOutOfStock = typeof item.stock === 'number' && item.stock <= 0;
                         return (
                         <article
                           className="pos-card"

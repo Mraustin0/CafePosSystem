@@ -72,7 +72,7 @@ const INITIAL_MENU = [
 
 const INITIAL_USERS = [
   { id: 1, code: "EMP-001", firstName: "สมชาย", lastName: "ใจดี", username: "somchai.j", role: "admin", status: "active", credentialSet: true },
-  { id: 2, code: "EMP-002", firstName: "วิภาวดี", lastName: "รักงาน", username: "wipawadee.r", role: "manager", status: "active", credentialSet: true },
+ { id: 2, code: "EMP-002", firstName: "วิภาวดี", lastName: "รักงาน", username: "wipawadee.r", role: "cashier", status: "active", credentialSet: true },
   { id: 3, code: "EMP-003", firstName: "Alex", lastName: "Srisuk", username: "alex.s", role: "cashier", status: "active", credentialSet: true },
   { id: 4, code: "EMP-004", firstName: "Sarah", lastName: "Kaewmanee", username: "sarah.k", role: "cashier", status: "active", credentialSet: true },
   { id: 5, code: "EMP-005", firstName: "นภัสสร", lastName: "มั่นคง", username: "napatsorn.m", role: "cashier", status: "inactive", credentialSet: false },

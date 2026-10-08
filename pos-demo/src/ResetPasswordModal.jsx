@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from "react";
 import "./AddNewItemModal.css";
 import "./UserManagementView.css";
 
-const PIN_LENGTH = 6;
 const PASSWORD_MIN = 8;
 
 const EyeIcon = ({ off }) => (
@@ -13,32 +12,23 @@ const EyeIcon = ({ off }) => (
   </svg>
 );
 
-const randomPin = () => {
-  const buf = new Uint32Array(PIN_LENGTH);
-  window.crypto.getRandomValues(buf);
-  return Array.from(buf, (n) => n % 10).join("");
-};
-
 /**
- * ResetPasswordModal — ให้ Admin ตั้ง PIN หรือรหัสผ่านใหม่ให้พนักงาน
+ * ResetPasswordModal — ให้ Admin ตั้งรหัสผ่านใหม่ให้พนักงาน
  *
  * props:
  *  - user                      พนักงานที่จะเปลี่ยนรหัส
- *  - onSave(userId, {type, value})  type = 'pin' | 'password'
+ *  - onSave(userId, {type, value})  type = 'password'
  *  - onClose()
  *
  * หมายเหตุความปลอดภัย: ค่ารหัสไม่ควรถูกเก็บเป็นข้อความธรรมดา
  * เมื่อต่อ Backend ให้ส่งไปเข้ารหัส (hash) ที่ฝั่งเซิร์ฟเวอร์เท่านั้น
  */
 export default function ResetPasswordModal({ user, onSave, onClose }) {
-  const [mode, setMode] = useState("pin"); // 'pin' | 'password'
   const [value, setValue] = useState("");
   const [confirm, setConfirm] = useState("");
   const [show, setShow] = useState(false);
   const [error, setError] = useState("");
   const inputRef = useRef(null);
-
-  const isPin = mode === "pin";
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -47,40 +37,19 @@ export default function ResetPasswordModal({ user, onSave, onClose }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const switchMode = (next) => {
-    setMode(next);
-    setValue("");
-    setConfirm("");
-    setShow(false);
-    setError("");
-    setTimeout(() => inputRef.current?.focus(), 0);
-  };
-
   const handleChange = (setter) => (e) => {
-    const raw = e.target.value;
-    setter(isPin ? raw.replace(/\D/g, "").slice(0, PIN_LENGTH) : raw);
-    setError("");
-  };
-
-  const handleGenerate = () => {
-    const pin = randomPin();
-    setValue(pin);
-    setConfirm(pin);
-    setShow(true);
+    setter(e.target.value);
     setError("");
   };
 
   const handleSubmit = () => {
-    if (isPin && !new RegExp(`^\\d{${PIN_LENGTH}}$`).test(value))
-      return setError(`PIN ต้องเป็นตัวเลข ${PIN_LENGTH} หลัก`);
-    if (!isPin && value.length < PASSWORD_MIN)
+    if (value.length < PASSWORD_MIN)
       return setError(`รหัสผ่านต้องยาวอย่างน้อย ${PASSWORD_MIN} ตัวอักษร`);
     if (value !== confirm) return setError("ค่าที่กรอกทั้งสองช่องไม่ตรงกัน");
 
-    onSave?.(user.id, { type: mode, value });
+    onSave?.(user.id, { type: "password", value });
   };
 
-  const label = isPin ? "PIN" : "รหัสผ่าน";
   const fullName = `${user.firstName} ${user.lastName}`;
 
   return (
@@ -95,7 +64,7 @@ export default function ResetPasswordModal({ user, onSave, onClose }) {
               </svg>
             </span>
             <div>
-              <h2 className="add-modal__title">เปลี่ยนรหัสผ่าน / PIN</h2>
+              <h2 className="add-modal__title">เปลี่ยนรหัสผ่าน</h2>
               <p className="add-modal__subtitle">{fullName} · {user.code}</p>
             </div>
           </div>
@@ -107,26 +76,16 @@ export default function ResetPasswordModal({ user, onSave, onClose }) {
         </header>
 
         <div className="add-modal__body">
-          <div className="um-seg" role="tablist">
-            <button type="button" role="tab" aria-selected={isPin} className={isPin ? "active" : ""} onClick={() => switchMode("pin")}>
-              PIN ({PIN_LENGTH} หลัก)
-            </button>
-            <button type="button" role="tab" aria-selected={!isPin} className={!isPin ? "active" : ""} onClick={() => switchMode("password")}>
-              รหัสผ่าน
-            </button>
-          </div>
-
           <label className="add-field">
-            <span className="add-field__label">{label}ใหม่ <span className="add-field__required">*</span></span>
+            <span className="add-field__label">รหัสผ่านใหม่ <span className="add-field__required">*</span></span>
             <div className="um-pass-wrap">
               <input
                 ref={inputRef}
                 className="add-input"
                 type={show ? "text" : "password"}
-                inputMode={isPin ? "numeric" : "text"}
                 value={value}
                 onChange={handleChange(setValue)}
-                placeholder={isPin ? "●●●●●●" : `อย่างน้อย ${PASSWORD_MIN} ตัวอักษร`}
+                placeholder={`อย่างน้อย ${PASSWORD_MIN} ตัวอักษร`}
                 autoComplete="new-password"
               />
               <button type="button" className="um-pass-eye" onClick={() => setShow((s) => !s)} aria-label={show ? "ซ่อน" : "แสดง"}>
@@ -136,29 +95,20 @@ export default function ResetPasswordModal({ user, onSave, onClose }) {
           </label>
 
           <label className="add-field">
-            <span className="add-field__label">ยืนยัน{label}ใหม่ <span className="add-field__required">*</span></span>
+            <span className="add-field__label">ยืนยันรหัสผ่านใหม่ <span className="add-field__required">*</span></span>
             <input
               className="add-input"
               type={show ? "text" : "password"}
-              inputMode={isPin ? "numeric" : "text"}
               value={confirm}
               onChange={handleChange(setConfirm)}
               onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-              placeholder={`กรอก${label}อีกครั้ง`}
+              placeholder="กรอกรหัสผ่านอีกครั้ง"
               autoComplete="new-password"
             />
           </label>
 
-          {isPin && (
-            <div>
-              <button type="button" className="um-linkbtn" onClick={handleGenerate}>
-                สุ่ม PIN ให้อัตโนมัติ
-              </button>
-            </div>
-          )}
-
           <div className="um-note">
-            พนักงานต้องใช้{label}ใหม่ในการเข้าสู่ระบบครั้งถัดไป กรุณาแจ้งให้พนักงานทราบด้วยตนเอง
+            พนักงานต้องใช้รหัสผ่านใหม่ในการเข้าสู่ระบบครั้งถัดไป กรุณาแจ้งให้พนักงานทราบด้วยตนเอง
           </div>
 
           {error && <p className="um-error">{error}</p>}
@@ -167,7 +117,7 @@ export default function ResetPasswordModal({ user, onSave, onClose }) {
         <footer className="add-modal__footer">
           <button type="button" onClick={onClose} className="add-btn add-btn--ghost">ยกเลิก</button>
           <button type="button" onClick={handleSubmit} className="add-btn add-btn--solid">
-            บันทึก{label}ใหม่
+            บันทึกรหัสผ่านใหม่
           </button>
         </footer>
       </div>

@@ -5,7 +5,6 @@ import "./UserManagementView.css";
 /* บทบาทของพนักงาน — คำอธิบายสิทธิ์เป็นข้อความตัวอย่าง ปรับให้ตรงกับระบบจริงได้ */
 export const ROLE_OPTIONS = [
   { key: "admin", label: "Admin", desc: "จัดการระบบและพนักงานได้ทั้งหมด" },
-  { key: "manager", label: "Manager", desc: "จัดการเมนู โปรโมชั่น และบิล" },
   { key: "cashier", label: "Cashier", desc: "ขายและรับชำระเงินหน้าร้าน" },
 ];
 
@@ -27,7 +26,10 @@ export default function UserModal({ user = null, nextCode, existingUsers = [], o
   const [firstName, setFirstName] = useState(user?.firstName ?? "");
   const [lastName, setLastName] = useState(user?.lastName ?? "");
   const [username, setUsername] = useState(user?.username ?? "");
-  const [role, setRole] = useState(user?.role ?? "cashier");
+  // ถ้า role เดิมไม่อยู่ใน ROLE_OPTIONS แล้ว (เช่น manager ที่ถูกเอาออก) ให้ใช้ cashier แทน
+  const [role, setRole] = useState(
+    ROLE_OPTIONS.some((r) => r.key === user?.role) ? user.role : "cashier"
+  );
   const [isActive, setIsActive] = useState((user?.status ?? "active") === "active");
   const [error, setError] = useState("");
   const firstRef = useRef(null);
@@ -176,7 +178,7 @@ export default function UserModal({ user = null, nextCode, existingUsers = [], o
 
           {!isEdit && (
             <div className="um-note">
-              หลังเพิ่มพนักงานแล้ว ให้ตั้ง PIN หรือรหัสผ่านเริ่มต้นจากปุ่มกุญแจในตารางรายชื่อ
+              หลังเพิ่มพนักงานแล้ว ให้ตั้งรหัสผ่านเริ่มต้นจากปุ่มกุญแจในตารางรายชื่อ
             </div>
           )}
 

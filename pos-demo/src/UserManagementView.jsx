@@ -24,7 +24,7 @@ const nextEmployeeCode = (users) => {
  *  - onSaveUser(user)            เพิ่ม/แก้ไข (ถ้า id ซ้ำ = แก้ไข)
  *  - onDeleteUser(id)
  *  - onToggleStatus(id)
- *  - onResetPassword(id, {type, value})
+ *  - onResetPassword(id, payload)  ตั้งรหัสผ่านใหม่
  */
 export default function UserManagementView({
   users = [],
@@ -105,7 +105,7 @@ export default function UserManagementView({
 
   const handleResetPassword = (id, payload) => {
     onResetPassword?.(id, payload);
-    showNotice(`ตั้ง${payload.type === "pin" ? " PIN" : "รหัสผ่าน"}ใหม่ให้ ${fullName(resetTarget)} แล้ว`);
+    showNotice(`ตั้งรหัสผ่านใหม่ให้ ${fullName(resetTarget)} แล้ว`);
     setResetTarget(null);
   };
 
@@ -214,7 +214,7 @@ export default function UserManagementView({
                           <path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
                         </svg>
                       </button>
-                      <button type="button" className="um-iconbtn um-iconbtn--key" title="เปลี่ยนรหัสผ่าน / PIN" aria-label={`เปลี่ยนรหัสผ่านของ ${fullName(u)}`} onClick={() => setResetTarget(u)}>
+                      <button type="button" className="um-iconbtn um-iconbtn--key" title="เปลี่ยนรหัสผ่าน" aria-label={`เปลี่ยนรหัสผ่านของ ${fullName(u)}`} onClick={() => setResetTarget(u)}>
                         <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
                           <circle cx="8" cy="15" r="4" /><path d="M10.85 12.15 19 4M18 5l3 3M15 8l2 2" />
                         </svg>

@@ -179,7 +179,6 @@
   white-space: nowrap;
 }
 .um-role--admin { background: #eef2ff; color: #4338ca; }
-.um-role--manager { background: #fef3c7; color: #92400e; }
 .um-role--cashier { background: #ecfdf5; color: #059669; }
 
 .um-status { display: inline-flex; align-items: center; gap: 10px; }
@@ -269,7 +268,7 @@
 .um-modal-hint { margin: 6px 0 0; font-size: 12px; color: #94a3b8; }
 .um-error { margin: 0; font-size: 13px; font-weight: 600; color: #dc2626; }
 
-.um-roles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.um-roles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .um-role-card {
   display: flex;
   flex-direction: column;

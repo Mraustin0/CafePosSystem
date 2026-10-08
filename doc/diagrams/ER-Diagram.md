@@ -12,6 +12,8 @@ erDiagram
     orders ||--|{ order_items : "contains"
     products ||--o{ order_items : "ordered as"
     orders ||--o| payments : "paid by"
+    order_items ||--o{ order_item_add_ons : "has selected"
+    add_ons ||--o{ order_item_add_ons : "selected as"
 
     users {
         BIGINT id PK
@@ -66,6 +68,11 @@ erDiagram
         INT quantity
         NUMERIC unit_price
     }
+    order_item_add_ons {
+        BIGINT order_item_id PK, FK
+        BIGINT add_on_id PK, FK
+        NUMERIC price "snapshot"
+    }
     payments {
         BIGINT id PK
         BIGINT order_id FK, UK
@@ -85,4 +92,16 @@ erDiagram
 | One-to-Many | `users` → `orders` | 1 : N | `Order.cashier` `@ManyToOne` | LAZY / ไม่มี cascade | เก็บว่าใครเปิดบิล, ลบ user ที่มีบิลไม่ได้ |
 | One-to-Many | `orders` → `order_items` | 1 : 1..N | `Order.items` `@OneToMany(mappedBy)` ↔ `OrderItem.order` | LAZY / `CascadeType.ALL` + `orphanRemoval` | รายการในบิลเกิดและตายพร้อมออเดอร์ |
 | One-to-Many | `products` → `order_items` | 1 : N | `OrderItem.product` `@ManyToOne` | LAZY / ไม่มี cascade | สินค้าที่เคยขายห้ามลบจริง (ใช้ `active=false`) |
+| One-to-Many | `order_items` → `order_item_add_ons` | 1 : 0..N | `OrderItem.addOns` `@ElementCollection` ของ `@Embeddable OrderItemAddOn` | LAZY (default) / DB `ON DELETE CASCADE` | add-on ที่เลือกเกิดและตายพร้อมรายการในบิล ไม่มี entity / repository แยก |
+| One-to-Many | `add_ons` → `order_item_add_ons` | 1 : 0..N | FK `add_on_id` ใน `@Embeddable OrderItemAddOn` | ไม่มี cascade | add-on ที่เคยขายห้ามลบจริง (ใช้ `active=false`) |
 | Many-to-Many | `products` — `add_ons` | M : N | `Product.addOns` `@ManyToMany @JoinTable` | LAZY (default) / ไม่มี cascade | add-on จัดการแยก, ตาราง join ไม่มีข้อมูลเพิ่ม |
+
+## หมายเหตุ: `product_add_ons` vs `order_item_add_ons`
+
+| ตาราง | ความหมาย | มีข้อมูลเพิ่ม |
+| ----- | -------- | ------------- |
+| `product_add_ons` | "เลือกได้อะไรบ้าง" ของสินค้านั้น | ไม่มี (ตาราง join ล้วน) |
+| `order_item_add_ons` | "เลือกไปแล้วอะไรบ้าง" ในรายการของบิล | `price` (snapshot ราคา ณ เวลาที่สั่ง ต่อ 1 หน่วยสินค้า) |
+
+- PK `(order_item_id, add_on_id)` → add-on ตัวเดียวกันเลือกได้ครั้งเดียวต่อรายการ
+- add-on ที่เลือกได้ต้อง `active = true` และอยู่ใน `product_add_ons` ของสินค้านั้น (ตรวจใน Service → 400)

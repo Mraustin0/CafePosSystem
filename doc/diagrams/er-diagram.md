@@ -12,6 +12,8 @@ erDiagram
     orders ||--|{ order_items : "contains"
     products ||--o{ order_items : "ordered as"
     orders ||--o| payments : "paid by"
+    order_items ||--o{ order_item_add_ons : "has selected"
+    add_ons ||--o{ order_item_add_ons : "selected as"
 
     users {
         BIGINT id PK
@@ -65,6 +67,11 @@ erDiagram
         BIGINT product_id FK
         INT quantity
         NUMERIC unit_price
+    }
+    order_item_add_ons {
+        BIGINT order_item_id PK, FK
+        BIGINT add_on_id PK, FK
+        NUMERIC(10,2) price "snapshot"
     }
     payments {
         BIGINT id PK

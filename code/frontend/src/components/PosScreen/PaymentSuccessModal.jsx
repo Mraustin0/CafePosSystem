@@ -6,12 +6,14 @@ export default function PaymentSuccessModal({
   onClose, 
   onNewOrder 
 }) {
-  const { totalAmount = 0, changeAmount = 0, cashGiven = 0, method = 'cash', cart = [], orderId = 'A-108', cashierName = 'แคชเชียร์ 01' } = paymentData || {};
-  
-  // เก็บเวลา/เลขคิว/เลขใบเสร็จไว้ครั้งเดียว ไม่สุ่มใหม่ทุกครั้งที่ re-render
-  const [now] = useState(() => new Date());
-  const [queueNo] = useState(() => `Q${Math.floor(Math.random() * 100) + 1}`);
-  const [receiptNo] = useState(() => `Q/00${Math.floor(Math.random() * 100000)}`);
+  const { totalAmount = 0, changeAmount = 0, cashGiven = 0, method = 'cash', cart = [], orderId = 'A-108', cashierName = 'แคชเชียร์ 01', order = null, payment = null } = paymentData || {};
+
+  // Prefer backend values so the receipt matches what's in the DB: queue # from the order id's
+  // last 3 digits, receipt # from the backend-assigned orderNumber (ORD-00000001). Random fallback
+  // only when the data isn't available (should not happen in production flow).
+  const [now] = useState(() => new Date(payment?.paidAt || order?.createdAt || Date.now()));
+  const queueNo = order?.id ? `Q${String(order.id).padStart(3, '0')}` : `Q${Math.floor(Math.random() * 100) + 1}`;
+  const receiptNo = order?.orderNumber || `Q/00${Math.floor(Math.random() * 100000)}`;
 
   const timeString = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
   const dateString = now.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -238,10 +240,29 @@ export default function PaymentSuccessModal({
               </div>
             </div>
 
-            <div className="action-buttons">
-              <button className="btn-print" onClick={handlePrintReceipt}>
-                พิมพ์ใบเสร็จ<br/>
+            <div className="action-buttons" style={{ display: 'flex', gap: '12px' }}>
+              <button className="btn-print" onClick={handlePrintReceipt} style={{ flex: 1 }}>
+                พิมพ์ใบเสร็จ
               </button>
+              {onNewOrder && (
+                <button
+                  onClick={onNewOrder}
+                  style={{
+                    flex: 1,
+                    background: '#00694b',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '15px',
+                    fontWeight: 700,
+                    padding: '14px 18px',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 6px -1px rgba(0, 105, 75, 0.25)',
+                  }}
+                >
+                  เริ่มออเดอร์ใหม่
+                </button>
+              )}
             </div>
 
           </div>

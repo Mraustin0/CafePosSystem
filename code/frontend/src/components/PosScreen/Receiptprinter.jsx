@@ -240,15 +240,25 @@ export function printReceipt({
   printWindow.document.write(receiptHTML);
   printWindow.document.close();
 
-  // ผูกปุ่ม "เริ่มออเดอร์ใหม่" -> เรียก callback ของหน้า POS แล้วปิดแท็บใบเสร็จ
+  // Bind "เริ่มออเดอร์ใหม่" — stash the callback on the popup window so inline onclick can find it,
+  // and also attach via addEventListener as a fallback. The onload path handles the case where the
+  // DOM isn't ready yet when we try to grab the button right after document.close().
   if (onNewOrder) {
-    const btn = printWindow.document.getElementById('btn-new-order');
-    if (btn) {
-      btn.addEventListener('click', () => {
-        onNewOrder();
-        printWindow.close();
-      });
-    }
+    const wire = () => {
+      try {
+        printWindow.__newOrder = () => {
+          try { onNewOrder(); } finally { printWindow.close(); }
+        };
+        const btn = printWindow.document.getElementById('btn-new-order');
+        if (btn) {
+          btn.onclick = printWindow.__newOrder;
+        }
+      } catch (e) {
+        // Cross-window access can throw if the popup closed or navigated — ignore.
+      }
+    };
+    wire();
+    try { printWindow.addEventListener('load', wire); } catch {}
   }
   return true;
 }

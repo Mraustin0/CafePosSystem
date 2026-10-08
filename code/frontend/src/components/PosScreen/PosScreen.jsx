@@ -16,6 +16,7 @@ import BillManagementView from "./BillManagementView";
 import DashboardView from "./DashboardView";
 import UserManagementView from "./UserManagementView";
 import SettingsView from "./SettingsView";
+import CashierSidebar, { CASHIER_NAV_KEYS } from "./CashierSidebar";
 import { listProducts, createProduct, updateProduct, setProductStatus } from "../../api/products";
 import { listAddOns, createAddOn, setAddOnStatus, updateAddOn } from "../../api/addOns";
 import { getCategories, navKeyFor, categoryForNav } from "../../api/categories";
@@ -297,6 +298,14 @@ export default function PosScreen() {
     window.addEventListener("products:reload", reload);
     return () => window.removeEventListener("products:reload", reload);
   }, [loadProducts]);
+
+  // Cashier role guard: never let a cashier land on admin-only nav keys (e.g. after an admin logs
+  // out and a cashier logs in on the same tab, or a stale localStorage state). Snap back to POS main.
+  useEffect(() => {
+    if (user?.role === 'CASHIER' && !CASHIER_NAV_KEYS.includes(activeNav) && activeNav !== 'settings') {
+      setActiveNav('coffee');
+    }
+  }, [user?.role, activeNav]);
 
   const subtotal = useMemo(() => cart.reduce((s, i) => s + Number(i.price) * i.qty, 0), [cart]);
   const promoDiscount = useMemo(() => {
@@ -584,42 +593,52 @@ export default function PosScreen() {
       `}</style>
 
       <div className="pos-content">
-        <aside className="pos-sidebar">
-          <nav className="pos-sidebar__nav">
-            {NAV_ITEMS.map(({ key, label, icon: ItemIcon }) => (
-              <button
-                key={key}
-                className={`pos-navitem ${activeNav === key ? "is-active" : ""}`}
-                onClick={() => setActiveNav(key)}
-              >
-                <ItemIcon className="pos-navitem__icon" />
-                <span>{label}</span>
-              </button>
-            ))}
-          </nav>
+        {user?.role === 'CASHIER' ? (
+          <CashierSidebar
+            activeNav={activeNav}
+            onNavigate={(key) => {
+              // Cashier 'profile' tab reuses the admin SettingsView (profile tab lives there).
+              setActiveNav(key === 'profile' ? 'settings' : key);
+            }}
+          />
+        ) : (
+          <aside className="pos-sidebar">
+            <nav className="pos-sidebar__nav">
+              {NAV_ITEMS.map(({ key, label, icon: ItemIcon }) => (
+                <button
+                  key={key}
+                  className={`pos-navitem ${activeNav === key ? "is-active" : ""}`}
+                  onClick={() => setActiveNav(key)}
+                >
+                  <ItemIcon className="pos-navitem__icon" />
+                  <span>{label}</span>
+                </button>
+              ))}
+            </nav>
 
-          <nav className="pos-sidebar__footer">
-            {NAV_FOOTER.map(({ key, label, icon: ItemIcon }) => (
-              <button
-                key={key}
-                className={`pos-navitem ${activeNav === key ? "is-active" : "pos-navitem--muted"}`}
-                onClick={() => setActiveNav(key)}
-              >
-                <ItemIcon className="pos-navitem__icon" />
-                <span>{label}</span>
-              </button>
-            ))}
-            {user?.role === 'ADMIN' && (
-              <button
-                className="pos-navitem pos-navitem--muted"
-                onClick={() => navigate('/add-user')}
-              >
-                <Icon.User className="pos-navitem__icon" />
-                <span>เพิ่มผู้ใช้</span>
-              </button>
-            )}
-          </nav>
-        </aside>
+            <nav className="pos-sidebar__footer">
+              {NAV_FOOTER.map(({ key, label, icon: ItemIcon }) => (
+                <button
+                  key={key}
+                  className={`pos-navitem ${activeNav === key ? "is-active" : "pos-navitem--muted"}`}
+                  onClick={() => setActiveNav(key)}
+                >
+                  <ItemIcon className="pos-navitem__icon" />
+                  <span>{label}</span>
+                </button>
+              ))}
+              {user?.role === 'ADMIN' && (
+                <button
+                  className="pos-navitem pos-navitem--muted"
+                  onClick={() => navigate('/add-user')}
+                >
+                  <Icon.User className="pos-navitem__icon" />
+                  <span>เพิ่มผู้ใช้</span>
+                </button>
+              )}
+            </nav>
+          </aside>
+        )}
 
         {/* -------- Main column -------- */}
         <div className="pos-main">

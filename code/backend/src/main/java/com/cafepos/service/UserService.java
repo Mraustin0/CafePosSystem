@@ -22,4 +22,7 @@ public interface UserService {
     UserResponse update(Long id, UpdateUserRequest request, Long actorId);
 
     UserResponse updateStatus(Long id, boolean active, Long actorId);
+
+    /** BE-08: admin-side reset. Admin cannot reset their own password this way (use changePassword). */
+    void resetPassword(Long id, ResetPasswordRequest request, Long actorId);
 }

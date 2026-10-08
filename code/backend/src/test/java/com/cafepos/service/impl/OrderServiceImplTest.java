@@ -35,6 +35,8 @@ class OrderServiceImplTest {
     @Mock
     private ProductRepository productRepository;
     @Mock
+    private AddOnRepository addOnRepository;
+    @Mock
     private UserRepository userRepository;
     @Mock
     private UserProfileRepository profileRepository;
@@ -68,7 +70,7 @@ class OrderServiceImplTest {
     }
 
     private OrderServiceImpl service(List<DiscountStrategy> strategies) {
-        return new OrderServiceImpl(orderRepository, productRepository, userRepository, profileRepository,
+        return new OrderServiceImpl(orderRepository, productRepository, addOnRepository, userRepository, profileRepository,
                 paymentRepository, mapper, strategies);
     }
 }

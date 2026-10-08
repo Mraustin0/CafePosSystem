@@ -1,5 +1,5 @@
 import React from "react";
-import "./AddNewItemModal.css"; 
+import "./AddNewItemModal.css";
 
 export function AddPromotionModal({ onClose }) {
   return (
@@ -58,7 +58,7 @@ export function AddPromotionModal({ onClose }) {
               <span className="add-field__label">มูลค่าส่วนลด (Discount Value) <span className="add-field__required">*</span></span>
               <div className="add-price-wrapper">
                 <input type="number" defaultValue="15" className="add-input add-input--price" style={{ paddingLeft: '16px', paddingRight: '40px' }} />
-                <span className="add-price-symbol" style={{ left: 'auto', right: '16px', color: '#10b981' }}>฿</span>
+                <span className="add-price-symbol" style={{ left: 'auto', right: '16px', color: 'var(--brand)' }}>฿</span>
               </div>
             </label>
           </div>
@@ -67,7 +67,7 @@ export function AddPromotionModal({ onClose }) {
           <div>
             <p className="add-section-title" style={{ marginBottom: '10px' }}>เงื่อนไขเพิ่มเติม (Conditions)</p>
             <div className="add-options" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              
+
               <label className="add-checkbox-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', border: '1px solid #e2e8f0', padding: '12px 16px', borderRadius: '8px', margin: 0, cursor: 'pointer' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span className="add-checkbox-wrapper">
@@ -76,19 +76,19 @@ export function AddPromotionModal({ onClose }) {
                   </span>
                   กำหนดยอดซื้อขั้นต่ำ (Minimum Spend Requirement)
                 </div>
-                
-                {/* 👉 เปลี่ยนเป็นช่องกรอกตัวเลขที่พิมพ์แก้ได้ */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10b981', fontSize: '13px', fontWeight: 600 }}>
+
+                {/* ช่องกรอกตัวเลขที่พิมพ์แก้ได้ */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--brand)', fontSize: '13px', fontWeight: 600 }}>
                   <span>ยอดขั้นต่ำ ฿</span>
-                  <input 
-                    type="number" 
-                    defaultValue="200" 
+                  <input
+                    type="number"
+                    defaultValue="200"
                     onClick={(e) => e.preventDefault()} /* ป้องกันไม่ให้คลิกช่องพิมพ์แล้ว checkbox เปลี่ยน */
                     style={{
                       width: '60px',
-                      border: '1px solid #a7f3d0',
-                      backgroundColor: '#ecfdf5',
-                      color: '#059669',
+                      border: '1px solid rgba(0, 105, 75, 0.3)',
+                      backgroundColor: 'rgba(0, 105, 75, 0.06)',
+                      color: 'var(--brand)',
                       fontWeight: 700,
                       fontSize: '13px',
                       outline: 'none',
@@ -115,8 +115,8 @@ export function AddPromotionModal({ onClose }) {
 
         {/* Footer */}
         <footer className="add-modal__footer">
-          <button type="button" onClick={onClose} className="add-btn add-btn--ghost">ยกเลิก (Cancel)</button>
-          <button type="button" className="add-btn add-btn--solid">บันทึกโปรโมชั่นใหม่ (Save Promotion)</button>
+          <button type="button" onClick={onClose} className="add-btn add-btn--ghost">ยกเลิก</button>
+          <button type="button" className="add-btn add-btn--solid">บันทึกโปรโมชั่น</button>
         </footer>
       </div>
     </div>

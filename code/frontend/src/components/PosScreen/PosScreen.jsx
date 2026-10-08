@@ -9,21 +9,25 @@ import MenuManagementView from "./MenuManagementView";
 import { SelectPromotionModal } from "./SelectPromotionModal";
 import AddonManagementView from "./AddonManagementView";
 import MenuConfigModal from "./MenuConfigModal";
+import ConfirmDeleteModal from "./ConfirmDeleteModal";
 import PaymentModal from "./PaymentModal";
 import PaymentSuccessModal from "./PaymentSuccessModal";
 import BillManagementView from "./BillManagementView";
 import DashboardView from "./DashboardView";
-import { listProducts, createProduct, updateProduct } from "../../api/products";
+import UserManagementView from "./UserManagementView";
+import SettingsView from "./SettingsView";
+import { listProducts, createProduct, updateProduct, setProductStatus } from "../../api/products";
 import { listAddOns, createAddOn, setAddOnStatus, updateAddOn } from "../../api/addOns";
-import { getCategories } from "../../api/categories";
+import { getCategories, navKeyFor, categoryForNav } from "../../api/categories";
 import { createPromotion, updatePromotion } from "../../api/promotions";
 import { createOrder, applyDiscount } from "../../api/orders";
 import { payOrder } from "../../api/payment";
+import { listUsers, createUser, updateUser, setUserStatus, resetUserPassword } from "../../api/users";
 import { useAuth } from "../../auth/useAuth";
 import { useNavigate } from "react-router-dom";
 
-// Backend category name -> UI nav key (Thana-nan's shape uses "coffee"/"tea"/"snack").
-const CATEGORY_TO_NAV = { Coffee: "coffee", Tea: "tea", Bakery: "snack" };
+// Backend category → UI nav key resolved via navKeyFor() (case-insensitive, substring-aware).
+// Kept here only so legacy lookups keep working if backend ever regresses to lowercase strings.
 
 // Default customization options — backend only stores product name/price/addons, so the UI
 // menus for serving/roast/sweetness are shared across products and populated from these
@@ -41,6 +45,8 @@ const DEFAULT_SWEETNESS = [
   { label: '100%', active: true }, { label: '75%', active: true },
   { label: '50%', active: true }, { label: '25%', active: true }, { label: '0%', active: true },
 ];
+// Reverse lookup — kept as a fallback hint; the authoritative source is the loaded `categories`
+// state, resolved via categoryForNav(categories, navKey).
 const NAV_TO_CATEGORY = { coffee: "Coffee", tea: "Tea", snack: "Bakery" };
 
 /* ---------------------------------------------------------
@@ -170,7 +176,9 @@ const NAV_FOOTER = [
   { key: "manage", label: "จัดการเมนู", icon: Icon.Edit },
   { key: "manage_addon", label: "จัดการท็อปปิ้ง", icon: Icon.Layers },
   { key: "promo", label: "โปรโมชั่น", icon: Icon.Tag },
+  { key: "users", label: "จัดการพนักงาน", icon: Icon.User },
   { key: "dashboard", label: "Dashboard", icon: Icon.Grid },
+  { key: "settings", label: "ตั้งค่า", icon: Icon.Gear },
 ];
 
 
@@ -188,7 +196,11 @@ export default function PosScreen() {
   const [selectedTeaForModal, setSelectedTeaForModal] = useState(null);
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [editingConfigItem, setEditingConfigItem] = useState(null);
+  const [menuToDelete, setMenuToDelete] = useState(null);
   const [globalAddons, setGlobalAddons] = useState([]);
+  // User management (admin-only view) — list loaded on-demand from backend; mutations round-trip.
+  const [users, setUsers] = useState([]);
+  const [billToOpen, setBillToOpen] = useState(null);
 
   const [isAddPromoModalOpen, setIsAddPromoModalOpen] = useState(false);
   const [isSelectPromoModalOpen, setIsSelectPromoModalOpen] = useState(false);
@@ -208,7 +220,7 @@ export default function PosScreen() {
       const page = await listProducts({ size: 200 });
       const items = (page?.content ?? []).map((p) => ({
         id: p.id,
-        category: CATEGORY_TO_NAV[p.category?.name] ?? "coffee",
+        category: navKeyFor(p.category?.name),
         name: p.name,
         price: p.price != null ? Number(p.price) : 0,
         qty: 0,
@@ -218,6 +230,8 @@ export default function PosScreen() {
              : p.category?.name === "Tea" ? "tea"
              : p.category?.name === "Bakery" ? "snack" : "",
         active: p.active,
+        isActive: p.active,  // MenuManagementView filters by `isActive`
+        stock: null,         // backend doesn't persist stock yet
         config: {
           serving: DEFAULT_SERVING,
           roasts: p.category?.name === "Coffee" ? DEFAULT_ROASTS : [],
@@ -249,11 +263,34 @@ export default function PosScreen() {
     }
   }, []);
 
+  // Admin-only — silently empty for cashiers (403 handled by apiRequest; UI won't render for non-admins).
+  const loadUsers = useCallback(async () => {
+    if (user?.role !== 'ADMIN') return;
+    try {
+      const page = await listUsers({ size: 200 });
+      setUsers((page?.content ?? []).map((u) => ({
+        id: u.id,
+        code: `EMP-${String(u.id).padStart(3, '0')}`,
+        firstName: (u.fullName || '').split(' ')[0] || u.username,
+        lastName: (u.fullName || '').split(' ').slice(1).join(' ') || '',
+        username: u.username,
+        role: u.role === 'ADMIN' ? 'admin' : 'cashier',
+        status: u.active ? 'active' : 'inactive',
+        credentialSet: true,
+        phone: u.phone,
+        email: u.email,
+      })));
+    } catch (err) {
+      console.error("listUsers failed:", err);
+    }
+  }, [user?.role]);
+
   useEffect(() => {
     getCategories().then(setCategories).catch(() => {});
     loadProducts();
     loadAddons();
-  }, [loadProducts, loadAddons]);
+    loadUsers();
+  }, [loadProducts, loadAddons, loadUsers]);
 
   useEffect(() => {
     const reload = () => loadProducts();
@@ -293,6 +330,20 @@ export default function PosScreen() {
     // P10: match backend BigDecimal scale=2 HALF_UP to avoid float precision mismatch on QR/CARD.
     const rawAmount = method === "CASH" ? paymentData.cashGiven : paymentData.totalAmount;
     const amountReceived = Number(Number(rawAmount).toFixed(2));
+    // Guard rails for backend contract: NaN/negative always rejected; CASH must cover total; non-CASH must equal exactly.
+    const dueTotal = Number(Number(paymentData.totalAmount ?? total).toFixed(2));
+    if (!Number.isFinite(amountReceived) || amountReceived < 0) {
+      alert('จำนวนเงินไม่ถูกต้อง');
+      return;
+    }
+    if (method === 'CASH' && amountReceived < dueTotal) {
+      alert(`เงินสดที่รับ (฿${amountReceived.toFixed(2)}) น้อยกว่ายอดที่ต้องชำระ (฿${dueTotal.toFixed(2)})`);
+      return;
+    }
+    if (method !== 'CASH' && amountReceived !== dueTotal) {
+      alert(`${method} ต้องชำระเท่ายอดเท่านั้น (฿${dueTotal.toFixed(2)})`);
+      return;
+    }
 
     setCheckoutBusy(true);
     try {
@@ -339,8 +390,7 @@ export default function PosScreen() {
 
   const handleSaveMenuConfig = async (id, data) => {
     const existing = menu.find((m) => m.id === id);
-    const backendCategoryName = NAV_TO_CATEGORY[existing?.category];
-    const cat = categories.find((c) => c.name === backendCategoryName);
+    const cat = categoryForNav(categories, existing?.category);
     try {
       await updateProduct(id, {
         categoryId: cat?.id,
@@ -379,6 +429,73 @@ export default function PosScreen() {
   const quantityCount = cart.reduce((sum, item) => sum + item.qty, 0);
 
   const currentNavLabel = NAV_ITEMS.find((nav) => nav.key === activeNav)?.label || "เมนู";
+
+  // UserManagementView handlers — all route through the admin users API (403 for cashiers).
+  const handleSaveUser = async (payload) => {
+    // UserModal returns { id, firstName, lastName, username, role, status, phone, email, password? }.
+    // Backend expects fullName (not split name) and role in uppercase.
+    const body = {
+      username: payload.username,
+      role: payload.role === 'admin' ? 'ADMIN' : 'CASHIER',
+      fullName: `${payload.firstName ?? ''} ${payload.lastName ?? ''}`.trim() || payload.username,
+      phone: payload.phone || null,
+      email: payload.email || null,
+    };
+    try {
+      if (payload.id && users.some((u) => u.id === payload.id)) {
+        await updateUser(payload.id, body);
+      } else {
+        if (!payload.password) { alert('กรุณาตั้งรหัสผ่านสำหรับผู้ใช้ใหม่'); return; }
+        await createUser({ ...body, password: payload.password });
+      }
+      await loadUsers();
+    } catch (err) {
+      alert(err?.message ?? 'บันทึกผู้ใช้ไม่สำเร็จ');
+    }
+  };
+
+  // No hard-delete endpoint for users — soft-delete via setStatus(false) to preserve audit trail.
+  const handleDeleteUser = async (id) => {
+    try { await setUserStatus(id, false); await loadUsers(); }
+    catch (err) { alert(err?.message ?? 'ลบผู้ใช้ไม่สำเร็จ'); }
+  };
+
+  const handleToggleUserStatus = async (id) => {
+    const u = users.find((x) => x.id === id);
+    try { await setUserStatus(id, u?.status !== 'active'); await loadUsers(); }
+    catch (err) { alert(err?.message ?? 'เปลี่ยนสถานะไม่สำเร็จ'); }
+  };
+
+  // BE-08: admin-side password reset. UserManagementView sends { type: 'password'|'pin', value }.
+  // Backend takes any 8+ char string — PIN is a shorter credential UX but stored as a password.
+  const handleResetUserPassword = async (id, payload) => {
+    const newPassword = payload?.value ?? payload?.newPassword;
+    if (!newPassword || String(newPassword).length < 8) {
+      alert('รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร');
+      return;
+    }
+    try { await resetUserPassword(id, String(newPassword)); alert('ตั้งรหัสใหม่สำเร็จ'); }
+    catch (err) { alert(err?.message ?? 'ตั้งรหัสใหม่ไม่สำเร็จ'); }
+  };
+
+  // Toggle product active/inactive from MenuManagementView.
+  const handleToggleMenuStatus = async (id) => {
+    const item = menu.find((m) => m.id === id);
+    if (!item) return;
+    try { await setProductStatus(id, !item.active); await loadProducts(); }
+    catch (err) { alert(err?.message ?? 'เปลี่ยนสถานะเมนูไม่สำเร็จ'); }
+  };
+
+  // Stock is client-only — backend doesn't persist product stock yet.
+  const handleUpdateMenuStock = (id, stock) => {
+    setMenu((prev) => prev.map((m) => (m.id === id ? { ...m, stock } : m)));
+  };
+
+  // Dashboard asks to jump to a specific bill; drops into Bill Management with that id pre-selected.
+  const handleViewBill = (billId) => {
+    setBillToOpen(billId ?? null);
+    setActiveNav('bill_mgmt');
+  };
 
   return (
     <div className="pos">
@@ -506,14 +623,28 @@ export default function PosScreen() {
 
         {/* -------- Main column -------- */}
         <div className="pos-main">
-          <div className="pos-body" style={{ flexDirection: (activeNav === "promo" || activeNav === "manage" || activeNav === "manage_addon" || activeNav === "bill_mgmt" || activeNav === "dashboard") ? "column" : "row" }}>
+          <div className="pos-body" style={{ flexDirection: (activeNav === "promo" || activeNav === "manage" || activeNav === "manage_addon" || activeNav === "bill_mgmt" || activeNav === "dashboard" || activeNav === "users" || activeNav === "settings") ? "column" : "row" }}>
 
             {activeNav === "dashboard" ? (
-              <DashboardView />
+              <DashboardView onViewBill={handleViewBill} />
+            ) :
+
+            activeNav === "settings" ? (
+              <SettingsView />
+            ) :
+
+            activeNav === "users" ? (
+              <UserManagementView
+                users={users}
+                onSaveUser={handleSaveUser}
+                onDeleteUser={handleDeleteUser}
+                onToggleStatus={handleToggleUserStatus}
+                onResetPassword={handleResetUserPassword}
+              />
             ) :
 
             activeNav === "bill_mgmt" ? (
-              <BillManagementView />
+              <BillManagementView initialBillId={billToOpen} />
             ) :
 
             activeNav === "manage_addon" ? (
@@ -547,8 +678,16 @@ export default function PosScreen() {
 
             activeNav === "manage" ? (
               <MenuManagementView
+                menuItems={menu}
+                onToggleStatus={handleToggleMenuStatus}
                 onOpenAddMenuModal={() => setIsAddMenuOpen(true)}
                 onEditMenu={(item) => setEditingConfigItem(item)}
+                onDeleteMenu={(id) => {
+                  // Kawinthida's MenuManagementView now calls onDeleteMenu(id); normalize into our { id, name } shape.
+                  const target = menu.find((m) => m.id === id);
+                  if (target) setMenuToDelete({ id, name: target.name });
+                }}
+                onUpdateStock={handleUpdateMenuStock}
               />
             ) :
 
@@ -779,9 +918,8 @@ export default function PosScreen() {
           activeCategory={NAV_TO_CATEGORY[activeNav] ? activeNav : "coffee"}
           onClose={() => setIsAddMenuOpen(false)}
           onSubmit={async (form) => {
-            const backendName = NAV_TO_CATEGORY[form.category];
-            const cat = categories.find((c) => c.name === backendName);
-            if (!cat) throw new Error(`ไม่พบหมวด "${backendName}" ในฐานข้อมูล`);
+            const cat = categoryForNav(categories, form.category);
+            if (!cat) throw new Error(`ไม่พบหมวดสำหรับ nav key "${form.category}" ในฐานข้อมูล`);
             try {
               await createProduct({ categoryId: cat.id, name: form.name, price: form.price, imageUrl: null, addOnIds: [] });
               window.dispatchEvent(new Event("products:reload"));
@@ -845,6 +983,26 @@ export default function PosScreen() {
             setAppliedPromo(null);
             setCompletedPaymentData(null);
           }}
+        />
+      )}
+
+      {menuToDelete && (
+        <ConfirmDeleteModal
+          title="ลบเมนู? (Delete Item?)"
+          itemName={menuToDelete.name}
+          description="เมนูนี้จะถูกปิดการขาย — ลูกค้ามองไม่เห็นในหน้า POS แต่บิลเก่าที่ขายไปแล้วยังอยู่ครบ"
+          confirmText="ปิดการขาย"
+          onConfirm={async () => {
+            try {
+              await setProductStatus(menuToDelete.id, false);
+              window.dispatchEvent(new Event('products:reload'));
+            } catch (err) {
+              alert(err?.message ?? 'ปิดเมนูไม่สำเร็จ');
+            } finally {
+              setMenuToDelete(null);
+            }
+          }}
+          onCancel={() => setMenuToDelete(null)}
         />
       )}
 

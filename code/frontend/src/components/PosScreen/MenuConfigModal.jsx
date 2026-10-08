@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import AddonFormModal from "./AddonFormModal";
 
 const GET_DEFAULT_CONFIG = (category) => {
   if (category === 'tea') {
@@ -36,6 +37,9 @@ export default function MenuConfigModal({ item, onClose, onSave, globalAddons = 
   
   // 👉 กำหนดค่าเริ่มต้น category ในหน้าแก้ไข ถ้าไม่มีให้เป็น coffee 
   const [editedCategory, setEditedCategory] = useState(item.category || "coffee");
+
+  // ฟอร์มเพิ่ม Add-on ใหม่ (Modal ซ้อน)
+  const [isAddonFormOpen, setIsAddonFormOpen] = useState(false);
   
   const toggleActive = (category, index) => {
     const newArr = [...config[category]];
@@ -50,6 +54,12 @@ export default function MenuConfigModal({ item, onClose, onSave, globalAddons = 
     } else {
       setConfig({ ...config, addonIds: [...currentIds, addonId] });
     }
+  };
+
+  // บันทึก Add-on ใหม่ลงรายการส่วนกลาง แล้วปิดฟอร์ม
+  const handleCreateAddon = (newAddon) => {
+    onAddGlobalAddon?.(newAddon);
+    setIsAddonFormOpen(false);
   };
 
   const handleSave = () => {
@@ -194,6 +204,10 @@ export default function MenuConfigModal({ item, onClose, onSave, globalAddons = 
         }
         .edit-addon-card.active {
           border-color: #10b981;
+        }
+        .edit-addon-card--add:hover {
+          border-color: #00694b;
+          background: rgba(0, 105, 75, 0.04);
         }
         /* Toggle Switch CSS */
         .custom-toggle {
@@ -406,7 +420,14 @@ export default function MenuConfigModal({ item, onClose, onSave, globalAddons = 
                 )
               })}
               
-              <div className="edit-addon-card" style={{ borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center', gap: '4px', cursor: 'default' }}>
+              <div
+                className="edit-addon-card edit-addon-card--add"
+                role="button"
+                tabIndex={0}
+                onClick={() => setIsAddonFormOpen(true)}
+                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setIsAddonFormOpen(true)}
+                style={{ borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center', gap: '4px' }}
+              >
                 <div style={{ color: '#10b981' }}><PlusIcon /></div>
                 <span style={{ fontSize: '14px', fontWeight: 700, color: '#374151' }}>เพิ่ม Add-on ใหม่</span>
                 <span style={{ fontSize: '11px', color: '#9ca3af' }}>กำหนดชื่อและราคาเสริม</span>
@@ -427,6 +448,15 @@ export default function MenuConfigModal({ item, onClose, onSave, globalAddons = 
         </footer>
 
       </div>
+
+      {isAddonFormOpen && (
+        <AddonFormModal
+          defaultCategory={item.category === 'snack' ? 'all' : item.category}
+          existingAddons={globalAddons}
+          onSave={handleCreateAddon}
+          onClose={() => setIsAddonFormOpen(false)}
+        />
+      )}
     </div>
   );
 }

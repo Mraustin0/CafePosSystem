@@ -12,13 +12,12 @@ import com.cafepos.mapper.UserMapper;
 import com.cafepos.repository.UserProfileRepository;
 import com.cafepos.repository.UserRepository;
 import com.cafepos.repository.UserSpecifications;
+import com.cafepos.exception.BadRequestException;
 import com.cafepos.service.UserService;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @Transactional(readOnly = true)
@@ -56,7 +55,7 @@ public class UserServiceImpl implements UserService {
         User user = getProfile(userId).getUser();
         if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
             // 400, not 401: the session is valid, only the form input is wrong (401 would log the user out).
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Current password is incorrect");
+            throw new BadRequestException("Current password is incorrect");
         }
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
     }
@@ -106,6 +105,18 @@ public class UserServiceImpl implements UserService {
         }
         profile.getUser().setActive(active);
         return userMapper.toResponse(profile);
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(Long id, ResetPasswordRequest request, Long actorId) {
+        // Admins route their own password through changePassword (requires current). This path is
+        // for issuing a credential to someone else only.
+        if (id.equals(actorId)) {
+            throw new BadRequestException("Use /me/password to change your own password");
+        }
+        UserProfile profile = getProfile(id);
+        profile.getUser().setPasswordHash(passwordEncoder.encode(request.newPassword()));
     }
 
     private UserProfile getProfile(Long userId) {

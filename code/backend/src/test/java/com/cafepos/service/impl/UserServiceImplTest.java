@@ -18,7 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.server.ResponseStatusException;
+import com.cafepos.exception.BadRequestException;
 
 import java.util.Optional;
 
@@ -95,7 +95,7 @@ class UserServiceImplTest {
         when(profileRepository.findById(2L)).thenReturn(Optional.of(profile(2L, Role.CASHIER, passwordEncoder.encode("old-pass1"))));
 
         assertThatThrownBy(() -> userService.changePassword(2L, new ChangePasswordRequest("wrong", "new-pass1")))
-                .isInstanceOf(ResponseStatusException.class);
+                .isInstanceOf(BadRequestException.class);
     }
 
     @Test

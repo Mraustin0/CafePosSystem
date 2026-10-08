@@ -86,6 +86,14 @@ public class UserController {
         return userService.updateStatus(id, request.active(), userId(jwt));
     }
 
+    /** BE-08: admin-side password reset. Admin cannot target themselves — use /me/password for that. */
+    @PatchMapping("/{id}/password")
+    public ResponseEntity<Void> resetPassword(@Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
+                                              @PathVariable Long id, @Valid @RequestBody ResetPasswordRequest request) {
+        userService.resetPassword(id, request, userId(jwt));
+        return ResponseEntity.noContent().build();
+    }
+
     private static Long userId(Jwt jwt) {
         return Long.valueOf(jwt.getSubject());
     }

@@ -57,11 +57,13 @@ class OrderApiIntegrationTest {
 
     @Test
     void create_rejectsInvalidItems() throws Exception {
+        // BE-02: add-ons are now a global catalog — attaching Oat Milk (id=2, active) to Croissant (id=7)
+        // is accepted even though product_add_ons has no link. Only inactive add-ons / products are rejected.
         send(post("/api/v1/orders"), CASHIER_1, "{\"items\":[{\"productId\":7,\"quantity\":1,\"addOnIds\":[2]}]}")
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message", containsString("not available for Croissant")));
+                .andExpect(status().isCreated());
         send(post("/api/v1/orders"), CASHIER_1, "{\"items\":[{\"productId\":3,\"quantity\":1,\"addOnIds\":[4]}]}")
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("not available")));
         send(post("/api/v1/orders"), CASHIER_1, "{\"items\":[{\"productId\":9,\"quantity\":1}]}")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message", containsString("Banana Cake")));

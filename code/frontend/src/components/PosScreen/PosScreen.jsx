@@ -627,15 +627,6 @@ export default function PosScreen() {
                   <span>{label}</span>
                 </button>
               ))}
-              {user?.role === 'ADMIN' && (
-                <button
-                  className="pos-navitem pos-navitem--muted"
-                  onClick={() => navigate('/add-user')}
-                >
-                  <Icon.User className="pos-navitem__icon" />
-                  <span>เพิ่มผู้ใช้</span>
-                </button>
-              )}
             </nav>
           </aside>
         )}

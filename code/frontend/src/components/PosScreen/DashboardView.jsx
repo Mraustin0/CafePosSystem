@@ -15,7 +15,7 @@ import {
    ข้อมูลตัวอย่าง (Mock) — แทนที่ด้วยข้อมูลจาก API ภายหลัง
    โครงสร้างด้านล่างตั้งใจให้ใกล้เคียงกับสิ่งที่ Backend จะส่งมา
 ========================================================= */
-const TODAY_ISO = "2026-09-28";
+const TODAY_ISO = new Date().toISOString().slice(0, 10);
 
 // สรุปประจำวัน (ยอดขายสุทธิหลังหักส่วนลดแล้ว)
 const TODAY = { revenue: 12480, discount: 640, orders: 52, cancelled: 2, cash: 4368, promptpay: 8112 };
@@ -87,7 +87,6 @@ const weekData = (WEEK_VALUES = [9850, 10420, 9210, 11300, 14850, 11100, 12480])
     return { label: `${THAI_DAYS[d.getDay()]} ${d.getDate()}`, value, highlight: i === WEEK_VALUES.length - 1 };
   });
 };
-const monthData = () => MONTHS.map((m, i) => ({ ...m, highlight: i === MONTHS.length - 1 }));
 
 /* ---------------------------------------------------------
    Small components
@@ -209,10 +208,11 @@ function BarChart({ data }) {
 export default function DashboardView({ onViewBill }) {
   const [compare, setCompare] = useState("week"); // 'week' | 'month'
 
-  // Backend-loaded overlays — fall back to mock constants if the API is unavailable so the
-  // dashboard still renders something during offline / 403 / startup.
+  // Backend-loaded overlays — fall back to mock constants if the API is unavailable.
   const [today, setToday] = useState(TODAY);
+  const [yesterday, setYesterday] = useState(YESTERDAY);
   const [weekValues, setWeekValues] = useState(WEEK_VALUES);
+  const [monthValues, setMonthValues] = useState(MONTHS);
   const [topDrinks, setTopDrinks] = useState(TOP_DRINKS);
   const [recentBills, setRecentBills] = useState([]);
 
@@ -246,6 +246,29 @@ export default function DashboardView({ onViewBill }) {
       }
     }).catch(() => {});
 
+    const yesterdayIso = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    salesSummary(yesterdayIso, yesterdayIso).then((s) => {
+      setYesterday({ revenue: Number(s.netSales || 0), orders: Number(s.orderCount || 0) });
+    }).catch(() => {});
+
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+    sixMonthsAgo.setDate(1);
+    const monthFromIso = sixMonthsAgo.toISOString().slice(0, 10);
+    salesByDay(monthFromIso, todayIso).then((days) => {
+      if (!days || !days.length) return;
+      const grouped = {};
+      days.forEach((d) => {
+        const key = d.date.slice(0, 7); // "yyyy-MM"
+        grouped[key] = (grouped[key] || 0) + Number(d.netSales);
+      });
+      const thaiMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+      const months = Object.entries(grouped)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, value]) => ({ label: thaiMonths[parseInt(key.slice(5, 7), 10) - 1], value }));
+      if (months.length) setMonthValues(months);
+    }).catch(() => {});
+
     listOrders({ status: 'PAID', from: todayIso, to: todayIso, size: 5, sort: 'createdAt,desc' })
       .then((page) => {
         const bills = (page?.content || []).map((o) => ({
@@ -265,16 +288,19 @@ export default function DashboardView({ onViewBill }) {
   }, []);
 
   const avgTicket = today.revenue && today.orders ? today.revenue / today.orders : 0;
-  const avgYesterday = YESTERDAY.revenue / YESTERDAY.orders;
+  const avgYesterday = yesterday.orders > 0 ? yesterday.revenue / yesterday.orders : 0;
   const cashPct = today.revenue > 0 ? (today.cash / today.revenue) * 100 : 0;
   const promptpayPct = 100 - cashPct;
 
   const peak = HOURLY.reduce((a, b) => (b.value > a.value ? b : a));
   const peakEnd = `${String(parseInt(peak.label, 10) + 1).padStart(2, "0")}:00`;
 
-  const bars = useMemo(() => (compare === "week" ? weekData(weekValues) : monthData()), [compare, weekValues]);
+  const monthDataLive = () => monthValues.map((m, i) => ({ ...m, highlight: i === monthValues.length - 1 }));
+  const bars = useMemo(() => (compare === "week" ? weekData(weekValues) : monthDataLive()), [compare, weekValues, monthValues]);
   const weekTotal = weekValues.reduce((s, v) => s + v, 0);
-  const monthGrowth = growth(MONTHS[MONTHS.length - 1].value, MONTHS[MONTHS.length - 2].value);
+  const monthGrowth = monthValues.length >= 2
+    ? growth(monthValues[monthValues.length - 1].value, monthValues[monthValues.length - 2].value)
+    : 0;
 
   const maxDrink = Math.max(...topDrinks.map((d) => d.qty));
   const maxAddon = Math.max(...TOP_ADDONS.map((a) => a.qty));
@@ -309,7 +335,7 @@ export default function DashboardView({ onViewBill }) {
           </div>
           <div className="db-kpi__value">{baht(today.revenue)}</div>
           <div className="db-kpi__meta">
-            <Growth value={growth(today.revenue, YESTERDAY.revenue)} />
+            <Growth value={growth(today.revenue, yesterday.revenue)} />
             <span>เทียบเมื่อวาน</span>
             <span className="db-badge db-badge--down">ส่วนลด −{baht(today.discount, 0)}</span>
           </div>
@@ -322,7 +348,7 @@ export default function DashboardView({ onViewBill }) {
           </div>
           <div className="db-kpi__value">{today.orders}<small>บิล</small></div>
           <div className="db-kpi__meta">
-            <Growth value={growth(today.orders, YESTERDAY.orders)} />
+            <Growth value={growth(today.orders, yesterday.orders)} />
             <span>เทียบเมื่อวาน</span>
             <span className="db-badge db-badge--down">ยกเลิกบิล {today.cancelled}</span>
           </div>

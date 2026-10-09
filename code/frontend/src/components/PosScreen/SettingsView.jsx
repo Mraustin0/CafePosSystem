@@ -219,16 +219,18 @@ export default function SettingsView() {
             </div>
           </button>
 
-          <button
-            type="button"
-            className={`st-tab ${activeTab === "users" ? "active" : ""}`}
-            onClick={() => setActiveTab("users")}
-          >
-            <div>
-              <span className="st-tab__label">ผู้ใช้งาน & สิทธิ์</span>
-              <span className="st-tab__sub">ผู้ดูแลระบบ, แคชเชียร์</span>
-            </div>
-          </button>
+          {user?.role !== "CASHIER" && (
+            <button
+              type="button"
+              className={`st-tab ${activeTab === "users" ? "active" : ""}`}
+              onClick={() => setActiveTab("users")}
+            >
+              <div>
+                <span className="st-tab__label">ผู้ใช้งาน & สิทธิ์</span>
+                <span className="st-tab__sub">ผู้ดูแลระบบ, แคชเชียร์</span>
+              </div>
+            </button>
+          )}
 
           <button
             type="button"

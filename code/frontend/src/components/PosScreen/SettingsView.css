@@ -69,6 +69,8 @@
 /* ปุ่มออกจากระบบเลื่อนลงมาล่างสุด */
 .st-tab--danger {
   margin-top: auto;
+  justify-content: center;
+  text-align: center;
 }
 .st-tab--danger:hover { background: #fef2f2; }
 .st-tab__label--danger { color: #dc2626; }

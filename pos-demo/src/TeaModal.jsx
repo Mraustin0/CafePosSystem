@@ -8,8 +8,12 @@ const FALLBACK_CONFIG = {
   ],
   roasts: [],
   sweetness: [
-    { label: '100%', active: true }, { label: '75%', active: true }, 
-    { label: '50%', active: true }, { label: '25%', active: true }, { label: '0%', active: true }
+    { label: '125%', active: true },
+    { label: '100%', active: true }, 
+    { label: '75%', active: true }, 
+    { label: '50%', active: true }, 
+    { label: '25%', active: true }, 
+    { label: '0%', active: true }
   ],
   addonIds: ['boba', 'jelly', 'pudding']
 };
@@ -51,7 +55,7 @@ export default function TeaModal({ item, onClose, onAddToCart, globalAddons = []
 
     const finalPrice = (basePrice + servingPrice + addonsPrice) * quantity;
     const servingLabel = servingData ? servingData.label.split(' ')[0] : "";
-    const detailString = `${servingLabel} • หวาน ${selectedSweetness}`;
+    const detailString = `${servingLabel} หวาน ${selectedSweetness}`;
     const extrasString = addonDetails.length > 0 ? addonDetails.join(", ") : "ไม่มีเพิ่มเติม";
 
     onAddToCart({
@@ -77,10 +81,17 @@ export default function TeaModal({ item, onClose, onAddToCart, globalAddons = []
   });
   const currentTotalPrice = (currentBasePrice + currentServingPrice + currentAddonPrice) * quantity;
 
+  // ฟังก์ชันแปลงข้อความแสดงระดับความหวาน
+  const getSweetnessLabel = (level) => {
+    if (level === '125%') return 'หวานมาก (125%)';
+    if (level === '100%') return 'หวานปกติ (100%)';
+    return level;
+  };
+
   return (
     <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '16px' }}>
       
-      {/* 🟠 CSS ธีมสีส้ม สำหรับ Tea Menu */}
+      {/* CSS ธีมสีส้ม สำหรับ Tea Menu */}
       <style>{`
         .tea-modal {
           background: #ffffff;
@@ -108,7 +119,7 @@ export default function TeaModal({ item, onClose, onAddToCart, globalAddons = []
           margin: 0 0 12px 0;
           letter-spacing: 0.02em;
         }
-        .req-star { color: #ea580c; margin-left: 4px; } /* เปลี่ยนดาวเป็นสีส้ม */
+        .req-star { color: #ea580c; margin-left: 4px; }
 
         .opt-btn {
           background: #ffffff;
@@ -127,8 +138,8 @@ export default function TeaModal({ item, onClose, onAddToCart, globalAddons = []
           flex: 1;
         }
         .opt-btn.active {
-          background: #fff7ed; /* พื้นหลังสีส้มอ่อน */
-          border-color: #ea580c; /* ขอบสีส้ม */
+          background: #fff7ed;
+          border-color: #ea580c;
           color: #ea580c;
           box-shadow: 0 0 0 1px #ea580c;
         }
@@ -246,7 +257,7 @@ export default function TeaModal({ item, onClose, onAddToCart, globalAddons = []
           
           {activeServing.length > 0 && (
             <div style={{ marginBottom: '32px' }}>
-              <h3 className="section-title">1. รูปแบบเครื่องดื่ม / SERVING TYPE <span className="req-star">*</span></h3>
+              <h3 className="section-title">รูปแบบเครื่องดื่ม / SERVING TYPE <span className="req-star">*</span></h3>
               <div style={{ display: 'flex', gap: '12px' }}>
                 {activeServing.map(s => (
                   <button 
@@ -264,9 +275,9 @@ export default function TeaModal({ item, onClose, onAddToCart, globalAddons = []
           {activeSweetness.length > 0 && (
             <div style={{ marginBottom: '32px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h3 className="section-title" style={{ margin: 0 }}>2. ระดับความหวาน / SWEETNESS LEVEL</h3>
+                <h3 className="section-title" style={{ margin: 0 }}>ระดับความหวาน / SWEETNESS LEVEL</h3>
                 <span style={{ fontSize: '13px', fontWeight: 700, color: '#ea580c' }}>
-                  {selectedSweetness === '100%' ? 'หวานปกติ (100%)' : selectedSweetness}
+                  {getSweetnessLabel(selectedSweetness)}
                 </span>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -286,7 +297,7 @@ export default function TeaModal({ item, onClose, onAddToCart, globalAddons = []
 
           {activeAddons.length > 0 && (
             <div style={{ marginBottom: '32px' }}>
-              <h3 className="section-title">3. ตัวเลือกเพิ่มเติม / ADD-ONS</h3>
+              <h3 className="section-title">ตัวเลือกเพิ่มเติม / ADD-ONS</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {activeAddons.map(ad => {
                   const isSelected = selectedAddons.includes(ad.id);
@@ -317,7 +328,7 @@ export default function TeaModal({ item, onClose, onAddToCart, globalAddons = []
           )}
 
           <div>
-            <h3 className="section-title">4. โน้ตพิเศษ / SPECIAL REQUESTS</h3>
+            <h3 className="section-title">โน้ตพิเศษ / SPECIAL REQUESTS</h3>
             <textarea 
               className="note-input"
               value={note} 

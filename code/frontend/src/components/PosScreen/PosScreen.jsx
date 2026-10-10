@@ -43,6 +43,7 @@ const DEFAULT_ROASTS = [
   { id: 'dark', label: 'คั่วเข้ม (Dark Roast)', desc: 'Bold, Smokey, Dark Chocolate', active: true },
 ];
 const DEFAULT_SWEETNESS = [
+  { label: '125%', active: true },
   { label: '100%', active: true }, { label: '75%', active: true },
   { label: '50%', active: true }, { label: '25%', active: true }, { label: '0%', active: true },
 ];
@@ -411,6 +412,8 @@ export default function PosScreen() {
         addOnIds: data.config?.addonIds ?? [],
       });
       await loadProducts();
+      // loadProducts resets config to defaults — restore the admin's toggle choices
+      setMenu(prev => prev.map(m => m.id === id ? { ...m, config: data.config } : m));
     } catch (err) {
       alert(err?.message ?? 'บันทึกเมนูไม่สำเร็จ');
       return;

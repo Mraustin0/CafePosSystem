@@ -10,10 +10,10 @@
 
 | ลำดับ | ชื่อ-นามสกุล | รหัสนักศึกษา | Section | Branch | หน้าที่รับผิดชอบ |
 | ----- | ------------ | ------------ | ------- | ------ | ---------------- |
-| 1 | ภควัฒน์ สุขมณี | 673380418-9 | 04 | `Phakawat_6733804189_04` | Auth & User (F-01–09), Sales / Order + POS (F-24–31), Payment (F-32–34), Design Patterns, Security, Exception Handler, Docker / CI / Deploy |
-| 2 | ธนนันค์ สาวิกัน | 673380568-8 | 04 | `Thana-nan_6733805868_04` | Category, Add-on (F-10–13, F-20–23) |
-| 3 | กวินธิดา อนุนิวัฒน์ | 673380390-5 | 04 | `Kawinthida_6733803905_04` | Product (F-14–19) |
-| 4 | กัญญาวีร์ สิงห์ลี | 673380573-7 | 04 | `Kanyawee_6733805737_04` | Reports (F-35–38), Test Report |
+| 1 | ภควัฒน์ สุขมณี | 673380418-9 | 04 | `Phakawat_6733804189_04` | Backend ทั้งหมด (REST API, Auth/JWT, Order, Payment, Promotion), เชื่อม Frontend กับ Backend, Docker / Deploy / CI, SOLID & Design Patterns, Test Report |
+| 2 | ธนนันค์ สาวิกัน | 673380568-8 | 04 | `Thana-nan_6733805868_04` | UI/UX ออกแบบหน้า POS หลัก (pos-demo), Bill Management, Dashboard wiring, Settings, ER Diagram, Use Case Diagram |
+| 3 | กวินธิดา อนุนิวัฒน์ | 673380390-5 | 04 | `Kawinthida_6733803905_04` | User Management UI, CoffeeModal, TeaModal, MenuConfigModal, CashierSidebar (role-based), Reset Password Modal |
+| 4 | กัญญาวีร์ สิงห์ลี | 673380573-7 | 04 | `Kanyawee_6733805737_04` | Dashboard UI (KPI cards, ยอดขาย), Settings UI (Profile, Logout), User Management View, Active Orders Page |
 
 รายละเอียดการแบ่งงาน: [doc/system-functions.md](doc/system-functions.md#การแบ่งงาน)
 

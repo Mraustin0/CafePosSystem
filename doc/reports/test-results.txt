@@ -1,0 +1,129 @@
+=== TEST REPORT — Cafe POS System ===
+Generated: Sat 10 Oct 2026 18:28:33 +07
+
+--- com.cafepos.CafePosApplicationTests.txt ---
+-------------------------------------------------------------------------------
+Test set: com.cafepos.CafePosApplicationTests
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.241 s -- in com.cafepos.CafePosApplicationTests
+
+--- com.cafepos.controller.api.AddOnControllerTest.txt ---
+-------------------------------------------------------------------------------
+Test set: com.cafepos.controller.api.AddOnControllerTest
+-------------------------------------------------------------------------------
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.127 s -- in com.cafepos.controller.api.AddOnControllerTest
+
+--- com.cafepos.controller.api.AuthControllerTest.txt ---
+-------------------------------------------------------------------------------
+Test set: com.cafepos.controller.api.AuthControllerTest
+-------------------------------------------------------------------------------
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.113 s -- in com.cafepos.controller.api.AuthControllerTest
+
+--- com.cafepos.controller.api.CategoryControllerTest.txt ---
+-------------------------------------------------------------------------------
+Test set: com.cafepos.controller.api.CategoryControllerTest
+-------------------------------------------------------------------------------
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.133 s -- in com.cafepos.controller.api.CategoryControllerTest
+
+--- com.cafepos.controller.api.OrderApiIntegrationTest.txt ---
+-------------------------------------------------------------------------------
+Test set: com.cafepos.controller.api.OrderApiIntegrationTest
+-------------------------------------------------------------------------------
+Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.163 s -- in com.cafepos.controller.api.OrderApiIntegrationTest
+
+--- com.cafepos.controller.api.PaymentApiIntegrationTest.txt ---
+-------------------------------------------------------------------------------
+Test set: com.cafepos.controller.api.PaymentApiIntegrationTest
+-------------------------------------------------------------------------------
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.211 s -- in com.cafepos.controller.api.PaymentApiIntegrationTest
+
+--- com.cafepos.controller.api.ProductApiIntegrationTest.txt ---
+-------------------------------------------------------------------------------
+Test set: com.cafepos.controller.api.ProductApiIntegrationTest
+-------------------------------------------------------------------------------
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.042 s -- in com.cafepos.controller.api.ProductApiIntegrationTest
+
+--- com.cafepos.controller.api.ProductControllerTest.txt ---
+-------------------------------------------------------------------------------
+Test set: com.cafepos.controller.api.ProductControllerTest
+-------------------------------------------------------------------------------
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.105 s -- in com.cafepos.controller.api.ProductControllerTest
+
+--- com.cafepos.controller.api.PromotionControllerTest.txt ---
+-------------------------------------------------------------------------------
+Test set: com.cafepos.controller.api.PromotionControllerTest
+-------------------------------------------------------------------------------
+Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.785 s -- in com.cafepos.controller.api.PromotionControllerTest
+
+--- com.cafepos.controller.api.ReportApiIntegrationTest.txt ---
+-------------------------------------------------------------------------------
+Test set: com.cafepos.controller.api.ReportApiIntegrationTest
+-------------------------------------------------------------------------------
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.058 s -- in com.cafepos.controller.api.ReportApiIntegrationTest
+
+--- com.cafepos.controller.api.SecurityIntegrationTest.txt ---
+-------------------------------------------------------------------------------
+Test set: com.cafepos.controller.api.SecurityIntegrationTest
+-------------------------------------------------------------------------------
+Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.170 s -- in com.cafepos.controller.api.SecurityIntegrationTest
+
+--- com.cafepos.controller.api.UserControllerTest.txt ---
+-------------------------------------------------------------------------------
+Test set: com.cafepos.controller.api.UserControllerTest
+-------------------------------------------------------------------------------
+Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.214 s -- in com.cafepos.controller.api.UserControllerTest
+
+--- com.cafepos.domain.OrderItemAddOnMappingTest.txt ---
+-------------------------------------------------------------------------------
+Test set: com.cafepos.domain.OrderItemAddOnMappingTest
+-------------------------------------------------------------------------------
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.178 s -- in com.cafepos.domain.OrderItemAddOnMappingTest
+
+--- com.cafepos.domain.state.OrderStateTest.txt ---
+-------------------------------------------------------------------------------
+Test set: com.cafepos.domain.state.OrderStateTest
+-------------------------------------------------------------------------------
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in com.cafepos.domain.state.OrderStateTest
+
+--- com.cafepos.service.discount.DiscountStrategyTest.txt ---
+-------------------------------------------------------------------------------
+Test set: com.cafepos.service.discount.DiscountStrategyTest
+-------------------------------------------------------------------------------
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in com.cafepos.service.discount.DiscountStrategyTest
+
+--- com.cafepos.service.impl.AddOnServiceImplTest.txt ---
+-------------------------------------------------------------------------------
+Test set: com.cafepos.service.impl.AddOnServiceImplTest
+-------------------------------------------------------------------------------
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in com.cafepos.service.impl.AddOnServiceImplTest
+
+--- com.cafepos.service.impl.CategoryServiceImplTest.txt ---
+-------------------------------------------------------------------------------
+Test set: com.cafepos.service.impl.CategoryServiceImplTest
+-------------------------------------------------------------------------------
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.126 s -- in com.cafepos.service.impl.CategoryServiceImplTest
+
+--- com.cafepos.service.impl.OrderServiceImplTest.txt ---
+-------------------------------------------------------------------------------
+Test set: com.cafepos.service.impl.OrderServiceImplTest
+-------------------------------------------------------------------------------
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.041 s -- in com.cafepos.service.impl.OrderServiceImplTest
+
+--- com.cafepos.service.impl.ProductServiceImplTest.txt ---
+-------------------------------------------------------------------------------
+Test set: com.cafepos.service.impl.ProductServiceImplTest
+-------------------------------------------------------------------------------
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.086 s -- in com.cafepos.service.impl.ProductServiceImplTest
+
+--- com.cafepos.service.impl.ReportServiceImplTest.txt ---
+-------------------------------------------------------------------------------
+Test set: com.cafepos.service.impl.ReportServiceImplTest
+-------------------------------------------------------------------------------
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.037 s -- in com.cafepos.service.impl.ReportServiceImplTest
+
+--- com.cafepos.service.impl.UserServiceImplTest.txt ---
+-------------------------------------------------------------------------------
+Test set: com.cafepos.service.impl.UserServiceImplTest
+-------------------------------------------------------------------------------
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.092 s -- in com.cafepos.service.impl.UserServiceImplTest
+

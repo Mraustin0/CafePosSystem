@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-export default function PaymentModal({ onClose, cart = [], onConfirmPayment, orderId = "A-108" }) {
+export default function PaymentModal({ onClose, cart = [], onConfirmPayment, orderId = "A-108", busy = false }) {
   const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
   const itemCount = cart.length;
 
@@ -389,8 +389,8 @@ export default function PaymentModal({ onClose, cart = [], onConfirmPayment, ord
                 <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                 ยกเลิก
               </button>
-              <button className="btn-confirm" onClick={handleConfirm}>
-                ยืนยันการชำระเงิน
+              <button className="btn-confirm" onClick={handleConfirm} disabled={busy} style={{ opacity: busy ? 0.6 : 1, cursor: busy ? 'not-allowed' : 'pointer' }}>
+                {busy ? 'กำลังดำเนินการ...' : 'ยืนยันการชำระเงิน'}
               </button>
             </div>
 

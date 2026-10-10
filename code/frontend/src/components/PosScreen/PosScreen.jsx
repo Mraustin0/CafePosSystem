@@ -18,7 +18,7 @@ import UserManagementView from "./UserManagementView";
 import SettingsView from "./SettingsView";
 import CashierSidebar, { CASHIER_NAV_KEYS } from "./CashierSidebar";
 import { listProducts, createProduct, updateProduct, setProductStatus } from "../../api/products";
-import { listAddOns, createAddOn, setAddOnStatus, updateAddOn } from "../../api/addOns";
+import { listAddOns, createAddOn, setAddOnStatus, updateAddOn, deleteAddOn } from "../../api/addOns";
 import { getCategories, navKeyFor, categoryForNav } from "../../api/categories";
 import { createPromotion, updatePromotion } from "../../api/promotions";
 import { createOrder, applyDiscount } from "../../api/orders";
@@ -243,7 +243,6 @@ export default function PosScreen() {
       setMenu(items);
       setLoadError(null);
     } catch (err) {
-      console.error("listProducts failed:", err);
       setLoadError(err?.message ?? "โหลดเมนูไม่สำเร็จ");
     }
   }, []);
@@ -251,17 +250,18 @@ export default function PosScreen() {
   const loadAddons = useCallback(async () => {
     try {
       const items = await listAddOns();
-      setGlobalAddons((items ?? []).map(a => ({
-        id: a.id,
-        label: a.name,
-        desc: a.name,
-        price: Number(a.price),
-        isActive: a.active,
-        category: 'all',
-      })));
-    } catch (err) {
-      console.error("listAddOns failed:", err);
-    }
+      setGlobalAddons(prev => {
+        const prevMap = Object.fromEntries(prev.map(a => [a.id, a]));
+        return (items ?? []).map(a => ({
+          id: a.id,
+          label: a.name,
+          desc: a.name,
+          price: Number(a.price),
+          isActive: a.active,
+          category: prevMap[a.id]?.category || 'all',
+        }));
+      });
+    } catch (_) {}
   }, []);
 
   // Admin-only — silently empty for cashiers (403 handled by apiRequest; UI won't render for non-admins).
@@ -281,9 +281,7 @@ export default function PosScreen() {
         phone: u.phone,
         email: u.email,
       })));
-    } catch (err) {
-      console.error("listUsers failed:", err);
-    }
+    } catch (_) {}
   }, [user?.role]);
 
   useEffect(() => {
@@ -378,6 +376,11 @@ export default function PosScreen() {
       setCurrentOrder({ ...order, payment });
       setPendingOrder(null);
       setIsPaymentModalOpen(false);
+      // Decrement client-side stock for finite-stock items paid in this order.
+      setMenu(prev => {
+        const totals = cart.reduce((map, c) => { if (c.productId) map[c.productId] = (map[c.productId] ?? 0) + c.qty; return map; }, {});
+        return prev.map(m => typeof m.stock === 'number' && totals[m.id] ? { ...m, stock: Math.max(0, m.stock - totals[m.id]) } : m);
+      });
       // P06/P07/P09: hand PaymentSuccessModal the backend-authoritative values
       // (change, orderNumber) plus the cashier from the session so the receipt reflects real data.
       setCompletedPaymentData({
@@ -390,7 +393,6 @@ export default function PosScreen() {
         payment,
       });
     } catch (err) {
-      console.error("checkout failed:", err);
       alert(`Checkout ล้มเหลว (${err?.status ?? "no status"}): ${err?.message ?? err}`);
     } finally {
       setCheckoutBusy(false);
@@ -425,14 +427,24 @@ export default function PosScreen() {
   };
 
   const changeCartQty = (id, delta) => {
-    setCart((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, qty: Math.max(1, item.qty + delta) } : item
-      )
-    );
+    setCart((prev) => {
+      if (delta > 0) {
+        const cartItem = prev.find(i => i.id === id);
+        if (cartItem?.productId) {
+          const menuItem = menu.find(m => m.id === cartItem.productId);
+          if (menuItem && typeof menuItem.stock === 'number') {
+            const total = prev.filter(i => i.productId === cartItem.productId).reduce((s, i) => s + i.qty, 0);
+            if (total >= menuItem.stock) return prev;
+          }
+        }
+      }
+      return prev.map(item => item.id === id ? { ...item, qty: Math.max(1, item.qty + delta) } : item);
+    });
   };
 
   const removeCartItem = (id) => setCart((prev) => prev.filter((item) => item.id !== id));
+
+  const cartedQtyFor = (productId) => cart.reduce((sum, i) => i.productId === productId ? sum + i.qty : sum, 0);
 
   const itemCount = cart.length;
   const quantityCount = cart.reduce((sum, item) => sum + item.qty, 0);
@@ -465,6 +477,7 @@ export default function PosScreen() {
 
   // No hard-delete endpoint for users — soft-delete via setStatus(false) to preserve audit trail.
   const handleDeleteUser = async (id) => {
+    if (id === user?.id) return; // cafe owner cannot delete themselves
     try { await setUserStatus(id, false); await loadUsers(); }
     catch (err) { alert(err?.message ?? 'ลบผู้ใช้ไม่สำเร็จ'); }
   };
@@ -644,13 +657,7 @@ export default function PosScreen() {
             ) :
 
             activeNav === "users" ? (
-              <UserManagementView
-                users={users}
-                onSaveUser={handleSaveUser}
-                onDeleteUser={handleDeleteUser}
-                onToggleStatus={handleToggleUserStatus}
-                onResetPassword={handleResetUserPassword}
-              />
+              <UserManagementView currentUserId={user?.id} />
             ) :
 
             activeNav === "bill_mgmt" ? (
@@ -666,15 +673,25 @@ export default function PosScreen() {
                   try { await setAddOnStatus(id, !addon.isActive); await loadAddons(); } catch (err) { alert(err?.message ?? 'เปลี่ยนสถานะไม่สำเร็จ'); }
                 }}
                 onAddAddon={async (newAddon) => {
-                  try { await createAddOn({ name: newAddon.label, price: newAddon.price }); await loadAddons(); } catch (err) { alert(err?.message ?? 'สร้าง Add-on ไม่สำเร็จ'); }
+                  try {
+                    const created = await createAddOn({ name: newAddon.label, price: newAddon.price });
+                    setGlobalAddons(prev => [...prev, { id: created.id, label: created.name, desc: created.name, price: Number(created.price), isActive: created.active, category: newAddon.category || 'all' }]);
+                  } catch (err) { alert(err?.message ?? 'สร้าง Add-on ไม่สำเร็จ'); }
                 }}
                 onEditAddon={async (patch) => {
-                  // Backend only persists name + price; desc/category stay client-side.
-                  try { await updateAddOn(patch.id, { name: patch.label, price: patch.price }); await loadAddons(); } catch (err) { alert(err?.message ?? 'แก้ไข Add-on ไม่สำเร็จ'); }
+                  try {
+                    const updated = await updateAddOn(patch.id, { name: patch.label, price: patch.price });
+                    setGlobalAddons(prev => prev.map(a => a.id === patch.id ? { ...a, label: updated.name, price: Number(updated.price), isActive: updated.active, category: patch.category || a.category } : a));
+                  } catch (err) { alert(err?.message ?? 'แก้ไข Add-on ไม่สำเร็จ'); }
                 }}
                 onDeleteAddon={async (id) => {
-                  // No hard-delete endpoint; soft-delete via setAddOnStatus(false).
-                  try { await setAddOnStatus(id, false); await loadAddons(); } catch (err) { alert(err?.message ?? 'ลบ Add-on ไม่สำเร็จ'); }
+                  try {
+                    await deleteAddOn(id);
+                  } catch (err) {
+                    if (err?.status === 409) { await setAddOnStatus(id, false).catch(() => {}); }
+                    else { alert(err?.message ?? 'ลบ Add-on ไม่สำเร็จ'); return; }
+                  }
+                  setGlobalAddons(prev => prev.filter(a => a.id !== id));
                 }}
               />
             ) :
@@ -733,7 +750,7 @@ export default function PosScreen() {
                         // stock=null means "unlimited" (backend doesn't track stock yet); only
                         // treat it as sold-out when stock is a real number <= 0. The old `!== undefined`
                         // check was treating null as 0 because `null <= 0` is true in JS.
-                        const isOutOfStock = typeof item.stock === 'number' && item.stock <= 0;
+                        const isOutOfStock = typeof item.stock === 'number' && cartedQtyFor(item.id) >= item.stock;
                         return (
                         <article
                           className="pos-card"
@@ -900,6 +917,7 @@ export default function PosScreen() {
         <CoffeeModal
           item={selectedItemForModal}
           globalAddons={globalAddons}
+          maxQty={typeof selectedItemForModal.stock === 'number' ? Math.max(0, selectedItemForModal.stock - cartedQtyFor(selectedItemForModal.id)) : null}
           onClose={() => setSelectedItemForModal(null)}
           onAddToCart={(customizedItem) => { setCart((prev) => [...prev, { ...customizedItem, productId: selectedItemForModal.id, id: Date.now() + Math.random() }]); }}
         />
@@ -909,6 +927,7 @@ export default function PosScreen() {
         <TeaModal
           item={selectedTeaForModal}
           globalAddons={globalAddons}
+          maxQty={typeof selectedTeaForModal.stock === 'number' ? Math.max(0, selectedTeaForModal.stock - cartedQtyFor(selectedTeaForModal.id)) : null}
           onClose={() => setSelectedTeaForModal(null)}
           onAddToCart={(customizedItem) => { setCart((prev) => [...prev, { ...customizedItem, productId: selectedTeaForModal.id, id: Date.now() + Math.random() }]); }}
         />
@@ -934,7 +953,7 @@ export default function PosScreen() {
             const cat = categoryForNav(categories, form.category);
             if (!cat) throw new Error(`ไม่พบหมวดสำหรับ nav key "${form.category}" ในฐานข้อมูล`);
             try {
-              await createProduct({ categoryId: cat.id, name: form.name, price: form.price, imageUrl: null, addOnIds: [] });
+              await createProduct({ categoryId: cat.id, name: form.name, price: form.price, imageUrl: form.imageUrl ?? null, addOnIds: [] });
               window.dispatchEvent(new Event("products:reload"));
             } catch (err) {
               if (err?.status === 403) throw new Error("ต้อง login เป็น ADMIN");
@@ -984,6 +1003,7 @@ export default function PosScreen() {
           promoName={appliedPromo?.title ?? appliedPromo?.name ?? null}
           onClose={() => { setIsPaymentModalOpen(false); setPendingOrder(null); }}
           onConfirmPayment={handleConfirmPayment}
+          busy={checkoutBusy}
         />
       )}
 
@@ -1008,7 +1028,7 @@ export default function PosScreen() {
           onConfirm={async () => {
             try {
               await setProductStatus(menuToDelete.id, false);
-              window.dispatchEvent(new Event('products:reload'));
+              setMenu(prev => prev.filter(m => m.id !== menuToDelete.id));
             } catch (err) {
               alert(err?.message ?? 'ปิดเมนูไม่สำเร็จ');
             } finally {

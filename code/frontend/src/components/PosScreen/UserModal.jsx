@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import "./AddNewItemModal.css";
 import "./UserManagementView.css";
 
-/* บทบาทของพนักงาน — คำอธิบายสิทธิ์เป็นข้อความตัวอย่าง ปรับให้ตรงกับระบบจริงได้ */
+/* บทบาทของพนักงาน */
 // Backend only recognizes ADMIN + CASHIER (Role enum). Keep client in sync.
 export const ROLE_OPTIONS = [
   { key: "admin", label: "Admin", desc: "จัดการระบบและพนักงานได้ทั้งหมด" },
@@ -12,14 +12,7 @@ export const ROLE_OPTIONS = [
 const USERNAME_RE = /^[a-zA-Z0-9._-]{3,20}$/;
 
 /**
- * UserModal — เพิ่ม / แก้ไขพนักงาน
- *
- * props:
- *  - user           พนักงานที่แก้ไข (ไม่ส่ง = เพิ่มใหม่)
- *  - nextCode       รหัสพนักงานที่จะสร้างให้ (แสดงตอนเพิ่มใหม่)
- *  - existingUsers  ใช้ตรวจ Username ซ้ำ
- *  - onSave(data)   คืนค่า string = ข้อความผิดพลาด (ฟอร์มจะค้างไว้) / คืนค่าอื่น = สำเร็จ
- *  - onClose()
+ * UserModal — เพิ่ม / แก้ไขพนักงาน (นำคำอธิบายใต้กล่องออก)
  */
 export default function UserModal({ user = null, nextCode, existingUsers = [], onSave, onClose }) {
   const isEdit = !!user;
@@ -27,8 +20,13 @@ export default function UserModal({ user = null, nextCode, existingUsers = [], o
   const [firstName, setFirstName] = useState(user?.firstName ?? "");
   const [lastName, setLastName] = useState(user?.lastName ?? "");
   const [username, setUsername] = useState(user?.username ?? "");
-  const [role, setRole] = useState(user?.role ?? "cashier");
-  const [isActive, setIsActive] = useState((user?.status ?? "active") === "active");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [role, setRole] = useState(
+    ROLE_OPTIONS.some((r) => r.key === user?.role) ? user.role : "cashier"
+  );
   const [error, setError] = useState("");
   const firstRef = useRef(null);
 
@@ -39,26 +37,38 @@ export default function UserModal({ user = null, nextCode, existingUsers = [], o
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const handleSubmit = () => {
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async () => {
     const fn = firstName.trim();
     const ln = lastName.trim();
     const un = username.trim();
+    const pass = password.trim();
+    const confirmPass = confirmPassword.trim();
 
     if (!fn || !ln) return setError("กรุณากรอกชื่อและนามสกุล");
     if (!USERNAME_RE.test(un))
       return setError("Username ต้องยาว 3–20 ตัว ใช้ได้เฉพาะ a-z, 0-9 และเครื่องหมาย . _ -");
-    const duplicated = existingUsers.some(
-      (u) => u.id !== user?.id && u.username.toLowerCase() === un.toLowerCase()
-    );
-    if (duplicated) return setError("Username นี้ถูกใช้แล้ว กรุณาใช้ชื่ออื่น");
 
-    const result = onSave?.({
+    if (!isEdit) {
+      if (!pass) return setError("กรุณากำหนดรหัสผ่านสำหรับการเข้าใช้งาน");
+      if (pass.length < 6) return setError("รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร");
+      if (pass !== confirmPass) return setError("รหัสผ่านและยืนยันรหัสผ่านไม่ตรงกัน");
+    } else if (pass) {
+      if (pass.length < 6) return setError("รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร");
+      if (pass !== confirmPass) return setError("รหัสผ่านและยืนยันรหัสผ่านไม่ตรงกัน");
+    }
+
+    setSaving(true);
+    const result = await onSave?.({
       firstName: fn,
       lastName: ln,
       username: un,
       role,
-      status: isActive ? "active" : "inactive",
+      status: user?.status ?? "active",
+      ...(pass ? { password: pass } : {}),
     });
+    setSaving(false);
     if (typeof result === "string") setError(result);
   };
 
@@ -92,9 +102,6 @@ export default function UserModal({ user = null, nextCode, existingUsers = [], o
         <div className="add-modal__body">
           <div>
             <span className="um-modal-code">{isEdit ? user.code : nextCode}</span>
-            <p className="um-modal-hint" style={{ marginTop: 0 }}>
-              {isEdit ? "รหัสพนักงานแก้ไขไม่ได้" : "รหัสพนักงานสร้างให้อัตโนมัติ"}
-            </p>
           </div>
 
           <div className="add-modal__row">
@@ -135,7 +142,84 @@ export default function UserModal({ user = null, nextCode, existingUsers = [], o
               autoCapitalize="off"
               spellCheck={false}
             />
-            <p className="um-modal-hint">ใช้สำหรับเข้าสู่ระบบ (a-z, 0-9, . _ - ความยาว 3–20 ตัว)</p>
+          </label>
+
+          {/* ช่องกรอกรหัสผ่าน */}
+          <label className="add-field">
+            <span className="add-field__label">
+              รหัสผ่าน (Password) {!isEdit && <span className="add-field__required">*</span>}
+            </span>
+            <div style={{ position: "relative" }}>
+              <input
+                type={showPassword ? "text" : "password"}
+                className="add-input"
+                value={password}
+                onChange={(e) => { setPassword(e.target.value); setError(""); }}
+                placeholder={isEdit ? "เว้นว่างไว้หากไม่ต้องการเปลี่ยนรหัสผ่าน" : "กำหนดรหัสผ่านสำหรับการเข้าใช้งาน"}
+                autoComplete="new-password"
+                style={{ paddingRight: "40px" }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                style={{
+                  position: "absolute",
+                  right: "10px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#6b7280"
+                }}
+                title={showPassword ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
+              >
+                {showPassword ? (
+                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                ) : (
+                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                )}
+              </button>
+            </div>
+          </label>
+
+          {/* ช่องยืนยันรหัสผ่าน */}
+          <label className="add-field">
+            <span className="add-field__label">
+              ยืนยันรหัสผ่าน (Confirm Password) {!isEdit && <span className="add-field__required">*</span>}
+            </span>
+            <div style={{ position: "relative" }}>
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                className="add-input"
+                value={confirmPassword}
+                onChange={(e) => { setConfirmPassword(e.target.value); setError(""); }}
+                placeholder="กรอกรหัสผ่านซ้ำอีกครั้ง"
+                autoComplete="new-password"
+                style={{ paddingRight: "40px" }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((prev) => !prev)}
+                style={{
+                  position: "absolute",
+                  right: "10px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#6b7280"
+                }}
+                title={showConfirmPassword ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
+              >
+                {showConfirmPassword ? (
+                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                ) : (
+                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                )}
+              </button>
+            </div>
           </label>
 
           <div>
@@ -157,36 +241,13 @@ export default function UserModal({ user = null, nextCode, existingUsers = [], o
             </div>
           </div>
 
-          <div className="add-toggle-row">
-            <span className="add-toggle-label">สถานะ</span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={isActive}
-              aria-label="สถานะการใช้งาน"
-              className={`add-toggle ${isActive ? "is-on" : "is-off"}`}
-              onClick={() => setIsActive((v) => !v)}
-            >
-              <span className="add-toggle__circle" />
-            </button>
-            <span className="add-toggle-text">
-              {isActive ? "Active — เข้าสู่ระบบได้" : "Inactive — ระงับการเข้าสู่ระบบ"}
-            </span>
-          </div>
-
-          {!isEdit && (
-            <div className="um-note">
-              หลังเพิ่มพนักงานแล้ว ให้ตั้ง PIN หรือรหัสผ่านเริ่มต้นจากปุ่มกุญแจในตารางรายชื่อ
-            </div>
-          )}
-
           {error && <p className="um-error">{error}</p>}
         </div>
 
         <footer className="add-modal__footer">
           <button type="button" onClick={onClose} className="add-btn add-btn--ghost">ยกเลิก</button>
-          <button type="button" onClick={handleSubmit} className="add-btn add-btn--solid">
-            {isEdit ? "บันทึกการแก้ไข" : "เพิ่มพนักงาน"}
+          <button type="button" onClick={handleSubmit} className="add-btn add-btn--solid" disabled={saving}>
+            {saving ? "กำลังบันทึก..." : (isEdit ? "บันทึกการแก้ไข" : "เพิ่มพนักงาน")}
           </button>
         </footer>
       </div>

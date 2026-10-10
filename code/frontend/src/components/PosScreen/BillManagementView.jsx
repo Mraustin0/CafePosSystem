@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import './BillManagementView.css';
 import { printReceipt } from './Receiptprinter';
 import { listOrders, getOrder } from '../../api/orders';
-import { getPayment } from '../../api/payment';
 
 /* ---------------------------------------------------------
    ตั้งค่าวันที่ปัจจุบัน
@@ -141,10 +140,8 @@ export default function BillManagementView({ initialBillId = null }) {
     try {
       const page = await listOrders({ status: 'PAID', from: fromDate, to: toDate, size: 200, sort: 'createdAt,desc' });
       const rows = page?.content ?? [];
-      const payments = await Promise.all(rows.map((r) => getPayment(r.id).catch(() => null)));
-      setBills(rows.map((r, i) => summaryToBill(r, payments[i]?.method)));
+      setBills(rows.map((r) => summaryToBill(r, r.paymentMethod)));
     } catch (err) {
-      console.error('listOrders failed:', err);
       setBills([]);
     }
   }, [fromDate, toDate]);

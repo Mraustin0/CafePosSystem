@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import "./SettingsView.css";
 import { useAuth } from "../../auth/useAuth";
-import { updateMyProfile, changeMyPassword } from "../../api/users";
+import { updateMyProfile, changeMyPassword, listUsers, createUser, updateUser, setUserStatus, resetUserPassword } from "../../api/users";
 
 /* ---------- Icons ---------- */
 const Icon = {
@@ -17,13 +17,6 @@ const Icon = {
   LogOut: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
 };
 
-/* ---------- Mock Data ---------- */
-const INITIAL_USERS = [
-  { id: 1, fullName: "สมชาย ใจดี", username: "Disksy", role: "ADMIN", active: true },
-  { id: 2, fullName: "พลอย แสงดี", username: "Tinny", role: "CASHIER", active: true },
-  { id: 3, fullName: "หนึ่ง จันทร์เพ็ญ", username: "Chommy", role: "CASHIER", active: true },
-  { id: 4, fullName: "ทิพย์ วงศ์งาม", username: "Tzoey", role: "CASHIER", active: false },
-];
 
 /* ---------- Sub Components ---------- */
 function ToggleSwitch({ checked, onChange }) {
@@ -44,7 +37,7 @@ function ToggleSwitch({ checked, onChange }) {
   );
 }
 
-function RowMenu({ onEdit, onResetPassword }) {
+function RowMenu({ onEdit }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -65,9 +58,6 @@ function RowMenu({ onEdit, onResetPassword }) {
           <button type="button" className="st-menu__item" onClick={() => { onEdit(); setOpen(false); }}>
             <Icon.Pencil className="st-menu__itemicon" /> แก้ไขข้อมูล
           </button>
-          <button type="button" className="st-menu__item" onClick={() => { onResetPassword(); setOpen(false); }}>
-            <Icon.Key className="st-menu__itemicon" /> รีเซ็ตรหัสผ่าน
-          </button>
         </div>
       )}
     </div>
@@ -76,15 +66,14 @@ function RowMenu({ onEdit, onResetPassword }) {
 
 /* ---------- Main Component ---------- */
 export default function SettingsView() {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("profile");
-  const [users, setUsers] = useState(INITIAL_USERS);
+  const [users, setUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [toast, setToast] = useState(null);
 
   const [userModal, setUserModal] = useState({ open: false, data: null });
-  const [passwordModal, setPasswordModal] = useState({ open: false, data: null });
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Hydrate profile form from the authenticated session instead of hardcoded mock values.
@@ -119,33 +108,49 @@ export default function SettingsView() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const toggleActive = (id, value) => {
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, active: value } : u)));
-    showToast("อัปเดตสถานะผู้ใช้งานเรียบร้อยแล้ว");
+  const loadUsers = useCallback(async () => {
+    try {
+      const res = await listUsers({ size: 100 });
+      setUsers(res?.content ?? []);
+    } catch (_) {}
+  }, []);
+
+  useEffect(() => {
+    if (user?.role !== 'CASHIER') loadUsers();
+  }, [loadUsers, user?.role]);
+
+  const toggleActive = async (id, value) => {
+    try {
+      await setUserStatus(id, value);
+      await loadUsers();
+      showToast("อัปเดตสถานะผู้ใช้งานเรียบร้อยแล้ว");
+    } catch (err) {
+      showToast(err?.message ?? "อัปเดตสถานะไม่สำเร็จ");
+    }
   };
 
-  const handleSaveUser = (e) => {
+  const handleSaveUser = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
     const fullName = formData.get("fullName");
     const username = formData.get("username");
+    const password = formData.get("password");
+    const newPassword = formData.get("newPassword");
     const role = formData.get("role");
-
-    if (userModal.data) {
-      setUsers((prev) => prev.map((u) => (u.id === userModal.data.id ? { ...u, fullName, username, role } : u)));
-      showToast("แก้ไขข้อมูลผู้ใช้งานสำเร็จ");
-    } else {
-      const newUser = { id: Date.now(), fullName, username, role, active: true };
-      setUsers((prev) => [...prev, newUser]);
-      showToast("เพิ่มผู้ใช้งานใหม่เรียบร้อยแล้ว");
+    try {
+      if (userModal.data) {
+        await updateUser(userModal.data.id, { role, fullName, phone: null, email: null });
+        if (newPassword) await resetUserPassword(userModal.data.id, newPassword);
+        showToast("แก้ไขข้อมูลผู้ใช้งานสำเร็จ");
+      } else {
+        await createUser({ username, password, role, fullName, phone: null, email: null });
+        showToast("เพิ่มผู้ใช้งานใหม่เรียบร้อยแล้ว");
+      }
+      setUserModal({ open: false, data: null });
+      await loadUsers();
+    } catch (err) {
+      showToast(err?.message ?? "บันทึกข้อมูลไม่สำเร็จ");
     }
-    setUserModal({ open: false, data: null });
-  };
-
-  const handleResetPasswordSave = (e) => {
-    e.preventDefault();
-    showToast(`รีเซ็ตรหัสผ่านให้ ${passwordModal.data?.username} เรียบร้อยแล้ว`);
-    setPasswordModal({ open: false, data: null });
   };
 
   const handleStoreChange = (field, value) => {
@@ -168,6 +173,7 @@ export default function SettingsView() {
         fullName: profileData.fullName,
         phone: profileData.phone || null,
         email: profileData.email || null,
+        username: profileData.username || null,
       });
       // Password section is optional — only call the change endpoint if the user filled it in.
       if (currentPassword && newPassword) {
@@ -179,6 +185,7 @@ export default function SettingsView() {
         setCurrentPassword("");
         setNewPassword("");
       }
+      await refreshUser();
       showToast("อัปเดตข้อมูลโปรไฟล์เรียบร้อยแล้ว");
     } catch (err) {
       showToast(err?.message ?? "บันทึกโปรไฟล์ไม่สำเร็จ");
@@ -282,7 +289,7 @@ export default function SettingsView() {
                       type="text"
                       className="st-input"
                       value={profileData.username}
-                      disabled
+                      onChange={(e) => setProfileData({ ...profileData, username: e.target.value })}
                     />
                   </div>
 
@@ -381,7 +388,6 @@ export default function SettingsView() {
                             <td className="is-right">
                               <RowMenu
                                 onEdit={() => setUserModal({ open: true, data: u })}
-                                onResetPassword={() => setPasswordModal({ open: true, data: u })}
                               />
                             </td>
                           </tr>
@@ -525,24 +531,26 @@ export default function SettingsView() {
                     />
                   </div>
                   <div className="st-field full">
-                    <label className="st-label">ชื่อผู้ใช้ (Username) <span className="st-req">*</span></label>
+                    <label className="st-label">ชื่อผู้ใช้ (Username) {!userModal.data && <span className="st-req">*</span>}</label>
                     <input
                       name="username"
                       type="text"
                       className="st-input"
                       defaultValue={userModal.data?.username || ""}
-                      required
+                      required={!userModal.data}
+                      readOnly={!!userModal.data}
+                      style={userModal.data ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
                     />
                   </div>
-                  {!userModal.data && (
+                  {!userModal.data ? (
                     <div className="st-field full">
                       <label className="st-label">รหัสผ่าน <span className="st-req">*</span></label>
-                      <input
-                        name="password"
-                        type="password"
-                        className="st-input"
-                        required
-                      />
+                      <input name="password" type="password" className="st-input" required />
+                    </div>
+                  ) : (
+                    <div className="st-field full">
+                      <label className="st-label">รหัสผ่านใหม่ <span style={{ color: '#9ca3af', fontWeight: 400, fontSize: 11 }}>(เว้นว่างหากไม่ต้องการเปลี่ยน)</span></label>
+                      <input name="newPassword" type="password" className="st-input" minLength={8} />
                     </div>
                   )}
                   <div className="st-field full">
@@ -568,46 +576,6 @@ export default function SettingsView() {
                 </button>
                 <button type="submit" className="st-btn st-btn--solid">
                   บันทึกข้อมูล
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {passwordModal.open && (
-        <div className="st-modal-overlay">
-          <div className="st-modal st-modal--sm">
-            <div className="st-modal__head">
-              <h3 className="st-modal__title">รีเซ็ตรหัสผ่าน</h3>
-              <button
-                type="button"
-                className="st-modal__close"
-                onClick={() => setPasswordModal({ open: false, data: null })}
-              >
-                <Icon.X />
-              </button>
-            </div>
-            <form onSubmit={handleResetPasswordSave}>
-              <div className="st-modal__body">
-                <p style={{ margin: "0 0 16px", fontSize: 13, color: "#6b7280" }}>
-                  กำลังรีเซ็ตรหัสผ่านให้กับบัญชี: <b>{passwordModal.data?.username}</b>
-                </p>
-                <div className="st-field">
-                  <label className="st-label">รหัสผ่านใหม่ <span className="st-req">*</span></label>
-                  <input type="password" className="st-input" required minLength={4} />
-                </div>
-              </div>
-              <div className="st-modal__foot">
-                <button
-                  type="button"
-                  className="st-btn st-btn--ghost"
-                  onClick={() => setPasswordModal({ open: false, data: null })}
-                >
-                  ยกเลิก
-                </button>
-                <button type="submit" className="st-btn st-btn--solid">
-                  ยืนยันรหัสผ่านใหม่
                 </button>
               </div>
             </form>

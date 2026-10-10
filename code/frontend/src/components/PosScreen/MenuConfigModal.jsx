@@ -5,8 +5,8 @@ const GET_DEFAULT_CONFIG = (category) => {
   if (category === 'tea') {
     return {
       serving: [{ id: 'iced', label: 'เย็น (Iced)', price: 0, active: true }, { id: 'hot', label: 'ร้อน (Hot)', price: 0, active: true }, { id: 'frappe', label: 'ปั่น  +฿15', price: 15, active: true }],
-      sweetness: [{ label: '100%', active: true }, { label: '75%', active: true }, { label: '50%', active: true }, { label: '25%', active: true }, { label: '0%', active: true }],
-      roasts: [], addonIds: ['boba', 'jelly'] 
+      sweetness: [{ label: '125%', active: true }, { label: '100%', active: true }, { label: '75%', active: true }, { label: '50%', active: true }, { label: '25%', active: true }, { label: '0%', active: true }],
+      roasts: [], addonIds: ['boba', 'jelly']
     };
   } else if (category === 'snack') {
     return {
@@ -16,8 +16,8 @@ const GET_DEFAULT_CONFIG = (category) => {
     return {
       serving: [{ id: 'iced', label: 'เย็น (Iced)', price: 0, active: true }, { id: 'hot', label: 'ร้อน (Hot)', price: 0, active: true }, { id: 'frappe', label: 'ปั่น +฿15', price: 15, active: true }],
       roasts: [{ id: 'medium', label: 'คั่วกลาง (Medium Roast)', desc: 'Nutty, Caramel, Balanced acidity', active: true }, { id: 'dark', label: 'คั่วเข้ม (Dark Roast)', desc: 'Bold, Smokey, Dark Chocolate', active: true }],
-      sweetness: [{ label: '100%', active: true }, { label: '75%', active: true }, { label: '50%', active: true }, { label: '25%', active: true }, { label: '0%', active: true }],
-      addonIds: ['shot', 'whip', 'jelly', 'oatmilk'] 
+      sweetness: [{ label: '125%', active: true }, { label: '100%', active: true }, { label: '75%', active: true }, { label: '50%', active: true }, { label: '25%', active: true }, { label: '0%', active: true }],
+      addonIds: ['shot', 'whip', 'jelly', 'oatmilk']
     };
   }
 };
@@ -32,11 +32,6 @@ const PlusIcon = () => (
 
 export default function MenuConfigModal({ item, onClose, onSave, globalAddons = [], onAddGlobalAddon }) {
   const [config, setConfig] = useState(item.config || GET_DEFAULT_CONFIG(item.category));
-  const [editedName, setEditedName] = useState(item.name);
-  const [editedPrice, setEditedPrice] = useState(item.price);
-  
-  // 👉 กำหนดค่าเริ่มต้น category ในหน้าแก้ไข ถ้าไม่มีให้เป็น coffee 
-  const [editedCategory, setEditedCategory] = useState(item.category || "coffee");
 
   // ฟอร์มเพิ่ม Add-on ใหม่ (Modal ซ้อน)
   const [isAddonFormOpen, setIsAddonFormOpen] = useState(false);
@@ -63,18 +58,7 @@ export default function MenuConfigModal({ item, onClose, onSave, globalAddons = 
   };
 
   const handleSave = () => {
-    if (!editedName.trim()) {
-      alert("กรุณากรอกชื่อเมนู");
-      return;
-    }
-    // 👉 เพิ่ม check ว่ามีการเลือก category หรือไม่
-    if(!editedCategory) {
-       alert("กรุณาเลือกหมวดหมู่สินค้า");
-       return;
-    }
-    
-    // 👉 ส่ง category กลับไปด้วยตอน save
-    if (onSave) onSave(item.id, { config, price: Number(editedPrice), name: editedName, category: editedCategory });
+    if (onSave) onSave(item.id, { config, price: item.price, name: item.name, category: item.category });
   };
 
   const activeServing = config.serving?.filter(s => s.active).length || 0;
@@ -82,7 +66,7 @@ export default function MenuConfigModal({ item, onClose, onSave, globalAddons = 
   const activeSweetness = config.sweetness?.filter(s => s.active).length || 0;
   
   const filteredGlobalAddons = globalAddons.filter(addon => 
-    addon.category === 'all' || addon.category === item.category // 👉 หรือจะกรองด้วย editedCategory ก็ได้
+    addon.category === 'all' || addon.category === item.category
   );
   
   const activeAddonsCount = filteredGlobalAddons.filter(addon => (config.addonIds || []).includes(addon.id)).length;
@@ -253,7 +237,7 @@ export default function MenuConfigModal({ item, onClose, onSave, globalAddons = 
               EP
             </div>
             <h2 style={{ fontSize: '20px', fontWeight: 800, margin: 0, color: '#111827' }}>
-              แก้ไขข้อมูลเมนู <span style={{color: '#6b7280', fontWeight: 500}}>(Edit Menu Item)</span>
+              {item.name} <span style={{color: '#6b7280', fontWeight: 500}}>(ตั้งค่าตัวเลือก)</span>
             </h2>
           </div>
           
@@ -263,68 +247,6 @@ export default function MenuConfigModal({ item, onClose, onSave, globalAddons = 
         {/* --- Body --- */}
         <div className="edit-modal-body custom-scrollbar">
           
-          {/* 1. Basic Info (Name & Price) */}
-          <div className="edit-section" style={{ display: 'flex', gap: '20px' }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#374151', marginBottom: '8px' }}>ชื่อเมนู (ITEM NAME) <span style={{color: '#ef4444'}}>*</span></label>
-              
-              <input 
-                type="text" 
-                value={editedName}
-                onChange={(e) => setEditedName(e.target.value)}
-                autoComplete="off"
-                className="clean-input"
-                style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1px solid #d1d5db', fontSize: '15px', fontWeight: 700, outline: 'none' }}
-              />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#374151', marginBottom: '8px' }}>ราคาเริ่มต้น (BASE PRICE) <span style={{color: '#ef4444'}}>*</span></label>
-              <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: '#111827' }}>฿</span>
-                
-                <input 
-                  type="number" 
-                  value={editedPrice}
-                  onChange={(e) => setEditedPrice(e.target.value)}
-                  autoComplete="off"
-                  className="clean-input"
-                  style={{ width: '100%', padding: '12px 16px 12px 36px', borderRadius: '10px', border: '1px solid #d1d5db', fontSize: '15px', fontWeight: 700, outline: 'none' }}
-                />
-              </div>
-            </div>
-          </div>
-          
-          {/* 👉 เพิ่มช่องเลือกหมวดหมู่แบบเต็มความกว้าง */}
-          <div className="edit-section">
-             <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#374151', marginBottom: '8px' }}>หมวดหมู่ / ประเภทสินค้า (CATEGORY) <span style={{color: '#ef4444'}}>*</span></label>
-             <div style={{ position: 'relative' }}>
-               <select 
-                 value={editedCategory} 
-                 onChange={e => setEditedCategory(e.target.value)} 
-                 style={{ 
-                   width: '100%', 
-                   padding: '12px 16px', 
-                   borderRadius: '10px', 
-                   border: '1px solid #d1d5db', 
-                   fontSize: '15px', 
-                   outline: 'none', 
-                   background: '#fff',
-                   fontWeight: 700,
-                   color: editedCategory === "" ? '#9ca3af' : '#111827',
-                   appearance: 'none' 
-                 }}
-               >
-                 <option value="" disabled hidden>กรุณาเลือกหมวดหมู่...</option>
-                 <option value="coffee" style={{ color: '#111827' }}>กาแฟ </option>
-                 <option value="tea" style={{ color: '#111827' }}>ชา </option>
-                 <option value="snack" style={{ color: '#111827' }}>ขนม </option>
-               </select>
-               <svg style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-             </div>
-          </div>
-
-          <hr style={{ border: 'none', borderTop: '1px solid #f3f4f6', margin: '0 0 32px 0' }} />
-
           {/* 2. SERVING TYPE */}
           {(item.category === 'coffee' || item.category === 'tea') && (
             <div className="edit-section">

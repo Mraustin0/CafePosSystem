@@ -4,13 +4,18 @@ import React, { useState } from 'react';
 // Backend wiring lives in PosScreen's handleToggleMenuStatus / handleUpdateMenuStock / etc.
 export default function MenuManagementView({ menuItems = [], onToggleStatus, onDeleteMenu, onOpenAddMenuModal, onEditMenu, onUpdateStock }) {
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('ACTIVE');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [stockModalItem, setStockModalItem] = useState(null);
   const [tempStockValue, setTempStockValue] = useState("");
 
   const filteredMenu = menuItems.filter(item => {
-    if (categoryFilter === 'all') return true;
-    return item.category === categoryFilter;
+    if (statusFilter === 'ACTIVE' && !item.isActive) return false;
+    if (statusFilter === 'INACTIVE' && item.isActive) return false;
+    if (categoryFilter !== 'all' && item.category !== categoryFilter) return false;
+    if (searchQuery.trim() && !item.name.toLowerCase().includes(searchQuery.trim().toLowerCase())) return false;
+    return true;
   });
 
   const getCategoryStyle = (cat) => {
@@ -62,18 +67,21 @@ export default function MenuManagementView({ menuItems = [], onToggleStatus, onD
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #d1d5db', borderRadius: '8px', padding: '8px 12px', width: '300px' }}>
             <svg width="16" height="16" fill="none" stroke="#9ca3af" strokeWidth="2" viewBox="0 0 24 24" style={{marginRight: '8px'}}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input 
-              type="text" 
-              placeholder="ค้นหาเมนู (Search menu)..." 
+            <input
+              type="text"
+              placeholder="ค้นหาเมนู (Search menu)..."
               className="clean-search-input"
               autoComplete="off"
-              style={{ border: 'none', outline: 'none', width: '100%', fontSize: '14px', background: 'transparent' }} 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ border: 'none', outline: 'none', width: '100%', fontSize: '14px', background: 'transparent' }}
             />
           </div>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#374151', fontSize: '14px', fontWeight: 600 }}>
             <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
-            <select style={{ border: 'none', background: 'transparent', outline: 'none', fontWeight: 600, color: '#111827', cursor: 'pointer' }}>
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ border: 'none', background: 'transparent', outline: 'none', fontWeight: 600, color: '#111827', cursor: 'pointer' }}>
+               <option value="ALL">ทั้งหมด (All)</option>
                <option value="ACTIVE">เปิดใช้งาน (Active)</option>
                <option value="INACTIVE">ปิดใช้งาน (Inactive)</option>
             </select>
@@ -189,11 +197,11 @@ export default function MenuManagementView({ menuItems = [], onToggleStatus, onD
                   <td style={{ padding: '16px 24px', textAlign: 'right' }}>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                       
-                      <button onClick={() => onEditMenu && onEditMenu(item)} style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: '0.2s' }} title="ตั้งค่า/แก้ไขเมนู">
+                      <button onClick={() => item.isActive && onEditMenu && onEditMenu(item)} disabled={!item.isActive} style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#fff', color: item.isActive ? '#6b7280' : '#d1d5db', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: item.isActive ? 'pointer' : 'not-allowed', transition: '0.2s' }} title="ตั้งค่า/แก้ไขเมนู">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
                       </button>
 
-                      <button onClick={() => handleOpenStockModal(item)} style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#fff', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: '0.2s' }} title="อัปเดตสต็อก">
+                      <button onClick={() => item.isActive && handleOpenStockModal(item)} disabled={!item.isActive} style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#fff', color: item.isActive ? '#f59e0b' : '#d1d5db', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: item.isActive ? 'pointer' : 'not-allowed', transition: '0.2s' }} title="อัปเดตสต็อก">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
                       </button>
                       

@@ -377,7 +377,7 @@
 .st-modal__body { padding: 24px; }
 .st-modal__foot {
   padding: 16px 24px; background: #f9fafb; border-top: 1px solid var(--st-line);
-  display: flex; align-items: center; justify-content: flex-end; gap: 12px;
+  display: flex; align-items: center; justify-content: center; gap: 12px;
 }
 
 @media (max-width: 900px) {

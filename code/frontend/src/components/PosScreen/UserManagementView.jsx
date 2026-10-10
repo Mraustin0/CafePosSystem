@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./UserManagementView.css";
 import UserModal, { ROLE_OPTIONS } from "./UserModal";
-import ResetPasswordModal from "./ResetPasswordModal";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
+import { listUsers, createUser, updateUser, setUserStatus, resetUserPassword } from "../../api/users";
 
 const ROLE_FILTERS = [{ key: "all", label: "ทั้งหมด" }, ...ROLE_OPTIONS];
 
@@ -16,28 +16,30 @@ const nextEmployeeCode = (users) => {
   return `EMP-${String(max + 1).padStart(3, "0")}`;
 };
 
-/**
- * UserManagementView — จัดการพนักงาน
- *
- * props (state อยู่ที่ PosScreen เพื่อไม่ให้ข้อมูลหายเวลาสลับหน้า):
- *  - users                       รายการพนักงาน
- *  - onSaveUser(user)            เพิ่ม/แก้ไข (ถ้า id ซ้ำ = แก้ไข)
- *  - onDeleteUser(id)
- *  - onToggleStatus(id)
- *  - onResetPassword(id, {type, value})
- */
-export default function UserManagementView({
-  users = [],
-  onSaveUser,
-  onDeleteUser,
-  onToggleStatus,
-  onResetPassword,
-}) {
+export default function UserManagementView({ currentUserId }) {
+  const [users, setUsers] = useState([]);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
 
+  const loadUsers = useCallback(async () => {
+    try {
+      const page = await listUsers({ size: 200 });
+      setUsers((page?.content ?? []).map((u) => ({
+        id: u.id,
+        code: `EMP-${String(u.id).padStart(3, '0')}`,
+        firstName: (u.fullName || '').split(' ')[0] || u.username,
+        lastName: (u.fullName || '').split(' ').slice(1).join(' ') || '',
+        username: u.username,
+        role: u.role === 'ADMIN' ? 'admin' : 'cashier',
+        status: u.active ? 'active' : 'inactive',
+        credentialSet: true,
+      })));
+    } catch (_) {}
+  }, []);
+
+  useEffect(() => { loadUsers(); }, [loadUsers]);
+
   const [userModal, setUserModal] = useState(null); // { user } | { user: null }
-  const [resetTarget, setResetTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const [notice, setNotice] = useState("");
@@ -69,9 +71,14 @@ export default function UserManagementView({
   const isLastActiveAdmin = (u) => u.role === "admin" && u.status === "active" && activeAdminCount <= 1;
 
   /* ---------- Handlers ---------- */
-  const handleToggle = (u) => {
+  const handleToggle = async (u) => {
     if (isLastActiveAdmin(u)) return showNotice("ต้องมี Admin ที่ใช้งานได้อย่างน้อย 1 คน");
-    onToggleStatus?.(u.id);
+    try {
+      await setUserStatus(u.id, u.status !== 'active');
+      await loadUsers();
+    } catch (err) {
+      showNotice(err?.message ?? "เปลี่ยนสถานะไม่สำเร็จ");
+    }
   };
 
   const handleDeleteClick = (u) => {
@@ -79,34 +86,47 @@ export default function UserManagementView({
     setDeleteTarget(u);
   };
 
-  const confirmDelete = () => {
-    onDeleteUser?.(deleteTarget.id);
-    showNotice(`ลบพนักงาน ${fullName(deleteTarget)} แล้ว`);
-    setDeleteTarget(null);
+  const confirmDelete = async () => {
+    try {
+      await setUserStatus(deleteTarget.id, false);
+      showNotice(`ปิดบัญชีพนักงาน ${fullName(deleteTarget)} แล้ว`);
+      setDeleteTarget(null);
+      await loadUsers();
+    } catch (err) {
+      showNotice(err?.message ?? "ลบไม่สำเร็จ");
+    }
   };
 
-  // คืนค่า string = ข้อความผิดพลาดให้ UserModal แสดง
-  const handleSaveUser = (data) => {
+  // คืนค่า string = ข้อความผิดพลาดให้ UserModal แสดง, null = สำเร็จ
+  const handleSaveUser = async (data) => {
     const editing = userModal?.user;
 
-    if (editing && isLastActiveAdmin(editing) && (data.role !== "admin" || data.status !== "active")) {
-      return "ไม่สามารถเปลี่ยนบทบาทหรือปิดใช้งาน Admin คนสุดท้ายของระบบได้";
+    if (editing && isLastActiveAdmin(editing) && data.role !== "admin") {
+      return "ไม่สามารถเปลี่ยนบทบาท Admin คนสุดท้ายของระบบได้";
     }
 
-    const record = editing
-      ? { ...editing, ...data }
-      : { ...data, id: Date.now(), code: nextEmployeeCode(users), credentialSet: false };
+    const body = {
+      role: data.role === 'admin' ? 'ADMIN' : 'CASHIER',
+      fullName: `${data.firstName} ${data.lastName}`.trim(),
+      phone: null,
+      email: null,
+    };
 
-    onSaveUser?.(record);
-    showNotice(editing ? "บันทึกการแก้ไขแล้ว" : `เพิ่มพนักงาน ${fullName(record)} แล้ว`);
-    setUserModal(null);
-    return null;
-  };
-
-  const handleResetPassword = (id, payload) => {
-    onResetPassword?.(id, payload);
-    showNotice(`ตั้ง${payload.type === "pin" ? " PIN" : "รหัสผ่าน"}ใหม่ให้ ${fullName(resetTarget)} แล้ว`);
-    setResetTarget(null);
+    try {
+      if (editing) {
+        await updateUser(editing.id, body);
+        if (data.password) await resetUserPassword(editing.id, data.password);
+        showNotice("บันทึกการแก้ไขแล้ว");
+      } else {
+        await createUser({ ...body, username: data.username, password: data.password });
+        showNotice(`เพิ่มพนักงาน ${data.firstName} ${data.lastName} แล้ว`);
+      }
+      setUserModal(null);
+      await loadUsers();
+      return null;
+    } catch (err) {
+      return err?.message ?? "บันทึกข้อมูลไม่สำเร็จ";
+    }
   };
 
   return (
@@ -214,17 +234,14 @@ export default function UserManagementView({
                           <path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
                         </svg>
                       </button>
-                      <button type="button" className="um-iconbtn um-iconbtn--key" title="เปลี่ยนรหัสผ่าน / PIN" aria-label={`เปลี่ยนรหัสผ่านของ ${fullName(u)}`} onClick={() => setResetTarget(u)}>
-                        <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                          <circle cx="8" cy="15" r="4" /><path d="M10.85 12.15 19 4M18 5l3 3M15 8l2 2" />
-                        </svg>
-                      </button>
-                      <button type="button" className="um-iconbtn um-iconbtn--danger" title="ลบ" aria-label={`ลบ ${fullName(u)}`} onClick={() => handleDeleteClick(u)}>
-                        <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                          <path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                          <line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" />
-                        </svg>
-                      </button>
+                      {u.id !== currentUserId && (
+                        <button type="button" className="um-iconbtn um-iconbtn--danger" title="ลบ" aria-label={`ลบ ${fullName(u)}`} onClick={() => handleDeleteClick(u)}>
+                          <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                            <path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            <line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" />
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -252,14 +269,6 @@ export default function UserManagementView({
           existingUsers={users}
           onSave={handleSaveUser}
           onClose={() => setUserModal(null)}
-        />
-      )}
-
-      {resetTarget && (
-        <ResetPasswordModal
-          user={resetTarget}
-          onSave={handleResetPassword}
-          onClose={() => setResetTarget(null)}
         />
       )}
 

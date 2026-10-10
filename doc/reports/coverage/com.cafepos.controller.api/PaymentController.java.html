@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PaymentController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cafe-pos</a> &gt; <a href="index.source.html" class="el_package">com.cafepos.controller.api</a> &gt; <span class="el_source">PaymentController.java</span></div><h1>PaymentController.java</h1><pre class="source lang-java linenums">package com.cafepos.controller.api;
+
+import com.cafepos.common.CurrentUser;
+import com.cafepos.dto.request.PaymentRequest;
+import com.cafepos.dto.response.PaymentResponse;
+import com.cafepos.service.PaymentService;
+import io.swagger.v3.oas.annotations.Parameter;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.*;
+
+/** F-32 – F-34. Payment is a sub-resource of an order (one payment per order). */
+@RestController
+@RequestMapping(&quot;/api/v1/orders/{orderId}/payment&quot;)
+public class PaymentController {
+
+    private final PaymentService paymentService;
+
+<span class="fc" id="L21">    public PaymentController(PaymentService paymentService) {</span>
+<span class="fc" id="L22">        this.paymentService = paymentService;</span>
+<span class="fc" id="L23">    }</span>
+
+    /**
+     * Order must be PENDING (paid or cancelled -&gt; 409). CASH: amountReceived &gt;= total, change is returned;
+     * QR_CODE / CARD: amountReceived must equal the total (otherwise 400).
+     */
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public PaymentResponse pay(@Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
+                               @PathVariable Long orderId, @Valid @RequestBody PaymentRequest request) {
+<span class="fc" id="L33">        return paymentService.pay(orderId, request, CurrentUser.from(jwt));</span>
+    }
+
+    /** 404 if the order is not paid yet. */
+    @GetMapping
+    public PaymentResponse findByOrder(@Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt,
+                                       @PathVariable Long orderId) {
+<span class="fc" id="L40">        return paymentService.findByOrder(orderId, CurrentUser.from(jwt));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

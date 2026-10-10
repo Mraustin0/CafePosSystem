@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AddOnMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cafe-pos</a> &gt; <a href="index.source.html" class="el_package">com.cafepos.mapper</a> &gt; <span class="el_source">AddOnMapper.java</span></div><h1>AddOnMapper.java</h1><pre class="source lang-java linenums">package com.cafepos.mapper;
+
+import com.cafepos.domain.entity.AddOn;
+import com.cafepos.dto.request.AddOnRequest;
+import com.cafepos.dto.response.AddOnResponse;
+import org.springframework.stereotype.Component;
+
+import java.math.RoundingMode;
+
+@Component
+<span class="fc" id="L11">public class AddOnMapper {</span>
+
+    public AddOn toEntity(AddOnRequest request) {
+<span class="nc" id="L14">        AddOn addOn = new AddOn();</span>
+<span class="nc" id="L15">        updateEntity(addOn, request);</span>
+<span class="nc" id="L16">        return addOn;</span>
+    }
+
+    public void updateEntity(AddOn addOn, AddOnRequest request) {
+<span class="fc" id="L20">        addOn.setName(request.name().trim());</span>
+<span class="fc" id="L21">        addOn.setPrice(request.price().setScale(2, RoundingMode.HALF_UP)); // match NUMERIC(10,2) so responses show 70.00, not 70</span>
+<span class="fc" id="L22">    }</span>
+
+    public AddOnResponse toResponse(AddOn addOn) {
+<span class="fc" id="L25">        return new AddOnResponse(addOn.getId(), addOn.getName(), addOn.getPrice(), addOn.isActive());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

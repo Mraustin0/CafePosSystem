@@ -13,3 +13,7 @@ export const replaceOrderItems = (id, items) => apiRequest(`/orders/${id}/items`
 // PERCENT: value 0-100, FIXED_AMOUNT: baht (<= subtotal), NONE: value ignored
 export const applyDiscount = (id, discount) => apiRequest(`/orders/${id}/discount`, { method: 'PUT', body: discount })
 export const cancelOrder = (id) => apiRequest(`/orders/${id}/cancel`, { method: 'POST' })
+
+// GET /orders/stats/today → { orderCount, netSales, avgOrderValue, pendingCount }
+// Scoped to the current cashier (admin sees all). Powers a POS top-bar / dashboard tile.
+export const quickStatsToday = () => apiRequest('/orders/stats/today')

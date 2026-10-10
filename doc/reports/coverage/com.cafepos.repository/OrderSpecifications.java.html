@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderSpecifications.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cafe-pos</a> &gt; <a href="index.source.html" class="el_package">com.cafepos.repository</a> &gt; <span class="el_source">OrderSpecifications.java</span></div><h1>OrderSpecifications.java</h1><pre class="source lang-java linenums">package com.cafepos.repository;
+
+import com.cafepos.common.ShopTime;
+import com.cafepos.domain.entity.Order;
+import com.cafepos.domain.enums.OrderStatus;
+import org.springframework.data.jpa.domain.Specification;
+
+import java.time.Instant;
+import java.time.LocalDate;
+
+/** Optional filters for the order list. A null argument means &quot;no filter&quot;. from/to are inclusive shop dates. */
+public final class OrderSpecifications {
+
+    private OrderSpecifications() {
+    }
+
+    public static Specification&lt;Order&gt; filter(OrderStatus status, LocalDate from, LocalDate to, Long cashierId) {
+<span class="fc" id="L18">        Specification&lt;Order&gt; spec = Specification.unrestricted();</span>
+<span class="fc bfc" id="L19" title="All 2 branches covered.">        if (status != null) {</span>
+<span class="fc" id="L20">            spec = spec.and((root, query, cb) -&gt; cb.equal(root.get(&quot;status&quot;), status));</span>
+        }
+<span class="fc bfc" id="L22" title="All 2 branches covered.">        if (from != null) {</span>
+<span class="fc" id="L23">            Instant start = ShopTime.startOfDay(from);</span>
+<span class="fc" id="L24">            spec = spec.and((root, query, cb) -&gt; cb.greaterThanOrEqualTo(root.get(&quot;createdAt&quot;), start));</span>
+        }
+<span class="fc bfc" id="L26" title="All 2 branches covered.">        if (to != null) {</span>
+<span class="fc" id="L27">            Instant end = ShopTime.startOfDay(to.plusDays(1));</span>
+<span class="fc" id="L28">            spec = spec.and((root, query, cb) -&gt; cb.lessThan(root.get(&quot;createdAt&quot;), end));</span>
+        }
+<span class="fc bfc" id="L30" title="All 2 branches covered.">        if (cashierId != null) {</span>
+<span class="fc" id="L31">            spec = spec.and((root, query, cb) -&gt; cb.equal(root.get(&quot;cashier&quot;).get(&quot;id&quot;), cashierId));</span>
+        }
+<span class="fc" id="L33">        return spec;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

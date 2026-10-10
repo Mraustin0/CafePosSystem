@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SpaConfig.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cafe-pos</a> &gt; <a href="index.source.html" class="el_package">com.cafepos.config</a> &gt; <span class="el_source">SpaConfig.java</span></div><h1>SpaConfig.java</h1><pre class="source lang-java linenums">package com.cafepos.config;
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.resource.PathResourceResolver;
+
+import java.io.IOException;
+
+/**
+ * Serves the React build from classpath:/static and sends unknown non-API paths to index.html,
+ * so refreshing a client route like /pos works instead of returning 404.
+ */
+@Configuration
+<span class="fc" id="L17">public class SpaConfig implements WebMvcConfigurer {</span>
+
+<span class="fc" id="L19">    private static final Resource INDEX = new ClassPathResource(&quot;static/index.html&quot;);</span>
+
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+<span class="fc" id="L23">        registry.addResourceHandler(&quot;/**&quot;)</span>
+<span class="fc" id="L24">                .addResourceLocations(&quot;classpath:/static/&quot;)</span>
+<span class="fc" id="L25">                .resourceChain(true)</span>
+<span class="fc" id="L26">                .addResolver(new PathResourceResolver() {</span>
+                    @Override
+                    protected Resource getResource(String path, Resource location) throws IOException {
+<span class="nc" id="L29">                        Resource file = location.createRelative(path);</span>
+<span class="nc bnc" id="L30" title="All 4 branches missed.">                        if (file.exists() &amp;&amp; file.isReadable()) {</span>
+<span class="nc" id="L31">                            return file;</span>
+                        }
+                        // API calls and missing files (anything with an extension) must stay 404, never the HTML page.
+<span class="nc bnc" id="L34" title="All 6 branches missed.">                        if (path.startsWith(&quot;api/&quot;) || path.contains(&quot;.&quot;) || !INDEX.exists()) {</span>
+<span class="nc" id="L35">                            return null;</span>
+                        }
+<span class="nc" id="L37">                        return INDEX;</span>
+                    }
+                });
+<span class="fc" id="L40">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

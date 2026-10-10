@@ -36,7 +36,7 @@ export function SelectPromotionModal({ onClose, onSelectPromotion, subtotal = 0 
   useEffect(() => {
     listPromotions({ active: true })
       .then((rows) => setPromotions(rows.map(mapApiPromo)))
-      .catch((err) => console.error('listPromotions failed:', err));
+      .catch(() => {});
   }, []);
 
   const handleApplyPromo = (promo) => {

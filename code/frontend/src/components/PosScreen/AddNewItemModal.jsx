@@ -49,6 +49,7 @@ export function AddNewItemModal({ activeCategory = "coffee", onClose, onSubmit }
 
   const [serving, setServing] = useState({});
   const [fileName, setFileName] = useState(null);
+  const [imageUrl, setImageUrl] = useState(null);
   const [thaiName, setThaiName] = useState("");
   const [engName, setEngName] = useState("");
   const [price, setPrice] = useState("");
@@ -65,7 +66,11 @@ export function AddNewItemModal({ activeCategory = "coffee", onClose, onSubmit }
 
   function handleFile(e) {
     const file = e.target.files?.[0];
-    if (file) setFileName(file.name);
+    if (!file) return;
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (ev) => setImageUrl(ev.target.result);
+    reader.readAsDataURL(file);
   }
 
   async function handleSave() {
@@ -76,7 +81,7 @@ export function AddNewItemModal({ activeCategory = "coffee", onClose, onSubmit }
     if (!onSubmit) { setSaveError("save handler not wired"); return; }
     setSaving(true);
     try {
-      await onSubmit({ category: selectedCategory, name: thaiName.trim(), englishName: engName.trim(), price: priceNum });
+      await onSubmit({ category: selectedCategory, name: thaiName.trim(), englishName: engName.trim(), price: priceNum, imageUrl: imageUrl ?? null });
       onClose();
     } catch (err) {
       setSaveError(err?.message ?? "บันทึกไม่สำเร็จ");

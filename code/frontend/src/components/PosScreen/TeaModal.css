@@ -12,8 +12,8 @@
 }
 
 /* Header */
-.tea-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--gray-200); padding: 24px; }
-.tea-header-left { display: flex; align-items: flex-start; gap: 16px; }
+.tea-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--gray-200); padding: 24px; }
+.tea-header-left { display: flex; align-items: center; gap: 16px; }
 .tea-icon-box { display: flex; height: 48px; width: 48px; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 12px; background: #fef3c7; color: #b45309; }
 .tea-title-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .tea-title { font-size: 18px; font-weight: 700; color: var(--gray-900); margin: 0; }

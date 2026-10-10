@@ -11,21 +11,35 @@ const FALLBACK_CONFIG = {
     { id: 'dark', label: 'คั่วเข้ม (Dark Roast)', desc: 'Bold, Smokey, Dark Chocolate', active: true }
   ],
   sweetness: [
-    { label: '100%', active: true }, { label: '75%', active: true },
-    { label: '50%', active: true }, { label: '25%', active: true }, { label: '0%', active: true }
+    { label: '125%', active: true },
+    { label: '100%', active: true },
+    { label: '75%', active: true },
+    { label: '50%', active: true },
+    { label: '25%', active: true },
+    { label: '0%', active: true }
   ],
   addonIds: ['shot', 'whip']
 };
 
-export default function CoffeeModal({ item, onClose, onAddToCart, globalAddons = [] }) {
-  const config = item.config || FALLBACK_CONFIG;
+export default function CoffeeModal({ item, onClose, onAddToCart, globalAddons = [], maxQty = null }) {
+  if (!item) return null;
+
+  const categoryKey = (item?.category || item?.categoryName || item?.type || "").toLowerCase();
+  const isSnack =
+    categoryKey.includes("snack") ||
+    categoryKey.includes("bakery") ||
+    categoryKey.includes("ขนม");
+
+  const config = item?.config || FALLBACK_CONFIG;
 
   const activeServing = config.serving?.filter(s => s.active) || [];
   const activeRoasts = config.roasts?.filter(r => r.active) || [];
-  const activeSweetness = config.sweetness?.filter(s => s.active) || [];
+  const rawSweetness = config.sweetness?.length ? config.sweetness : FALLBACK_CONFIG.sweetness;
+  const sweetness125 = rawSweetness.some(s => s.label === '125%') ? rawSweetness : [{ label: '125%', active: true }, ...rawSweetness];
+  const activeSweetness = sweetness125.filter(s => s.active);
 
   const activeAddons = globalAddons.filter(a =>
-    (config.addonIds || []).includes(a.id) && a.isActive
+    (a.category === 'coffee' || a.category === 'all') && a.isActive
   );
 
   const [selectedServing, setSelectedServing] = useState(activeServing[0]?.id || null);
@@ -41,47 +55,58 @@ export default function CoffeeModal({ item, onClose, onAddToCart, globalAddons =
 
   const handleAddToCart = () => {
     const basePrice = item.price || 0;
-    const servingData = activeServing.find(s => s.id === selectedServing);
-    const servingPrice = servingData ? servingData.price : 0;
 
-    let addonsPrice = 0;
-    const addonDetails = [];
-    selectedAddons.forEach(id => {
-      const ad = activeAddons.find(a => a.id === id);
-      if (ad) {
-        addonsPrice += ad.price;
-        addonDetails.push(ad.label);
-      }
-    });
+    if (isSnack) {
+      onAddToCart({
+        id: Date.now(),
+        name: item.name,
+        price: basePrice,
+        qty: quantity,
+        detail: "",
+        extras: "",
+        note: note ? `โน้ต: ${note}` : "",
+        isNew: true
+      });
+    } else {
+      const servingData = activeServing.find(s => s.id === selectedServing);
+      const servingPrice = servingData ? servingData.price : 0;
 
-    const finalPrice = (basePrice + servingPrice + addonsPrice) * quantity;
-    const roastLabel = activeRoasts.find(r => r.id === selectedRoast)?.label.split(' ')[0] || "";
-    const servingLabel = servingData ? servingData.label.split(' ')[0] : "";
-    const detailString = `${servingLabel} • ${roastLabel} • หวาน ${selectedSweetness}`;
-    const extrasString = addonDetails.length > 0 ? addonDetails.join(", ") : "ไม่มีเพิ่มเติม";
+      let addonsPrice = 0;
+      const addonDetails = [];
+      selectedAddons.forEach(id => {
+        const ad = activeAddons.find(a => a.id === id);
+        if (ad) {
+          addonsPrice += ad.price;
+          addonDetails.push(ad.label);
+        }
+      });
 
-    onAddToCart({
-      id: Date.now(),
-      name: item.name,
-      price: finalPrice / quantity,
-      qty: quantity,
-      detail: detailString,
-      extras: extrasString,
-      note: note ? `โน้ต: ${note}` : "",
-      isNew: true
-    });
+      const finalUnitPrice = basePrice + servingPrice + addonsPrice;
+      const roastLabel = activeRoasts.find(r => r.id === selectedRoast)?.label.split(' ')[0] || "";
+      const servingLabel = servingData ? servingData.label.split(' ')[0] : "";
+      const detailString = `${servingLabel} ${roastLabel} หวาน ${selectedSweetness}`;
+      const extrasString = addonDetails.length > 0 ? addonDetails.join(", ") : "ไม่มีเพิ่มเติม";
+
+      onAddToCart({
+        id: Date.now(),
+        name: item.name,
+        price: finalUnitPrice,
+        qty: quantity,
+        detail: detailString,
+        extras: extrasString,
+        note: note ? `โน้ต: ${note}` : "",
+        isNew: true
+      });
+    }
 
     onClose();
   };
 
-  const currentBasePrice = item.price || 0;
-  const currentServingPrice = activeServing.find(s => s.id === selectedServing)?.price || 0;
-  let currentAddonPrice = 0;
-  selectedAddons.forEach(id => {
-    const ad = activeAddons.find(a => a.id === id);
-    if (ad) currentAddonPrice += ad.price;
-  });
-  const currentTotalPrice = (currentBasePrice + currentServingPrice + currentAddonPrice) * quantity;
+  const getSweetnessLabel = (level) => {
+    if (level === '125%') return 'หวานมาก (125%)';
+    if (level === '100%') return 'หวานปกติ (100%)';
+    return level;
+  };
 
   return (
     <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '16px' }}>
@@ -250,15 +275,18 @@ export default function CoffeeModal({ item, onClose, onAddToCart, globalAddons =
 
       <div className="order-modal">
 
+        {/* Header */}
         <div style={{ padding: '24px', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <div style={{ width: '60px', height: '60px', borderRadius: '14px', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', overflow: 'hidden' }}>
-               {item.imgSrc ? <img src={item.imgSrc} alt={item.name} style={{width:'100%', height:'100%', objectFit:'cover'}} /> : '☕️'}
+               {item.imgSrc ? <img src={item.imgSrc} alt={item.name} style={{width:'100%', height:'100%', objectFit:'cover'}} /> : (isSnack ? '🍪' : '☕️')}
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
                 <h2 style={{ fontSize: '20px', fontWeight: 800, margin: 0, color: '#111827' }}>{item.name}</h2>
-                <span style={{ fontSize: '11px', background: '#ffedd5', color: '#ea580c', padding: '4px 8px', borderRadius: '100px', fontWeight: 700 }}>Espresso Bar</span>
+                <span style={{ fontSize: '11px', background: '#ffedd5', color: '#ea580c', padding: '4px 8px', borderRadius: '100px', fontWeight: 700 }}>
+                  {item.categoryName || (isSnack ? "Snacks & Bakery" : "Espresso Bar")}
+                </span>
               </div>
               <div style={{ fontSize: '15px', fontWeight: 700, color: '#ea580c' }}>Base Price: ฿{item.price}</div>
             </div>
@@ -268,101 +296,106 @@ export default function CoffeeModal({ item, onClose, onAddToCart, globalAddons =
           </button>
         </div>
 
+        {/* Body */}
         <div className="order-modal-body custom-scrollbar">
 
-          {activeServing.length > 0 && (
-            <div style={{ marginBottom: '32px' }}>
-              <h3 className="section-title">รูปแบบเครื่องดื่ม / SERVING TYPE <span className="req-star">*</span></h3>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                {activeServing.map(s => (
-                  <button
-                    key={s.id}
-                    onClick={() => setSelectedServing(s.id)}
-                    className={`opt-btn ${s.id === selectedServing ? 'active' : ''}`}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          {!isSnack && (
+            <>
+              {activeServing.length > 0 && (
+                <div style={{ marginBottom: '32px' }}>
+                  <h3 className="section-title">รูปแบบเครื่องดื่ม / SERVING TYPE <span className="req-star">*</span></h3>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    {activeServing.map(s => (
+                      <button
+                        key={s.id}
+                        onClick={() => setSelectedServing(s.id)}
+                        className={`opt-btn ${s.id === selectedServing ? 'active' : ''}`}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-          {activeRoasts.length > 0 && (
-            <div style={{ marginBottom: '32px' }}>
-              <h3 className="section-title">เมล็ดกาแฟ / ROAST PROFILE <span className="req-star">*</span></h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                {activeRoasts.map(r => (
-                  <button
-                    key={r.id}
-                    onClick={() => setSelectedRoast(r.id)}
-                    className={`card-btn ${r.id === selectedRoast ? 'active' : ''}`}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                      <div className="radio-circle"></div>
-                      <div>
-                        <div style={{ fontSize: '14px', fontWeight: 700, color: r.id === selectedRoast ? '#9a3412' : '#111827', marginBottom: '2px' }}>{r.label}</div>
-                        <div style={{ fontSize: '12px', color: '#6b7280' }}>{r.desc}</div>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {activeSweetness.length > 0 && (
-            <div style={{ marginBottom: '32px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h3 className="section-title" style={{ margin: 0 }}>ระดับความหวาน / SWEETNESS LEVEL</h3>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: '#ea580c' }}>
-                  {selectedSweetness === '100%' ? 'หวานปกติ (100%)' : selectedSweetness}
-                </span>
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {activeSweetness.map(s => (
-                  <button
-                    key={s.label}
-                    onClick={() => setSelectedSweetness(s.label)}
-                    className={`opt-btn ${s.label === selectedSweetness ? 'active' : ''}`}
-                    style={{ padding: '12px 0' }}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {activeAddons.length > 0 && (
-            <div style={{ marginBottom: '32px' }}>
-              <h3 className="section-title">ตัวเลือกเพิ่มเติม / ADD-ONS</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {activeAddons.map(ad => {
-                  const isSelected = selectedAddons.includes(ad.id);
-                  return (
-                    <div
-                      key={ad.id}
-                      onClick={() => toggleAddon(ad.id)}
-                      className={`card-btn addon-card ${isSelected ? 'active' : ''}`}
-                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: '16px' }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <div className="checkbox-square">
-                          {isSelected && <svg width="14" height="14" fill="none" stroke="#fff" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"></path></svg>}
+              {activeRoasts.length > 0 && (
+                <div style={{ marginBottom: '32px' }}>
+                  <h3 className="section-title">เมล็ดกาแฟ / ROAST PROFILE <span className="req-star">*</span></h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    {activeRoasts.map(r => (
+                      <button
+                        key={r.id}
+                        onClick={() => setSelectedRoast(r.id)}
+                        className={`card-btn ${r.id === selectedRoast ? 'active' : ''}`}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                          <div className="radio-circle"></div>
+                          <div>
+                            <div style={{ fontSize: '14px', fontWeight: 700, color: r.id === selectedRoast ? '#9a3412' : '#111827', marginBottom: '2px' }}>{r.label}</div>
+                            <div style={{ fontSize: '12px', color: '#6b7280' }}>{r.desc}</div>
+                          </div>
                         </div>
-                        <div>
-                          <div style={{ fontSize: '15px', fontWeight: 700, color: isSelected ? '#9a3412' : '#111827', marginBottom: '2px' }}>{ad.label}</div>
-                          <div style={{ fontSize: '13px', color: '#6b7280' }}>{ad.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {activeSweetness.length > 0 && (
+                <div style={{ marginBottom: '32px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <h3 className="section-title" style={{ margin: 0 }}>ระดับความหวาน / SWEETNESS LEVEL</h3>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#ea580c' }}>
+                      {getSweetnessLabel(selectedSweetness)}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {activeSweetness.map(s => (
+                      <button
+                        key={s.label}
+                        onClick={() => setSelectedSweetness(s.label)}
+                        className={`opt-btn ${s.label === selectedSweetness ? 'active' : ''}`}
+                        style={{ padding: '12px 0' }}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {activeAddons.length > 0 && (
+                <div style={{ marginBottom: '32px' }}>
+                  <h3 className="section-title">ตัวเลือกเพิ่มเติม / ADD-ONS</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {activeAddons.map(ad => {
+                      const isSelected = selectedAddons.includes(ad.id);
+                      return (
+                        <div
+                          key={ad.id}
+                          onClick={() => toggleAddon(ad.id)}
+                          className={`card-btn addon-card ${isSelected ? 'active' : ''}`}
+                          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: '16px' }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <div className="checkbox-square">
+                              {isSelected && <svg width="14" height="14" fill="none" stroke="#fff" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"></path></svg>}
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '15px', fontWeight: 700, color: isSelected ? '#9a3412' : '#111827', marginBottom: '2px' }}>{ad.label}</div>
+                              <div style={{ fontSize: '13px', color: '#6b7280' }}>{ad.desc}</div>
+                            </div>
+                          </div>
+                          <div style={{ fontSize: '15px', fontWeight: 700, color: ad.price === 0 ? '#10b981' : '#374151' }}>
+                            {ad.price === 0 ? 'Free' : `+฿${ad.price}`}
+                          </div>
                         </div>
-                      </div>
-                      <div style={{ fontSize: '15px', fontWeight: 700, color: ad.price === 0 ? '#10b981' : '#374151' }}>
-                        {ad.price === 0 ? 'Free' : `+฿${ad.price}`}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           <div>
@@ -371,27 +404,32 @@ export default function CoffeeModal({ item, onClose, onAddToCart, globalAddons =
               className="note-input"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="ระบุข้อความเพิ่มเติมถึงบาริสต้า (เช่น แยกน้ำแข็ง, ขอแก้วสองชั้น)..."
+              placeholder={isSnack ? "ระบุข้อความเพิ่มเติม (เช่น อุ่นร้อน, อุ่นครึ่งชิ้น)..." : "ระบุข้อความเพิ่มเติมถึงบาริสต้า (เช่น แยกน้ำแข็ง, ขอแก้วสองชั้น)..."}
               autoComplete="off"
             />
           </div>
 
         </div>
 
+        {/* Footer */}
         <div style={{ padding: '24px', borderTop: '1px solid #f3f4f6', background: '#fff', display: 'flex', gap: '16px', alignItems: 'center' }}>
 
-          <div className="stepper-container">
-            <button className="step-btn" onClick={() => setQuantity(Math.max(1, quantity - 1))}>
-              <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" /></svg>
-            </button>
-            <span className="step-val">{quantity}</span>
-            <button className="step-btn" onClick={() => setQuantity(quantity + 1)}>
-              <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14m-7-7h14" /></svg>
-            </button>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+            <div className="stepper-container">
+              <button className="step-btn" onClick={() => setQuantity(Math.max(1, quantity - 1))}>
+                <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" /></svg>
+              </button>
+              <span className="step-val">{quantity}</span>
+              <button className="step-btn" onClick={() => setQuantity(maxQty !== null ? Math.min(maxQty, quantity + 1) : quantity + 1)} disabled={maxQty !== null && quantity >= maxQty}>
+                <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14m-7-7h14" /></svg>
+              </button>
+            </div>
+            {maxQty !== null && <span style={{ fontSize: '11px', color: maxQty <= 3 ? '#ef4444' : '#6b7280', fontWeight: 600 }}>เหลือ {maxQty} รายการ</span>}
           </div>
 
           <button
             onClick={handleAddToCart}
+            disabled={maxQty !== null && maxQty <= 0}
             style={{
               flex: 1,
               height: '52px',

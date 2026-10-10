@@ -39,10 +39,9 @@ public class OrderMapper {
                 payment == null ? null : paymentMapper.toResponse(payment, order));
     }
 
-    public OrderSummaryResponse toSummary(Order order, String cashierName) {
-        int quantity = order.getItems().stream().mapToInt(OrderItem::getQuantity).sum();
+    public OrderSummaryResponse toSummary(Order order, String cashierName, com.cafepos.domain.enums.PaymentMethod paymentMethod, int itemCount) {
         return new OrderSummaryResponse(order.getId(), order.getOrderNumber(), order.getStatus(), cashierName,
-                quantity, order.getTotal(), order.getCreatedAt());
+                itemCount, order.getTotal(), order.getCreatedAt(), paymentMethod);
     }
 
     private OrderItemResponse toItemResponse(OrderItem item) {

@@ -4,6 +4,7 @@ import com.cafepos.common.CurrentUser;
 import com.cafepos.domain.enums.OrderStatus;
 import com.cafepos.dto.request.ApplyDiscountRequest;
 import com.cafepos.dto.request.OrderItemsRequest;
+import com.cafepos.dto.response.OrderQuickStatsResponse;
 import com.cafepos.dto.response.OrderResponse;
 import com.cafepos.dto.response.OrderSummaryResponse;
 import com.cafepos.dto.response.PageResponse;
@@ -80,5 +81,11 @@ public class OrderController {
     @PostMapping("/{id}/cancel")
     public OrderResponse cancel(@Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt, @PathVariable Long id) {
         return orderService.cancel(id, CurrentUser.from(jwt));
+    }
+
+    /** Today's at-a-glance stats for a POS top bar — scoped to the current cashier (admin sees all). */
+    @GetMapping("/stats/today")
+    public OrderQuickStatsResponse quickStatsToday(@Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
+        return orderService.quickStatsToday(CurrentUser.from(jwt));
     }
 }

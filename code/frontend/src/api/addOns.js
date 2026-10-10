@@ -6,3 +6,5 @@ export const getAddOn = (id) => apiRequest(`/add-ons/${id}`)
 export const createAddOn = (data) => apiRequest('/add-ons', { method: 'POST', body: data })
 export const updateAddOn = (id, data) => apiRequest(`/add-ons/${id}`, { method: 'PUT', body: data })
 export const setAddOnStatus = (id, active) => apiRequest(`/add-ons/${id}/status`, { method: 'PATCH', body: { active } })
+// BE-05: hard-delete. 409 if add-on has order history → fall back to setAddOnStatus(id, false).
+export const deleteAddOn = (id) => apiRequest(`/add-ons/${id}`, { method: 'DELETE' })

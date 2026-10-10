@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Order.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cafe-pos</a> &gt; <a href="index.source.html" class="el_package">com.cafepos.domain.entity</a> &gt; <span class="el_source">Order.java</span></div><h1>Order.java</h1><pre class="source lang-java linenums">package com.cafepos.domain.entity;
+
+import com.cafepos.domain.enums.DiscountType;
+import com.cafepos.domain.enums.OrderStatus;
+import com.cafepos.domain.state.OrderState;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+
+@Entity
+@Table(name = &quot;orders&quot;)
+@Getter
+@Setter
+@NoArgsConstructor
+public class Order {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = &quot;order_number&quot;, nullable = false, unique = true, length = 20)
+    private String orderNumber;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = &quot;cashier_id&quot;, nullable = false)
+    private User cashier;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private OrderStatus status = OrderStatus.PENDING;
+
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal subtotal = BigDecimal.ZERO;
+
+    // How the discount was entered (e.g. PERCENT 10), kept so it can be recalculated when items change.
+    @Enumerated(EnumType.STRING)
+    @Column(name = &quot;discount_type&quot;, nullable = false, length = 20)
+    private DiscountType discountType = DiscountType.NONE;
+
+    @Column(name = &quot;discount_value&quot;, precision = 10, scale = 2)
+    private BigDecimal discountValue;
+
+    @Column(name = &quot;discount_amount&quot;, nullable = false, precision = 10, scale = 2)
+    private BigDecimal discountAmount = BigDecimal.ZERO;
+
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal total = BigDecimal.ZERO;
+
+    @CreationTimestamp
+    @Column(name = &quot;created_at&quot;, nullable = false, updatable = false)
+    private Instant createdAt;
+
+    // Items live and die with their order: cascade ALL + orphanRemoval.
+    @OneToMany(mappedBy = &quot;order&quot;, cascade = CascadeType.ALL, orphanRemoval = true)
+    private List&lt;OrderItem&gt; items = new ArrayList&lt;&gt;();
+
+    // Keeps both sides of the bidirectional relation in sync.
+    public void addItem(OrderItem item) {
+<span class="fc" id="L66">        items.add(item);</span>
+<span class="fc" id="L67">        item.setOrder(this);</span>
+<span class="fc" id="L68">    }</span>
+
+    public void removeItem(OrderItem item) {
+<span class="nc" id="L71">        items.remove(item);</span>
+<span class="nc" id="L72">        item.setOrder(null);</span>
+<span class="nc" id="L73">    }</span>
+
+    // State pattern: the rules live in domain/state, the entity only asks its current state.
+
+    public void ensureModifiable() {
+<span class="fc" id="L78">        OrderState.of(status).ensureModifiable();</span>
+<span class="fc" id="L79">    }</span>
+
+    public void cancel() {
+<span class="fc" id="L82">        status = OrderState.of(status).cancel();</span>
+<span class="fc" id="L83">    }</span>
+
+    public void markPaid() {
+<span class="fc" id="L86">        status = OrderState.of(status).pay();</span>
+<span class="fc" id="L87">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

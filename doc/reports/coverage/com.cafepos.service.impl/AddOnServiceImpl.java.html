@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AddOnServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cafe-pos</a> &gt; <a href="index.source.html" class="el_package">com.cafepos.service.impl</a> &gt; <span class="el_source">AddOnServiceImpl.java</span></div><h1>AddOnServiceImpl.java</h1><pre class="source lang-java linenums">package com.cafepos.service.impl;
+
+import com.cafepos.domain.entity.AddOn;
+import com.cafepos.dto.request.AddOnRequest;
+import com.cafepos.dto.response.AddOnResponse;
+import com.cafepos.exception.ConflictException;
+import com.cafepos.exception.ResourceNotFoundException;
+import com.cafepos.mapper.AddOnMapper;
+import com.cafepos.repository.AddOnRepository;
+import com.cafepos.repository.OrderRepository;
+import com.cafepos.service.AddOnService;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+@Service
+@Transactional(readOnly = true)
+public class AddOnServiceImpl implements AddOnService {
+
+<span class="fc" id="L22">    private static final Sort BY_NAME = Sort.by(&quot;name&quot;);</span>
+
+    private final AddOnRepository addOnRepository;
+    private final OrderRepository orderRepository;
+    private final AddOnMapper addOnMapper;
+
+<span class="fc" id="L28">    public AddOnServiceImpl(AddOnRepository addOnRepository, OrderRepository orderRepository, AddOnMapper addOnMapper) {</span>
+<span class="fc" id="L29">        this.addOnRepository = addOnRepository;</span>
+<span class="fc" id="L30">        this.orderRepository = orderRepository;</span>
+<span class="fc" id="L31">        this.addOnMapper = addOnMapper;</span>
+<span class="fc" id="L32">    }</span>
+
+    @Override
+    public List&lt;AddOnResponse&gt; findAll(Boolean active) {
+<span class="fc bfc" id="L36" title="All 2 branches covered.">        List&lt;AddOn&gt; addOns = active == null</span>
+<span class="fc" id="L37">                ? addOnRepository.findAll(BY_NAME)</span>
+<span class="fc" id="L38">                : addOnRepository.findByActive(active, BY_NAME);</span>
+<span class="fc" id="L39">        return addOns.stream().map(addOnMapper::toResponse).toList();</span>
+    }
+
+    @Override
+    public AddOnResponse findById(Long id) {
+<span class="nc" id="L44">        return addOnMapper.toResponse(getAddOn(id));</span>
+    }
+
+    @Override
+    @Transactional
+    public AddOnResponse create(AddOnRequest request) {
+<span class="pc bpc" id="L50" title="1 of 2 branches missed.">        if (addOnRepository.existsByNameIgnoreCase(request.name().trim())) {</span>
+<span class="fc" id="L51">            throw new ConflictException(&quot;Add-on name already exists: &quot; + request.name());</span>
+        }
+<span class="nc" id="L53">        return addOnMapper.toResponse(addOnRepository.save(addOnMapper.toEntity(request)));</span>
+    }
+
+    @Override
+    @Transactional
+    public AddOnResponse update(Long id, AddOnRequest request) {
+<span class="fc" id="L59">        AddOn addOn = getAddOn(id);</span>
+<span class="pc bpc" id="L60" title="1 of 2 branches missed.">        if (addOnRepository.existsByNameIgnoreCaseAndIdNot(request.name().trim(), id)) {</span>
+<span class="nc" id="L61">            throw new ConflictException(&quot;Add-on name already exists: &quot; + request.name());</span>
+        }
+<span class="fc" id="L63">        addOnMapper.updateEntity(addOn, request);</span>
+<span class="fc" id="L64">        return addOnMapper.toResponse(addOn);</span>
+    }
+
+    @Override
+    @Transactional
+    public AddOnResponse updateStatus(Long id, boolean active) {
+<span class="fc" id="L70">        AddOn addOn = getAddOn(id);</span>
+<span class="fc" id="L71">        addOn.setActive(active);</span>
+<span class="fc" id="L72">        return addOnMapper.toResponse(addOn);</span>
+    }
+
+    @Override
+    @Transactional
+    public void delete(Long id) {
+<span class="nc" id="L78">        AddOn addOn = getAddOn(id);</span>
+        // BE-05: block hard-delete once the add-on has been attached to any order item (keeps bill history intact).
+<span class="nc bnc" id="L80" title="All 2 branches missed.">        if (orderRepository.existsOrderItemByAddOnId(id)) {</span>
+<span class="nc" id="L81">            throw new ConflictException(&quot;Add-on has order history; use PATCH /status to soft-delete instead&quot;);</span>
+        }
+<span class="nc" id="L83">        addOnRepository.delete(addOn);</span>
+<span class="nc" id="L84">    }</span>
+
+    private AddOn getAddOn(Long id) {
+<span class="fc" id="L87">        return addOnRepository.findById(id)</span>
+<span class="fc" id="L88">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Add-on&quot;, id));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

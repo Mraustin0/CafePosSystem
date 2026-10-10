@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PaymentServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cafe-pos</a> &gt; <a href="index.source.html" class="el_package">com.cafepos.service.impl</a> &gt; <span class="el_source">PaymentServiceImpl.java</span></div><h1>PaymentServiceImpl.java</h1><pre class="source lang-java linenums">package com.cafepos.service.impl;
+
+import com.cafepos.common.CurrentUser;
+import com.cafepos.domain.entity.Order;
+import com.cafepos.domain.entity.Payment;
+import com.cafepos.domain.enums.PaymentMethod;
+import com.cafepos.domain.event.OrderPaidEvent;
+import com.cafepos.dto.request.PaymentRequest;
+import com.cafepos.dto.response.PaymentResponse;
+import com.cafepos.exception.BadRequestException;
+import com.cafepos.exception.ResourceNotFoundException;
+import com.cafepos.mapper.PaymentMapper;
+import com.cafepos.repository.OrderRepository;
+import com.cafepos.repository.PaymentRepository;
+import com.cafepos.service.PaymentService;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.Instant;
+
+@Service
+@Transactional(readOnly = true)
+public class PaymentServiceImpl implements PaymentService {
+
+    private final OrderRepository orderRepository;
+    private final PaymentRepository paymentRepository;
+    private final PaymentMapper paymentMapper;
+    private final ApplicationEventPublisher eventPublisher;
+
+<span class="fc" id="L33">    public PaymentServiceImpl(OrderRepository orderRepository, PaymentRepository paymentRepository,</span>
+                              PaymentMapper paymentMapper, ApplicationEventPublisher eventPublisher) {
+<span class="fc" id="L35">        this.orderRepository = orderRepository;</span>
+<span class="fc" id="L36">        this.paymentRepository = paymentRepository;</span>
+<span class="fc" id="L37">        this.paymentMapper = paymentMapper;</span>
+<span class="fc" id="L38">        this.eventPublisher = eventPublisher;</span>
+<span class="fc" id="L39">    }</span>
+
+    @Override
+    @Transactional
+    public PaymentResponse pay(Long orderId, PaymentRequest request, CurrentUser actor) {
+<span class="fc" id="L44">        Order order = getVisibleOrder(orderId, actor);</span>
+<span class="fc" id="L45">        order.markPaid(); // State: PAID / CANCELLED -&gt; 409</span>
+<span class="fc" id="L46">        BigDecimal received = validateAmount(request, order.getTotal());</span>
+
+<span class="fc" id="L48">        Payment payment = new Payment();</span>
+<span class="fc" id="L49">        payment.setOrder(order);</span>
+<span class="fc" id="L50">        payment.setMethod(request.method());</span>
+<span class="fc" id="L51">        payment.setAmount(received);</span>
+<span class="fc" id="L52">        payment.setPaidAt(Instant.now());</span>
+        // Two cashiers paying at the same moment: payments.order_id UNIQUE rejects the second one -&gt; 409.
+<span class="fc" id="L54">        paymentRepository.save(payment);</span>
+
+<span class="fc" id="L56">        PaymentResponse response = paymentMapper.toResponse(payment, order);</span>
+<span class="fc" id="L57">        eventPublisher.publishEvent(new OrderPaidEvent(order.getId(), order.getOrderNumber(), order.getCashier().getId(),</span>
+<span class="fc" id="L58">                payment.getMethod(), order.getTotal(), response.change(), payment.getPaidAt()));</span>
+<span class="fc" id="L59">        return response;</span>
+    }
+
+    @Override
+    public PaymentResponse findByOrder(Long orderId, CurrentUser actor) {
+<span class="fc" id="L64">        Order order = getVisibleOrder(orderId, actor);</span>
+<span class="fc" id="L65">        return paymentRepository.findByOrderId(order.getId())</span>
+<span class="fc" id="L66">                .map(payment -&gt; paymentMapper.toResponse(payment, order))</span>
+<span class="fc" id="L67">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Payment for order&quot;, orderId));</span>
+    }
+
+    /** Cash may be more than the total (change is given); QR/card is charged exactly. */
+    private static BigDecimal validateAmount(PaymentRequest request, BigDecimal total) {
+<span class="fc" id="L72">        BigDecimal received = request.amountReceived().setScale(2, RoundingMode.HALF_UP);</span>
+<span class="fc bfc" id="L73" title="All 2 branches covered.">        if (received.compareTo(total) &lt; 0) {</span>
+<span class="fc" id="L74">            throw new BadRequestException(&quot;Amount received &quot; + received + &quot; is less than the total &quot; + total);</span>
+        }
+<span class="fc bfc" id="L76" title="All 4 branches covered.">        if (request.method() != PaymentMethod.CASH &amp;&amp; received.compareTo(total) != 0) {</span>
+<span class="fc" id="L77">            throw new BadRequestException(request.method() + &quot; payment must be exactly the total &quot; + total);</span>
+        }
+<span class="fc" id="L79">        return received;</span>
+    }
+
+    private Order getVisibleOrder(Long orderId, CurrentUser actor) {
+<span class="fc" id="L83">        return orderRepository.findVisibleById(orderId, actor)</span>
+<span class="fc" id="L84">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Order&quot;, orderId));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

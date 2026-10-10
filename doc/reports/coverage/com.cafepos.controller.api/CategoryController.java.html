@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CategoryController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cafe-pos</a> &gt; <a href="index.source.html" class="el_package">com.cafepos.controller.api</a> &gt; <span class="el_source">CategoryController.java</span></div><h1>CategoryController.java</h1><pre class="source lang-java linenums">package com.cafepos.controller.api;
+
+import com.cafepos.dto.request.CategoryRequest;
+import com.cafepos.dto.response.CategoryResponse;
+import com.cafepos.service.CategoryService;
+import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.net.URI;
+import java.util.List;
+
+@RestController
+@RequestMapping(&quot;/api/v1/categories&quot;)
+public class CategoryController {
+
+    private final CategoryService categoryService;
+
+<span class="fc" id="L20">    public CategoryController(CategoryService categoryService) {</span>
+<span class="fc" id="L21">        this.categoryService = categoryService;</span>
+<span class="fc" id="L22">    }</span>
+
+    @GetMapping
+    public List&lt;CategoryResponse&gt; findAll() {
+<span class="fc" id="L26">        return categoryService.findAll();</span>
+    }
+
+    @GetMapping(&quot;/{id}&quot;)
+    public CategoryResponse findById(@PathVariable Long id) {
+<span class="nc" id="L31">        return categoryService.findById(id);</span>
+    }
+
+    @PostMapping
+    public ResponseEntity&lt;CategoryResponse&gt; create(@Valid @RequestBody CategoryRequest request) {
+<span class="fc" id="L36">        CategoryResponse created = categoryService.create(request);</span>
+<span class="fc" id="L37">        URI location = ServletUriComponentsBuilder.fromCurrentRequest()</span>
+<span class="fc" id="L38">                .path(&quot;/{id}&quot;).buildAndExpand(created.id()).toUri();</span>
+<span class="fc" id="L39">        return ResponseEntity.created(location).body(created);</span>
+    }
+
+    @PutMapping(&quot;/{id}&quot;)
+    public CategoryResponse update(@PathVariable Long id, @Valid @RequestBody CategoryRequest request) {
+<span class="nc" id="L44">        return categoryService.update(id, request);</span>
+    }
+
+    @DeleteMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;Void&gt; delete(@PathVariable Long id) {
+<span class="fc" id="L49">        categoryService.delete(id);</span>
+<span class="fc" id="L50">        return ResponseEntity.noContent().build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

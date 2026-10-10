@@ -1,91 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './PromotionView.css';
-
-const INITIAL_PROMOTIONS = [
-  {
-    id: 'promo-1',
-    title: 'Member Special',
-    code: 'MEMBER10',
-    typeTag: '% ลด 10%',
-    tagColor: 'dark',
-    discountValue: '10%',
-    condition: 'ยอดขั้นต่ำ ฿200',
-    isActive: true,
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-      </svg>
-    )
-  },
-  {
-    id: 'promo-2',
-    title: 'ส่วนลดบิลใหญ่',
-    code: 'SAVE50',
-    typeTag: '฿ ลด ฿50',
-    tagColor: 'green',
-    discountValue: '฿50',
-    condition: 'ขั้นต่ำ ฿500',
-    isActive: true,
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="6" width="20" height="12" rx="2" />
-        <circle cx="12" cy="12" r="2" />
-        <path d="M6 12h.01M18 12h.01" />
-      </svg>
-    )
-  },
-  {
-    id: 'promo-3',
-    title: 'ซื้อ 1 แถม 1 ชา/กาแฟ',
-    code: 'B1G1',
-    typeTag: '1+1 ซื้อ 1 แถม 1',
-    tagColor: 'brown',
-    discountValue: 'ฟรี 1 แก้ว',
-    condition: 'เฉพาะหมวดเครื่องดื่ม',
-    isActive: true,
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="20 12 20 22 4 22 4 12" />
-        <rect x="2" y="7" width="20" height="5" />
-        <line x1="12" y1="22" x2="12" y2="7" />
-        <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
-        <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
-      </svg>
-    )
-  },
-  {
-    id: 'promo-4',
-    title: 'First Order Welcome',
-    code: 'WELCOME20',
-    typeTag: '% ลด 20%',
-    tagColor: 'green',
-    discountValue: '20%',
-    condition: 'ไม่มีขั้นต่ำ',
-    isActive: true,
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-      </svg>
-    )
-  },
-  {
-    id: 'promo-5',
-    title: 'Happy Hour ชา/กาแฟ',
-    code: 'HAPPY15',
-    typeTag: '% ลด 15%',
-    tagColor: 'gray',
-    discountValue: '15%',
-    condition: '14:00 - 17:00',
-    isActive: false,
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21.21 15.89A10 10 0 1 1 8 2.83M22 12A10 10 0 0 0 12 2v10z" />
-      </svg>
-    )
-  }
-];
-
-import { useEffect, useCallback } from 'react';
 import { listPromotions, setPromotionStatus, deletePromotion } from '../../api/promotions';
 
 const STAR_ICON = (
@@ -119,14 +33,17 @@ function apiToPromo(p) {
 export default function PromotionView({ onOpenAddPromoModal, onEditPromo }) {
   const [promotions, setPromotions] = useState([]);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ACTIVE');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [loadError, setLoadError] = useState('');
 
   const load = useCallback(async () => {
+    setLoadError('');
     try {
       const rows = await listPromotions();
-      setPromotions(rows.map(apiToPromo));
+      setPromotions((rows ?? []).map(apiToPromo));
     } catch (err) {
-      console.error('listPromotions failed:', err);
+      setLoadError(err?.message ?? 'โหลดโปรโมชั่นไม่สำเร็จ');
     }
   }, []);
 
@@ -142,9 +59,9 @@ export default function PromotionView({ onOpenAddPromoModal, onEditPromo }) {
     if (!promo) return;
     try {
       await setPromotionStatus(id, !promo.isActive);
+      setStatusFilter('ALL');
       await load();
     } catch (err) {
-      console.error('setPromotionStatus failed:', err);
       alert(err?.message ?? 'เปลี่ยนสถานะไม่สำเร็จ');
     }
   };
@@ -160,7 +77,13 @@ export default function PromotionView({ onOpenAddPromoModal, onEditPromo }) {
 
   return (
     <div className="promo-view">
-      
+
+      {loadError && (
+        <div style={{ margin: '16px 24px 0', padding: '12px 16px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', color: '#dc2626', fontSize: '14px' }}>
+          โหลดโปรโมชั่นไม่สำเร็จ: {loadError}
+        </div>
+      )}
+
       {/* ---------------- Header & Toolbar ---------------- */}
       <header className="promo-header" style={{ alignItems: 'center' }}>
         <div className="promo-header-info">
@@ -252,12 +175,16 @@ export default function PromotionView({ onOpenAddPromoModal, onEditPromo }) {
                 <button className="icon-btn" onClick={() => handleEdit(promo)} title="แก้ไขโปรโมชั่น">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                 </button>
-                <button className="icon-btn" style={{ color: '#ef4444' }} title="ลบโปรโมชั่น" onClick={async () => {
-                  if (!window.confirm(`ลบโปรโมชั่น "${promo.title}" ใช่หรือไม่?`)) return;
-                  try { await deletePromotion(promo.id); await load(); } catch (err) { alert(err?.message ?? 'ลบไม่สำเร็จ'); }
-                }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                </button>
+                {confirmDeleteId === promo.id ? (
+                  <>
+                    <button className="icon-btn" style={{ color: '#ef4444', fontSize: '11px', width: 'auto', padding: '2px 8px' }} onClick={async (e) => { e.stopPropagation(); setConfirmDeleteId(null); try { await deletePromotion(promo.id); await load(); } catch (err) { alert(err?.message ?? 'ลบไม่สำเร็จ'); } }}>ยืนยัน</button>
+                    <button className="icon-btn" style={{ fontSize: '11px', width: 'auto', padding: '2px 8px' }} onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}>ยกเลิก</button>
+                  </>
+                ) : (
+                  <button className="icon-btn" style={{ color: '#ef4444' }} title="ลบโปรโมชั่น" onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(promo.id); }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                  </button>
+                )}
               </div>
             </div>
             

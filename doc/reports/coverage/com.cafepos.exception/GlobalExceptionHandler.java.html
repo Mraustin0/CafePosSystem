@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GlobalExceptionHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cafe-pos</a> &gt; <a href="index.source.html" class="el_package">com.cafepos.exception</a> &gt; <span class="el_source">GlobalExceptionHandler.java</span></div><h1>GlobalExceptionHandler.java</h1><pre class="source lang-java linenums">package com.cafepos.exception;
+
+import com.cafepos.dto.response.ApiErrorResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.core.PropertyReferenceException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.web.ErrorResponse;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+
+import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+@RestControllerAdvice
+<span class="fc" id="L25">public class GlobalExceptionHandler {</span>
+
+<span class="fc" id="L27">    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);</span>
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity&lt;ApiErrorResponse&gt; handleNotFound(ResourceNotFoundException ex, HttpServletRequest req) {
+<span class="fc" id="L31">        return build(HttpStatus.NOT_FOUND, ex.getMessage(), req);</span>
+    }
+
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity&lt;ApiErrorResponse&gt; handleBadRequestRule(BadRequestException ex, HttpServletRequest req) {
+<span class="fc" id="L36">        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), req);</span>
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity&lt;ApiErrorResponse&gt; handleConflict(ConflictException ex, HttpServletRequest req) {
+<span class="fc" id="L41">        return build(HttpStatus.CONFLICT, ex.getMessage(), req);</span>
+    }
+
+    // Safety net for DB constraints (UNIQUE / FK) that slipped past service checks, e.g. concurrent inserts.
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity&lt;ApiErrorResponse&gt; handleDataIntegrity(DataIntegrityViolationException ex, HttpServletRequest req) {
+<span class="nc" id="L47">        return build(HttpStatus.CONFLICT, &quot;Request conflicts with existing data&quot;, req);</span>
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity&lt;ApiErrorResponse&gt; handleValidation(MethodArgumentNotValidException ex, HttpServletRequest req) {
+<span class="fc" id="L52">        Map&lt;String, String&gt; fieldErrors = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L53">        ex.getBindingResult().getFieldErrors()</span>
+<span class="fc" id="L54">                .forEach(e -&gt; fieldErrors.putIfAbsent(e.getField(), e.getDefaultMessage()));</span>
+<span class="fc" id="L55">        HttpStatus status = HttpStatus.BAD_REQUEST;</span>
+<span class="fc" id="L56">        ApiErrorResponse body = new ApiErrorResponse(Instant.now(), status.value(), status.getReasonPhrase(),</span>
+<span class="fc" id="L57">                &quot;Validation failed&quot;, req.getRequestURI(), fieldErrors);</span>
+<span class="fc" id="L58">        return ResponseEntity.status(status).body(body);</span>
+    }
+
+    @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
+    public ResponseEntity&lt;ApiErrorResponse&gt; handleBadRequest(Exception ex, HttpServletRequest req) {
+<span class="nc" id="L63">        return build(HttpStatus.BAD_REQUEST, &quot;Malformed request&quot;, req);</span>
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity&lt;ApiErrorResponse&gt; handleBadCredentials(BadCredentialsException ex, HttpServletRequest req) {
+<span class="fc" id="L68">        return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), req);</span>
+    }
+
+    // e.g. ?sort=unknownField on a paged endpoint
+    @ExceptionHandler(PropertyReferenceException.class)
+    public ResponseEntity&lt;ApiErrorResponse&gt; handleBadSort(PropertyReferenceException ex, HttpServletRequest req) {
+<span class="fc" id="L74">        return build(HttpStatus.BAD_REQUEST, &quot;Invalid sort property: &quot; + ex.getPropertyName(), req);</span>
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity&lt;ApiErrorResponse&gt; handleOther(Exception ex, HttpServletRequest req) {
+        // Spring's own web exceptions (404 no route, 405 wrong method, ...) carry their status — keep it.
+<span class="pc bpc" id="L80" title="1 of 2 branches missed.">        if (ex instanceof ErrorResponse springError) {</span>
+<span class="fc" id="L81">            HttpStatusCode code = springError.getStatusCode();</span>
+<span class="fc" id="L82">            return build(HttpStatus.valueOf(code.value()), springError.getBody().getDetail(), req);</span>
+        }
+<span class="nc" id="L84">        log.error(&quot;Unhandled error on {} {}&quot;, req.getMethod(), req.getRequestURI(), ex);</span>
+<span class="nc" id="L85">        return build(HttpStatus.INTERNAL_SERVER_ERROR, &quot;Unexpected error&quot;, req);</span>
+    }
+
+    private ResponseEntity&lt;ApiErrorResponse&gt; build(HttpStatus status, String message, HttpServletRequest req) {
+<span class="fc" id="L89">        return ResponseEntity.status(status)</span>
+<span class="fc" id="L90">                .body(ApiErrorResponse.of(status.value(), status.getReasonPhrase(), message, req.getRequestURI()));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

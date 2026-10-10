@@ -1,6 +1,7 @@
 package com.cafepos.dto.response;
 
 import com.cafepos.domain.enums.OrderStatus;
+import com.cafepos.domain.enums.PaymentMethod;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -13,5 +14,6 @@ public record OrderSummaryResponse(
         String cashierName,
         int itemCount,
         BigDecimal total,
-        Instant createdAt) {
+        Instant createdAt,
+        PaymentMethod paymentMethod) {
 }

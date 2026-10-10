@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProductSpecifications.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cafe-pos</a> &gt; <a href="index.source.html" class="el_package">com.cafepos.repository</a> &gt; <span class="el_source">ProductSpecifications.java</span></div><h1>ProductSpecifications.java</h1><pre class="source lang-java linenums">package com.cafepos.repository;
+
+import com.cafepos.domain.entity.Product;
+import org.springframework.data.jpa.domain.Specification;
+
+/** Optional filters for the product list. A null argument means &quot;no filter&quot;. */
+public final class ProductSpecifications {
+
+    private ProductSpecifications() {
+    }
+
+    public static Specification&lt;Product&gt; filter(Long categoryId, String search, Boolean active) {
+<span class="fc" id="L13">        Specification&lt;Product&gt; spec = Specification.unrestricted();</span>
+<span class="pc bpc" id="L14" title="1 of 2 branches missed.">        if (categoryId != null) {</span>
+<span class="nc" id="L15">            spec = spec.and((root, query, cb) -&gt; cb.equal(root.get(&quot;category&quot;).get(&quot;id&quot;), categoryId));</span>
+        }
+<span class="pc bpc" id="L17" title="1 of 4 branches missed.">        if (search != null &amp;&amp; !search.isBlank()) {</span>
+<span class="fc" id="L18">            String pattern = &quot;%&quot; + escapeLike(search.trim().toLowerCase()) + &quot;%&quot;;</span>
+<span class="fc" id="L19">            spec = spec.and((root, query, cb) -&gt; cb.like(cb.lower(root.get(&quot;name&quot;)), pattern, '\\'));</span>
+        }
+<span class="fc bfc" id="L21" title="All 2 branches covered.">        if (active != null) {</span>
+<span class="fc" id="L22">            spec = spec.and((root, query, cb) -&gt; cb.equal(root.get(&quot;active&quot;), active));</span>
+        }
+<span class="fc" id="L24">        return spec;</span>
+    }
+
+    // Treat % and _ typed by the user as literal characters, not wildcards.
+    private static String escapeLike(String value) {
+<span class="fc" id="L29">        return value.replace(&quot;\\&quot;, &quot;\\\\&quot;).replace(&quot;%&quot;, &quot;\\%&quot;).replace(&quot;_&quot;, &quot;\\_&quot;);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

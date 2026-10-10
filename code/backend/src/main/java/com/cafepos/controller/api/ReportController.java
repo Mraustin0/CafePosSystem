@@ -1,6 +1,8 @@
 package com.cafepos.controller.api;
 
 import com.cafepos.dto.response.CashierSalesResponse;
+import com.cafepos.dto.response.CategorySalesResponse;
+import com.cafepos.dto.response.DaySalesResponse;
 import com.cafepos.dto.response.PaymentMethodSalesResponse;
 import com.cafepos.dto.response.SalesSummaryResponse;
 import com.cafepos.dto.response.TopProductResponse;
@@ -58,5 +60,21 @@ public class ReportController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
         return reportService.salesByPaymentMethod(from, to);
+    }
+
+    /** Net sales per shop-day — fills zero-sales days so chart axes stay stable. */
+    @GetMapping("/sales-by-day")
+    public List<DaySalesResponse> salesByDay(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return reportService.salesByDay(from, to);
+    }
+
+    /** Revenue per product category (incl. add-ons), with percent share of total. Ordered by revenue DESC. */
+    @GetMapping("/sales-by-category")
+    public List<CategorySalesResponse> salesByCategory(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return reportService.salesByCategory(from, to);
     }
 }

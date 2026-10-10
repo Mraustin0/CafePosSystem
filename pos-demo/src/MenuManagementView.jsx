@@ -237,7 +237,7 @@ export default function MenuManagementView({ menuItems, onToggleStatus, onDelete
             
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
               <button onClick={() => setStockModalItem(null)} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#f3f4f6', color: '#4b5563', fontWeight: 600, cursor: 'pointer' }}>ยกเลิก</button>
-              <button onClick={handleSaveStock} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#f59e0b', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>อัปเดตสต็อก</button>
+              <button onClick={handleSaveStock} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#00694b', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>อัปเดตสต็อก</button>
             </div>
           </div>
         </div>

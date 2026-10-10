@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuthServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cafe-pos</a> &gt; <a href="index.source.html" class="el_package">com.cafepos.service.impl</a> &gt; <span class="el_source">AuthServiceImpl.java</span></div><h1>AuthServiceImpl.java</h1><pre class="source lang-java linenums">package com.cafepos.service.impl;
+
+import com.cafepos.domain.entity.User;
+import com.cafepos.dto.request.LoginRequest;
+import com.cafepos.dto.response.LoginResponse;
+import com.cafepos.repository.UserRepository;
+import com.cafepos.service.AuthService;
+import com.cafepos.service.UserService;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.JwsHeader;
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+
+@Service
+@Transactional(readOnly = true)
+public class AuthServiceImpl implements AuthService {
+
+    // One shift. ponytail: no refresh/revocation — a deactivated user keeps access until the token expires; add a DB check in the JWT validator if that matters.
+<span class="fc" id="L28">    private static final Duration TOKEN_TTL = Duration.ofHours(8);</span>
+
+    private final UserRepository userRepository;
+    private final UserService userService;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtEncoder jwtEncoder;
+
+    public AuthServiceImpl(UserRepository userRepository, UserService userService,
+<span class="fc" id="L36">                           PasswordEncoder passwordEncoder, JwtEncoder jwtEncoder) {</span>
+<span class="fc" id="L37">        this.userRepository = userRepository;</span>
+<span class="fc" id="L38">        this.userService = userService;</span>
+<span class="fc" id="L39">        this.passwordEncoder = passwordEncoder;</span>
+<span class="fc" id="L40">        this.jwtEncoder = jwtEncoder;</span>
+<span class="fc" id="L41">    }</span>
+
+    @Override
+    public LoginResponse login(LoginRequest request) {
+<span class="fc" id="L45">        User user = userRepository.findByUsername(request.username().trim())</span>
+<span class="fc bfc" id="L46" title="All 4 branches covered.">                .filter(u -&gt; u.isActive() &amp;&amp; passwordEncoder.matches(request.password(), u.getPasswordHash()))</span>
+                // Same message for every case so the response doesn't reveal which usernames exist.
+<span class="fc" id="L48">                .orElseThrow(() -&gt; new BadCredentialsException(&quot;Invalid username or password&quot;));</span>
+
+<span class="fc" id="L50">        Instant now = Instant.now();</span>
+<span class="fc" id="L51">        JwtClaimsSet claims = JwtClaimsSet.builder()</span>
+<span class="fc" id="L52">                .subject(user.getId().toString())</span>
+<span class="fc" id="L53">                .claim(&quot;username&quot;, user.getUsername())</span>
+<span class="fc" id="L54">                .claim(&quot;roles&quot;, List.of(user.getRole().name()))</span>
+<span class="fc" id="L55">                .issuedAt(now)</span>
+<span class="fc" id="L56">                .expiresAt(now.plus(TOKEN_TTL))</span>
+<span class="fc" id="L57">                .build();</span>
+<span class="fc" id="L58">        String token = jwtEncoder.encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims))</span>
+<span class="fc" id="L59">                .getTokenValue();</span>
+
+<span class="fc" id="L61">        return new LoginResponse(token, &quot;Bearer&quot;, TOKEN_TTL.toSeconds(), userService.findById(user.getId()));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

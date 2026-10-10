@@ -6,6 +6,8 @@
   - `V2__seed_demo_data.sql` — ข้อมูลตัวอย่าง
   - `V3__order_item_add_ons.sql` — add-on ที่เลือกในแต่ละรายการของบิล
   - `V4__order_discount_rule.sql` — เก็บแบบส่วนลดใน `orders` เพื่อคำนวณใหม่เมื่อแก้รายการ
+  - `V5__promotions.sql` — ตาราง catalog โปรโมชั่น + seed data 2 รายการ
+  - `V6__product_image_url_to_text.sql` — แก้ `products.image_url` จาก VARCHAR(500) → TEXT
 - ER Diagram: [diagrams/er-diagram.md](diagrams/er-diagram.md)
 
 คำย่อ: **PK** Primary Key · **FK** Foreign Key · **UK** Unique · **NN** Not Null · **IDENTITY** เลขรันอัตโนมัติ
@@ -55,7 +57,7 @@ Entity: `domain/entity/Product.java`
 | category_id | BIGINT | NN, FK → `categories.id` | | หมวดของสินค้า |
 | name | VARCHAR(100) | NN | | ชื่อเมนู |
 | price | NUMERIC(10,2) | NN, CHECK ≥ 0 | | ราคาขายปัจจุบัน (บาท) |
-| image_url | VARCHAR(500) | | | URL รูปสินค้า |
+| image_url | TEXT | | | URL รูปสินค้า (เปลี่ยนจาก VARCHAR(500) → TEXT ใน V6) |
 | active | BOOLEAN | NN | `TRUE` | soft delete — `false` = ไม่แสดงในหน้าขาย |
 
 ## 5. `add_ons` — ตัวเลือกเพิ่มเติม
@@ -128,10 +130,28 @@ Mapping: `OrderItem.addOns` (`@ElementCollection` ของ `@Embeddable OrderIt
 | price | NUMERIC(10,2) | NN, CHECK ≥ 0 | | ราคา add-on **ณ เวลาที่สั่ง** (snapshot) ต่อ 1 หน่วยสินค้า |
 
 - PK `(order_item_id, add_on_id)` → add-on ตัวเดียวกันเลือกได้ครั้งเดียวต่อรายการ
-- add-on ที่เลือกได้ต้อง `active = true` และอยู่ใน `product_add_ons` ของสินค้านั้น (ตรวจใน Service → 400)
-- ต่างจาก `product_add_ons`: ตารางนั้นคือ "เลือก**ได้**อะไรบ้าง" ตารางนี้คือ "เลือก**ไป**แล้วอะไรบ้าง"
+- add-on ที่เลือกได้ต้อง `active = true` (ตรวจใน Service → 400)
+- **หมายเหตุ (BE-02):** `product_add_ons` ไม่ใช่ข้อบังคับอีกต่อไป — add-on เป็น global catalog ที่สินค้าใดก็เลือกได้ เพื่อให้แคชเชียร์เพิ่ม boba/extra shot ในเมนูใหม่ได้ทันทีโดยไม่ต้อง admin pre-link ทุกคู่
+- ต่างจาก `product_add_ons`: ตารางนั้นคือ "เลือก**ได้**อะไรบ้าง (catalog)" ตารางนี้คือ "เลือก**ไป**แล้วอะไรบ้าง (snapshot)"
 
-## 10. `payments` — การชำระเงิน (1:1 กับ `orders`)
+## 10. `promotions` — catalog โปรโมชั่น/คูปอง
+
+Entity: `domain/entity/Promotion.java`
+
+| Column | Type | Constraint | Default | คำอธิบาย |
+| ------ | ---- | ---------- | ------- | -------- |
+| id | BIGINT | PK, IDENTITY | | รหัสโปรโมชั่น |
+| code | VARCHAR(50) | NN, UK | | รหัสคูปอง เช่น `MEMBER10`, `WELCOME20` |
+| name | VARCHAR(100) | NN | | ชื่อโปรโมชั่นที่แสดงบน UI |
+| discount_type | VARCHAR(20) | NN, CHECK IN (`PERCENT`, `FIXED_AMOUNT`) | | แบบส่วนลด — enum `DiscountType` (ไม่มี NONE ใน promotions) |
+| discount_value | NUMERIC(10,2) | NN, CHECK ≥ 0 | | ค่าส่วนลด: `PERCENT` = เปอร์เซ็นต์, `FIXED_AMOUNT` = บาท |
+| min_order_amount | NUMERIC(10,2) | CHECK ≥ 0 หรือ NULL | | ยอดขั้นต่ำที่ใช้โปรโมชั่นได้ — `NULL` = ไม่มีขั้นต่ำ |
+| active | BOOLEAN | NN | `TRUE` | `false` = ปิดโปรโมชั่น |
+| created_at | TIMESTAMPTZ | NN | `CURRENT_TIMESTAMP` | วันเวลาที่สร้าง |
+
+> ตารางนี้คือ **catalog** ของโปรโมชั่นที่ admin จัดการ — เมื่อแคชเชียร์เลือกใช้ ระบบคัดลอก `discount_type` + `discount_value` ไปเก็บใน `orders` (ไม่ FK กับตารางนี้) ทำให้แก้/ลบโปรโมชั่นในภายหลังไม่กระทบบิลเก่า
+
+## 11. `payments` — การชำระเงิน (1:1 กับ `orders`)
 
 Entity: `domain/entity/Payment.java`
 

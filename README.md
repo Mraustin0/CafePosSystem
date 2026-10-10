@@ -88,7 +88,9 @@ cd code/backend
 
 ## Deployment URL
 
-<!-- TODO -->
+🌐 **Live:** [https://cafepossystem.onrender.com](https://cafepossystem.onrender.com)
+
+> Hosted on Render (app) + Neon (PostgreSQL)
 
 ## Project Structure
 

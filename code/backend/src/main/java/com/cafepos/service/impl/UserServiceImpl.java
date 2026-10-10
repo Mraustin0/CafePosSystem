@@ -45,6 +45,16 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserResponse updateProfile(Long userId, ProfileUpdateRequest request) {
         UserProfile profile = getProfile(userId);
+        if (request.username() != null && !request.username().isBlank()) {
+            String newUsername = request.username().trim();
+            if (!newUsername.equalsIgnoreCase(profile.getUser().getUsername()) &&
+                    userRepository.existsByUsernameIgnoreCase(newUsername)) {
+                throw new ConflictException("Username already taken: " + newUsername);
+            }
+            User user = profile.getUser();
+            user.setUsername(newUsername);
+            userRepository.save(user);
+        }
         userMapper.updateProfile(profile, request);
         return userMapper.toResponse(profile);
     }
@@ -58,6 +68,7 @@ public class UserServiceImpl implements UserService {
             throw new BadRequestException("Current password is incorrect");
         }
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
     }
 
     @Override
@@ -80,7 +91,7 @@ public class UserServiceImpl implements UserService {
 
         UserProfile profile = new UserProfile();
         profile.setUser(userRepository.save(user));
-        userMapper.updateProfile(profile, new ProfileUpdateRequest(request.fullName(), request.phone(), request.email()));
+        userMapper.updateProfile(profile, new ProfileUpdateRequest(request.fullName(), request.phone(), request.email(), null));
         return userMapper.toResponse(profileRepository.save(profile));
     }
 
@@ -91,8 +102,10 @@ public class UserServiceImpl implements UserService {
         if (id.equals(actorId) && request.role() != profile.getUser().getRole()) {
             throw new ConflictException("You cannot change your own role");
         }
-        profile.getUser().setRole(request.role());
-        userMapper.updateProfile(profile, new ProfileUpdateRequest(request.fullName(), request.phone(), request.email()));
+        User user = profile.getUser();
+        user.setRole(request.role());
+        userRepository.save(user);
+        userMapper.updateProfile(profile, new ProfileUpdateRequest(request.fullName(), request.phone(), request.email(), null));
         return userMapper.toResponse(profile);
     }
 
@@ -103,7 +116,9 @@ public class UserServiceImpl implements UserService {
         if (id.equals(actorId) && !active) {
             throw new ConflictException("You cannot deactivate your own account");
         }
-        profile.getUser().setActive(active);
+        User user = profile.getUser();
+        user.setActive(active);
+        userRepository.save(user);
         return userMapper.toResponse(profile);
     }
 
@@ -116,7 +131,9 @@ public class UserServiceImpl implements UserService {
             throw new BadRequestException("Use /me/password to change your own password");
         }
         UserProfile profile = getProfile(id);
-        profile.getUser().setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        User user = profile.getUser();
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
     }
 
     private UserProfile getProfile(Long userId) {

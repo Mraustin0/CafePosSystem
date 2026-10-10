@@ -8,6 +8,7 @@ import com.cafepos.dto.request.ApplyDiscountRequest;
 import com.cafepos.dto.request.OrderItemRequest;
 import com.cafepos.dto.request.OrderItemsRequest;
 import com.cafepos.common.ShopTime;
+import com.cafepos.domain.enums.PaymentMethod;
 import com.cafepos.dto.response.OrderQuickStatsResponse;
 import com.cafepos.dto.response.OrderResponse;
 import com.cafepos.dto.response.OrderSummaryResponse;
@@ -89,7 +90,12 @@ public class OrderServiceImpl implements OrderService {
         Long effectiveCashierId = actor.admin() ? cashierId : actor.id();
         Page<Order> page = orderRepository.findAll(OrderSpecifications.filter(status, from, to, effectiveCashierId), pageable);
         Map<Long, String> names = cashierNames(page.getContent().stream().map(o -> o.getCashier().getId()).collect(Collectors.toSet()));
-        return PageResponse.of(page, o -> orderMapper.toSummary(o, names.get(o.getCashier().getId())));
+        List<Long> orderIds = page.getContent().stream().map(Order::getId).toList();
+        Map<Long, PaymentMethod> paymentMethods = paymentRepository.findByOrderIdIn(orderIds).stream()
+                .collect(Collectors.toMap(p -> p.getOrder().getId(), Payment::getMethod));
+        Map<Long, Integer> itemCounts = orderRepository.sumItemQuantitiesByIds(orderIds).stream()
+                .collect(Collectors.toMap(r -> (Long) r[0], r -> ((Number) r[1]).intValue()));
+        return PageResponse.of(page, o -> orderMapper.toSummary(o, names.get(o.getCashier().getId()), paymentMethods.get(o.getId()), itemCounts.getOrDefault(o.getId(), 0)));
     }
 
     @Override

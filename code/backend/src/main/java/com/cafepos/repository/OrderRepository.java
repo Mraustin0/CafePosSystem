@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecificationExecutor<Order> {
@@ -23,4 +25,8 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     @Query("select count(a) > 0 from Order o join o.items i join i.addOns a where a.addOn.id = :addOnId")
     boolean existsOrderItemByAddOnId(@Param("addOnId") Long addOnId);
+
+    /** One query to get total item quantity per order — avoids N+1 when building summary responses. */
+    @Query("select o.id, coalesce(sum(i.quantity), 0) from Order o left join o.items i where o.id in :ids group by o.id")
+    List<Object[]> sumItemQuantitiesByIds(@Param("ids") Collection<Long> ids);
 }

@@ -2,16 +2,18 @@ import React, { useEffect, useRef, useState } from "react";
 
 /**
  * AddonFormModal
- * ฟอร์มสร้าง/แก้ไข Add-on (ท็อปปิ้งส่วนกลาง) ใช้ร่วมกันได้หลายหน้า
+ * ฟอร์มสร้าง/แก้ไข Add-on ที่เปิดจากหน้าแก้ไขเมนู
  *
  * props:
+ *  - menuName         ชื่อเมนูที่กำลังแก้ไขอยู่ (แสดงต่อท้ายหัวข้อ)
  *  - initial          Add-on เดิมเมื่อแก้ไข (ไม่ส่ง = สร้างใหม่)
- *  - defaultCategory  หมวดเริ่มต้นตอนสร้างใหม่: 'all' | 'coffee' | 'tea'
- *  - existingAddons   รายการทั้งหมด ใช้ตรวจชื่อซ้ำในหมวดเดียวกัน
+ *  - defaultCategory  ค่า category ที่ซ่อนไว้ตอนสร้างใหม่ ค่าเริ่มต้น 'all'
+ *  - existingAddons   รายการทั้งหมด ใช้ตรวจชื่อซ้ำ
  *  - onSave(addon)    ส่ง { id, label, desc, price, isActive, category }
  *  - onClose()
  */
 export default function AddonFormModal({
+  menuName = "",
   initial = null,
   defaultCategory = "all",
   existingAddons = [],
@@ -24,7 +26,6 @@ export default function AddonFormModal({
     initial && initial.desc !== `+${initial.label}` ? initial.desc : ""
   );
   const [price, setPrice] = useState(initial ? String(initial.price) : "");
-  const [category, setCategory] = useState(initial?.category ?? defaultCategory);
   const [error, setError] = useState("");
   const nameRef = useRef(null);
 
@@ -48,10 +49,9 @@ export default function AddonFormModal({
     const duplicated = existingAddons.some(
       (a) =>
         a.id !== initial?.id &&
-        a.category === category &&
         a.label.trim().toLowerCase() === label.toLowerCase()
     );
-    if (duplicated) return setError("มี Add-on ชื่อนี้ในหมวดเดียวกันแล้ว");
+    if (duplicated) return setError("มี Add-on ชื่อนี้อยู่แล้ว");
 
     onSave?.({
       ...(initial || {}),
@@ -60,7 +60,7 @@ export default function AddonFormModal({
       desc: desc.trim() || `+${label}`,
       price: Math.round(priceNum),
       isActive: initial?.isActive ?? true,
-      category,
+      category: initial?.category ?? defaultCategory,
     });
   };
 
@@ -83,6 +83,7 @@ export default function AddonFormModal({
         }
         .af-head { padding: 22px 24px 8px; }
         .af-title { font-size: 18px; font-weight: 800; color: #111827; margin: 0 0 4px; }
+        .af-menu { color: #00694b; }
         .af-sub { font-size: 13px; color: #6b7280; margin: 0; }
         .af-body { padding: 16px 24px 8px; display: flex; flex-direction: column; gap: 16px; }
         .af-label { display: block; font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 6px; }
@@ -93,12 +94,6 @@ export default function AddonFormModal({
           box-sizing: border-box; font-family: inherit;
         }
         .af-input:focus { border-color: #00694b; box-shadow: 0 0 0 2px rgba(0,105,75,0.2); }
-        .af-row { display: flex; gap: 12px; }
-        .af-row > div { flex: 1; }
-        .af-note {
-          font-size: 12px; color: #6b7280; background: #f9fafb; border: 1px solid #f3f4f6;
-          border-radius: 10px; padding: 10px 12px; line-height: 1.5;
-        }
         .af-error { font-size: 13px; color: #dc2626; font-weight: 600; margin: 0; }
         .af-foot { padding: 16px 24px 22px; display: flex; justify-content: flex-end; gap: 10px; }
         .af-btn { padding: 11px 22px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
@@ -110,7 +105,10 @@ export default function AddonFormModal({
 
       <div className="af-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <div className="af-head">
-          <h3 className="af-title">{isEdit ? "แก้ไข Add-on" : "เพิ่ม Add-on ใหม่"}</h3>
+          <h3 className="af-title">
+            {isEdit ? "แก้ไข Add-on" : "เพิ่ม Add-on ใหม่"}
+            {menuName && <> ใน <span className="af-menu">{menuName}</span></>}
+          </h3>
           <p className="af-sub">กำหนดชื่อและราคาเสริมของตัวเลือกเพิ่มเติม</p>
         </div>
 
@@ -141,34 +139,16 @@ export default function AddonFormModal({
             />
           </div>
 
-          <div className="af-row">
-            <div>
-              <label className="af-label">ราคาเพิ่ม (฿)</label>
-              <input
-                className="af-input"
-                type="number"
-                min="0"
-                value={price}
-                onChange={(e) => { setPrice(e.target.value); setError(""); }}
-                placeholder="0 = ฟรี"
-              />
-            </div>
-            <div>
-              <label className="af-label">ใช้ได้กับหมวด</label>
-              <select
-                className="af-input"
-                value={category}
-                onChange={(e) => { setCategory(e.target.value); setError(""); }}
-              >
-                <option value="all">ทั้งหมด</option>
-                <option value="coffee">กาแฟ (Coffee)</option>
-                <option value="tea">ชา (Tea)</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="af-note">
-            Add-on นี้เป็นรายการส่วนกลาง จะปรากฏในหน้าจัดการท็อปปิ้ง และเลือกใช้กับเมนูอื่นในหมวดเดียวกันได้
+          <div>
+            <label className="af-label">ราคาเพิ่ม (฿)</label>
+            <input
+              className="af-input"
+              type="number"
+              min="0"
+              value={price}
+              onChange={(e) => { setPrice(e.target.value); setError(""); }}
+              placeholder="0"
+            />
           </div>
 
           {error && <p className="af-error">{error}</p>}

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserSpecifications.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cafe-pos</a> &gt; <a href="index.source.html" class="el_package">com.cafepos.repository</a> &gt; <span class="el_source">UserSpecifications.java</span></div><h1>UserSpecifications.java</h1><pre class="source lang-java linenums">package com.cafepos.repository;
+
+import com.cafepos.domain.entity.UserProfile;
+import com.cafepos.domain.enums.Role;
+import org.springframework.data.jpa.domain.Specification;
+
+/** Optional filters for the user list. A null argument means &quot;no filter&quot;. */
+public final class UserSpecifications {
+
+    private UserSpecifications() {
+    }
+
+    public static Specification&lt;UserProfile&gt; filter(Role role, Boolean active) {
+<span class="fc" id="L14">        Specification&lt;UserProfile&gt; spec = Specification.unrestricted();</span>
+<span class="pc bpc" id="L15" title="1 of 2 branches missed.">        if (role != null) {</span>
+<span class="fc" id="L16">            spec = spec.and((root, query, cb) -&gt; cb.equal(root.get(&quot;user&quot;).get(&quot;role&quot;), role));</span>
+        }
+<span class="pc bpc" id="L18" title="1 of 2 branches missed.">        if (active != null) {</span>
+<span class="nc" id="L19">            spec = spec.and((root, query, cb) -&gt; cb.equal(root.get(&quot;user&quot;).get(&quot;active&quot;), active));</span>
+        }
+<span class="fc" id="L21">        return spec;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

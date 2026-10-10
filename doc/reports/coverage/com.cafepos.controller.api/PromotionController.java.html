@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PromotionController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cafe-pos</a> &gt; <a href="index.source.html" class="el_package">com.cafepos.controller.api</a> &gt; <span class="el_source">PromotionController.java</span></div><h1>PromotionController.java</h1><pre class="source lang-java linenums">package com.cafepos.controller.api;
+
+import com.cafepos.dto.request.PromotionRequest;
+import com.cafepos.dto.request.StatusUpdateRequest;
+import com.cafepos.dto.response.PromotionResponse;
+import com.cafepos.service.PromotionService;
+import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.net.URI;
+import java.util.List;
+
+@RestController
+@RequestMapping(&quot;/api/v1/promotions&quot;)
+public class PromotionController {
+
+    private final PromotionService promotionService;
+
+<span class="fc" id="L21">    public PromotionController(PromotionService promotionService) {</span>
+<span class="fc" id="L22">        this.promotionService = promotionService;</span>
+<span class="fc" id="L23">    }</span>
+
+    @GetMapping
+    public List&lt;PromotionResponse&gt; findAll(@RequestParam(required = false) Boolean active) {
+<span class="fc" id="L27">        return promotionService.findAll(active);</span>
+    }
+
+    @GetMapping(&quot;/{id}&quot;)
+    public PromotionResponse findById(@PathVariable Long id) {
+<span class="fc" id="L32">        return promotionService.findById(id);</span>
+    }
+
+    @PostMapping
+    public ResponseEntity&lt;PromotionResponse&gt; create(@Valid @RequestBody PromotionRequest request) {
+<span class="fc" id="L37">        PromotionResponse created = promotionService.create(request);</span>
+<span class="fc" id="L38">        URI location = ServletUriComponentsBuilder.fromCurrentRequest()</span>
+<span class="fc" id="L39">                .path(&quot;/{id}&quot;).buildAndExpand(created.id()).toUri();</span>
+<span class="fc" id="L40">        return ResponseEntity.created(location).body(created);</span>
+    }
+
+    @PutMapping(&quot;/{id}&quot;)
+    public PromotionResponse update(@PathVariable Long id, @Valid @RequestBody PromotionRequest request) {
+<span class="fc" id="L45">        return promotionService.update(id, request);</span>
+    }
+
+    @PatchMapping(&quot;/{id}/status&quot;)
+    public PromotionResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest request) {
+<span class="fc" id="L50">        return promotionService.updateStatus(id, request.active());</span>
+    }
+
+    @DeleteMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;Void&gt; delete(@PathVariable Long id) {
+<span class="fc" id="L55">        promotionService.delete(id);</span>
+<span class="fc" id="L56">        return ResponseEntity.noContent().build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PromotionServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cafe-pos</a> &gt; <a href="index.source.html" class="el_package">com.cafepos.service.impl</a> &gt; <span class="el_source">PromotionServiceImpl.java</span></div><h1>PromotionServiceImpl.java</h1><pre class="source lang-java linenums">package com.cafepos.service.impl;
+
+import com.cafepos.domain.entity.Promotion;
+import com.cafepos.domain.enums.DiscountType;
+import com.cafepos.dto.request.PromotionRequest;
+import com.cafepos.dto.response.PromotionResponse;
+import com.cafepos.exception.BadRequestException;
+import com.cafepos.exception.ConflictException;
+import com.cafepos.exception.ResourceNotFoundException;
+import com.cafepos.mapper.PromotionMapper;
+import com.cafepos.repository.PromotionRepository;
+import com.cafepos.service.PromotionService;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.util.List;
+
+@Service
+@Transactional(readOnly = true)
+public class PromotionServiceImpl implements PromotionService {
+
+    private final PromotionRepository promotionRepository;
+    private final PromotionMapper promotionMapper;
+
+<span class="fc" id="L27">    public PromotionServiceImpl(PromotionRepository promotionRepository, PromotionMapper promotionMapper) {</span>
+<span class="fc" id="L28">        this.promotionRepository = promotionRepository;</span>
+<span class="fc" id="L29">        this.promotionMapper = promotionMapper;</span>
+<span class="fc" id="L30">    }</span>
+
+    @Override
+    public List&lt;PromotionResponse&gt; findAll(Boolean active) {
+<span class="nc" id="L34">        return promotionRepository.findAll(Sort.by(&quot;code&quot;)).stream()</span>
+<span class="nc bnc" id="L35" title="All 4 branches missed.">                .filter(p -&gt; active == null || p.isActive() == active)</span>
+<span class="nc" id="L36">                .map(promotionMapper::toResponse)</span>
+<span class="nc" id="L37">                .toList();</span>
+    }
+
+    @Override
+    public PromotionResponse findById(Long id) {
+<span class="nc" id="L42">        return promotionMapper.toResponse(getPromotion(id));</span>
+    }
+
+    @Override
+    @Transactional
+    public PromotionResponse create(PromotionRequest request) {
+<span class="nc" id="L48">        validate(request);</span>
+<span class="nc bnc" id="L49" title="All 2 branches missed.">        if (promotionRepository.existsByCodeIgnoreCase(request.code().trim())) {</span>
+<span class="nc" id="L50">            throw new ConflictException(&quot;Promotion code already exists: &quot; + request.code());</span>
+        }
+<span class="nc" id="L52">        Promotion saved = promotionRepository.save(promotionMapper.toEntity(request));</span>
+<span class="nc" id="L53">        return promotionMapper.toResponse(saved);</span>
+    }
+
+    @Override
+    @Transactional
+    public PromotionResponse update(Long id, PromotionRequest request) {
+<span class="nc" id="L59">        validate(request);</span>
+<span class="nc" id="L60">        Promotion promotion = getPromotion(id);</span>
+<span class="nc bnc" id="L61" title="All 2 branches missed.">        if (promotionRepository.existsByCodeIgnoreCaseAndIdNot(request.code().trim(), id)) {</span>
+<span class="nc" id="L62">            throw new ConflictException(&quot;Promotion code already exists: &quot; + request.code());</span>
+        }
+<span class="nc" id="L64">        promotionMapper.updateEntity(promotion, request);</span>
+<span class="nc" id="L65">        return promotionMapper.toResponse(promotion);</span>
+    }
+
+    // BE-01: NONE is a &quot;no discount&quot; state used by Order.discountType — a promotion must always
+    // apply something, otherwise saving it corrupts the orders table at use time. And PERCENT above
+    // 100% silently passes validation but blows up with 400 at checkout (PercentDiscount caps at 100).
+    // Reject both at the API boundary so admins see the problem when they save, not when a cashier
+    // tries to use the broken promotion.
+<span class="fc" id="L73">    private static final BigDecimal MAX_PERCENT = new BigDecimal(&quot;100&quot;);</span>
+    private static void validate(PromotionRequest request) {
+<span class="nc bnc" id="L75" title="All 2 branches missed.">        if (request.discountType() == DiscountType.NONE) {</span>
+<span class="nc" id="L76">            throw new BadRequestException(&quot;Promotion cannot have discount type NONE&quot;);</span>
+        }
+<span class="nc bnc" id="L78" title="All 2 branches missed.">        if (request.discountType() == DiscountType.PERCENT</span>
+<span class="nc bnc" id="L79" title="All 2 branches missed.">                &amp;&amp; request.discountValue().compareTo(MAX_PERCENT) &gt; 0) {</span>
+<span class="nc" id="L80">            throw new BadRequestException(&quot;Percent discount cannot exceed 100%&quot;);</span>
+        }
+<span class="nc" id="L82">    }</span>
+
+    @Override
+    @Transactional
+    public PromotionResponse updateStatus(Long id, boolean active) {
+<span class="nc" id="L87">        Promotion promotion = getPromotion(id);</span>
+<span class="nc" id="L88">        promotion.setActive(active);</span>
+<span class="nc" id="L89">        return promotionMapper.toResponse(promotion);</span>
+    }
+
+    @Override
+    @Transactional
+    public void delete(Long id) {
+<span class="nc" id="L95">        promotionRepository.delete(getPromotion(id));</span>
+<span class="nc" id="L96">    }</span>
+
+    private Promotion getPromotion(Long id) {
+<span class="nc" id="L99">        return promotionRepository.findById(id)</span>
+<span class="nc" id="L100">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Promotion&quot;, id));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

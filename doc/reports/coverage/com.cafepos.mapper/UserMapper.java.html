@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cafe-pos</a> &gt; <a href="index.source.html" class="el_package">com.cafepos.mapper</a> &gt; <span class="el_source">UserMapper.java</span></div><h1>UserMapper.java</h1><pre class="source lang-java linenums">package com.cafepos.mapper;
+
+import com.cafepos.domain.entity.User;
+import com.cafepos.domain.entity.UserProfile;
+import com.cafepos.dto.request.ProfileUpdateRequest;
+import com.cafepos.dto.response.UserResponse;
+import org.springframework.stereotype.Component;
+
+@Component
+<span class="fc" id="L10">public class UserMapper {</span>
+
+    public void updateProfile(UserProfile profile, ProfileUpdateRequest request) {
+<span class="fc" id="L13">        profile.setFullName(request.fullName().trim());</span>
+<span class="fc" id="L14">        profile.setPhone(blankToNull(request.phone()));</span>
+<span class="fc" id="L15">        profile.setEmail(blankToNull(request.email()));</span>
+<span class="fc" id="L16">    }</span>
+
+    public UserResponse toResponse(UserProfile profile) {
+<span class="fc" id="L19">        User user = profile.getUser();</span>
+<span class="fc" id="L20">        return new UserResponse(user.getId(), user.getUsername(), user.getRole(), user.isActive(),</span>
+<span class="fc" id="L21">                profile.getFullName(), profile.getPhone(), profile.getEmail(), user.getCreatedAt());</span>
+    }
+
+    private static String blankToNull(String value) {
+<span class="pc bpc" id="L25" title="1 of 4 branches missed.">        return value == null || value.isBlank() ? null : value.trim();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderQuickStatsResponse.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cafe-pos</a> &gt; <a href="index.source.html" class="el_package">com.cafepos.dto.response</a> &gt; <span class="el_source">OrderQuickStatsResponse.java</span></div><h1>OrderQuickStatsResponse.java</h1><pre class="source lang-java linenums">package com.cafepos.dto.response;
+
+import java.math.BigDecimal;
+
+/**
+ * Today's at-a-glance figures for a POS top bar / dashboard tile.
+ * - orderCount: count of PAID orders today
+ * - netSales: sum of PAID order totals today (post-discount)
+ * - avgOrderValue: netSales / orderCount, HALF_UP to 2 decimals; zero when no orders
+ * - pendingCount: PENDING orders still open — surfaces stuck orders needing cancel/complete
+ * Cashiers see only their own; admins see all.
+ */
+<span class="nc" id="L13">public record OrderQuickStatsResponse(</span>
+        long orderCount,
+        BigDecimal netSales,
+        BigDecimal avgOrderValue,
+        long pendingCount) {
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

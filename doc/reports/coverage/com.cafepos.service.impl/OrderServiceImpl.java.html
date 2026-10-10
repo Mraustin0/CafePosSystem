@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cafe-pos</a> &gt; <a href="index.source.html" class="el_package">com.cafepos.service.impl</a> &gt; <span class="el_source">OrderServiceImpl.java</span></div><h1>OrderServiceImpl.java</h1><pre class="source lang-java linenums">package com.cafepos.service.impl;
+
+import com.cafepos.common.CurrentUser;
+import com.cafepos.domain.entity.*;
+import com.cafepos.domain.enums.DiscountType;
+import com.cafepos.domain.enums.OrderStatus;
+import com.cafepos.dto.request.ApplyDiscountRequest;
+import com.cafepos.dto.request.OrderItemRequest;
+import com.cafepos.dto.request.OrderItemsRequest;
+import com.cafepos.common.ShopTime;
+import com.cafepos.domain.enums.PaymentMethod;
+import com.cafepos.dto.response.OrderQuickStatsResponse;
+import com.cafepos.dto.response.OrderResponse;
+import com.cafepos.dto.response.OrderSummaryResponse;
+import com.cafepos.dto.response.PageResponse;
+import com.cafepos.exception.BadRequestException;
+import com.cafepos.exception.ResourceNotFoundException;
+import com.cafepos.mapper.OrderMapper;
+import com.cafepos.repository.*;
+import com.cafepos.service.OrderService;
+import com.cafepos.service.discount.DiscountStrategy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+@Service
+@Transactional(readOnly = true)
+public class OrderServiceImpl implements OrderService {
+
+    private final OrderRepository orderRepository;
+    private final ProductRepository productRepository;
+    private final AddOnRepository addOnRepository;
+    private final UserRepository userRepository;
+    private final UserProfileRepository profileRepository;
+    private final PaymentRepository paymentRepository;
+    private final OrderMapper orderMapper;
+    private final Map&lt;DiscountType, DiscountStrategy&gt; discountStrategies;
+
+<span class="fc" id="L47">    public OrderServiceImpl(OrderRepository orderRepository,</span>
+                            ProductRepository productRepository,
+                            AddOnRepository addOnRepository,
+                            UserRepository userRepository,
+                            UserProfileRepository profileRepository,
+                            PaymentRepository paymentRepository,
+                            OrderMapper orderMapper,
+                            List&lt;DiscountStrategy&gt; discountStrategies) {
+<span class="fc" id="L55">        this.orderRepository = orderRepository;</span>
+<span class="fc" id="L56">        this.productRepository = productRepository;</span>
+<span class="fc" id="L57">        this.addOnRepository = addOnRepository;</span>
+<span class="fc" id="L58">        this.userRepository = userRepository;</span>
+<span class="fc" id="L59">        this.profileRepository = profileRepository;</span>
+<span class="fc" id="L60">        this.paymentRepository = paymentRepository;</span>
+<span class="fc" id="L61">        this.orderMapper = orderMapper;</span>
+<span class="fc" id="L62">        this.discountStrategies = discountStrategies.stream()</span>
+<span class="fc" id="L63">                .collect(Collectors.toMap(DiscountStrategy::type, Function.identity(), (a, b) -&gt; {</span>
+<span class="nc" id="L64">                    throw new IllegalStateException(&quot;Two discount strategies for &quot; + a.type());</span>
+<span class="fc" id="L65">                }, () -&gt; new EnumMap&lt;&gt;(DiscountType.class)));</span>
+        // Fail at startup, not at checkout, if a DiscountType has no strategy.
+<span class="fc bfc" id="L67" title="All 2 branches covered.">        if (this.discountStrategies.size() != DiscountType.values().length) {</span>
+<span class="fc" id="L68">            throw new IllegalStateException(&quot;Missing discount strategy, found only &quot; + this.discountStrategies.keySet());</span>
+        }
+<span class="fc" id="L70">    }</span>
+
+    @Override
+    @Transactional
+    public OrderResponse create(OrderItemsRequest request, CurrentUser actor) {
+<span class="fc" id="L75">        Order order = new Order();</span>
+<span class="fc" id="L76">        order.setCashier(userRepository.getReferenceById(actor.id()));</span>
+        // order_number is NOT NULL UNIQUE but the real number needs the generated id: insert a unique placeholder first.
+<span class="fc" id="L78">        order.setOrderNumber(&quot;NEW-&quot; + UUID.randomUUID().toString().substring(0, 16));</span>
+<span class="fc" id="L79">        fillItems(order, request.items());</span>
+<span class="fc" id="L80">        applyDiscount(order, DiscountType.NONE, null);</span>
+
+<span class="fc" id="L82">        orderRepository.save(order);</span>
+<span class="fc" id="L83">        order.setOrderNumber(&quot;ORD-%08d&quot;.formatted(order.getId()));</span>
+<span class="fc" id="L84">        return toResponse(order);</span>
+    }
+
+    @Override
+    public PageResponse&lt;OrderSummaryResponse&gt; findAll(OrderStatus status, LocalDate from, LocalDate to, Long cashierId,
+                                                      Pageable pageable, CurrentUser actor) {
+<span class="fc bfc" id="L90" title="All 2 branches covered.">        Long effectiveCashierId = actor.admin() ? cashierId : actor.id();</span>
+<span class="fc" id="L91">        Page&lt;Order&gt; page = orderRepository.findAll(OrderSpecifications.filter(status, from, to, effectiveCashierId), pageable);</span>
+<span class="fc" id="L92">        Map&lt;Long, String&gt; names = cashierNames(page.getContent().stream().map(o -&gt; o.getCashier().getId()).collect(Collectors.toSet()));</span>
+<span class="fc" id="L93">        List&lt;Long&gt; orderIds = page.getContent().stream().map(Order::getId).toList();</span>
+<span class="fc" id="L94">        Map&lt;Long, PaymentMethod&gt; paymentMethods = paymentRepository.findByOrderIdIn(orderIds).stream()</span>
+<span class="fc" id="L95">                .collect(Collectors.toMap(p -&gt; p.getOrder().getId(), Payment::getMethod));</span>
+<span class="fc" id="L96">        Map&lt;Long, Integer&gt; itemCounts = orderRepository.sumItemQuantitiesByIds(orderIds).stream()</span>
+<span class="fc" id="L97">                .collect(Collectors.toMap(r -&gt; (Long) r[0], r -&gt; ((Number) r[1]).intValue()));</span>
+<span class="fc" id="L98">        return PageResponse.of(page, o -&gt; orderMapper.toSummary(o, names.get(o.getCashier().getId()), paymentMethods.get(o.getId()), itemCounts.getOrDefault(o.getId(), 0)));</span>
+    }
+
+    @Override
+    public OrderResponse findById(Long id, CurrentUser actor) {
+<span class="fc" id="L103">        return toResponse(getVisibleOrder(id, actor));</span>
+    }
+
+    @Override
+    @Transactional
+    public OrderResponse replaceItems(Long id, OrderItemsRequest request, CurrentUser actor) {
+<span class="fc" id="L109">        Order order = getVisibleOrder(id, actor);</span>
+<span class="fc" id="L110">        order.ensureModifiable();</span>
+<span class="fc" id="L111">        order.getItems().clear(); // orphanRemoval deletes the old rows and their add-ons</span>
+<span class="fc" id="L112">        fillItems(order, request.items());</span>
+        try {
+<span class="fc" id="L114">            applyDiscount(order, order.getDiscountType(), order.getDiscountValue());</span>
+<span class="fc" id="L115">        } catch (BadRequestException e) {</span>
+            // Rolls back the whole transaction, so the order keeps its old items.
+<span class="fc" id="L117">            throw new BadRequestException(&quot;The current discount does not fit the new subtotal &quot;</span>
+<span class="fc" id="L118">                    + order.getSubtotal() + &quot;: change or remove the discount first&quot;);</span>
+        }
+<span class="fc" id="L120">        return toResponse(order);</span>
+    }
+
+    @Override
+    @Transactional
+    public OrderResponse applyDiscount(Long id, ApplyDiscountRequest request, CurrentUser actor) {
+<span class="fc" id="L126">        Order order = getVisibleOrder(id, actor);</span>
+<span class="fc" id="L127">        order.ensureModifiable();</span>
+<span class="fc" id="L128">        applyDiscount(order, request.type(), request.value());</span>
+<span class="fc" id="L129">        return toResponse(order);</span>
+    }
+
+    @Override
+    @Transactional
+    public OrderResponse cancel(Long id, CurrentUser actor) {
+<span class="fc" id="L135">        Order order = getVisibleOrder(id, actor);</span>
+<span class="fc" id="L136">        order.cancel();</span>
+<span class="fc" id="L137">        return toResponse(order);</span>
+    }
+
+    @Override
+    public OrderQuickStatsResponse quickStatsToday(CurrentUser actor) {
+<span class="nc" id="L142">        LocalDate today = LocalDate.now(ShopTime.ZONE);</span>
+<span class="nc bnc" id="L143" title="All 2 branches missed.">        Long cashierId = actor.admin() ? null : actor.id();</span>
+<span class="nc" id="L144">        Page&lt;Order&gt; all = orderRepository.findAll(</span>
+<span class="nc" id="L145">                OrderSpecifications.filter(null, today, today, cashierId),</span>
+<span class="nc" id="L146">                Pageable.unpaged());</span>
+<span class="nc bnc" id="L147" title="All 2 branches missed.">        long paid = all.stream().filter(o -&gt; o.getStatus() == OrderStatus.PAID).count();</span>
+<span class="nc bnc" id="L148" title="All 2 branches missed.">        long pending = all.stream().filter(o -&gt; o.getStatus() == OrderStatus.PENDING).count();</span>
+<span class="nc" id="L149">        BigDecimal net = all.stream()</span>
+<span class="nc bnc" id="L150" title="All 2 branches missed.">                .filter(o -&gt; o.getStatus() == OrderStatus.PAID)</span>
+<span class="nc" id="L151">                .map(Order::getTotal)</span>
+<span class="nc" id="L152">                .reduce(BigDecimal.ZERO, BigDecimal::add)</span>
+<span class="nc" id="L153">                .setScale(2, RoundingMode.HALF_UP);</span>
+<span class="nc bnc" id="L154" title="All 2 branches missed.">        BigDecimal avg = paid == 0 ? BigDecimal.ZERO.setScale(2)</span>
+<span class="nc" id="L155">                : net.divide(BigDecimal.valueOf(paid), 2, RoundingMode.HALF_UP);</span>
+<span class="nc" id="L156">        return new OrderQuickStatsResponse(paid, net, avg, pending);</span>
+    }
+
+    // ----- helpers -----
+
+    private void fillItems(Order order, List&lt;OrderItemRequest&gt; requests) {
+<span class="fc" id="L162">        Map&lt;Long, Product&gt; products = loadProducts(requests.stream().map(OrderItemRequest::productId).collect(Collectors.toSet()));</span>
+<span class="fc bfc" id="L163" title="All 2 branches covered.">        for (OrderItemRequest request : requests) {</span>
+<span class="fc" id="L164">            Product product = products.get(request.productId());</span>
+<span class="fc bfc" id="L165" title="All 2 branches covered.">            if (!product.isActive()) {</span>
+<span class="fc" id="L166">                throw new BadRequestException(&quot;Product is not available: &quot; + product.getName());</span>
+            }
+<span class="fc" id="L168">            OrderItem item = new OrderItem();</span>
+<span class="fc" id="L169">            item.setProduct(product);</span>
+<span class="fc" id="L170">            item.setQuantity(request.quantity());</span>
+<span class="fc" id="L171">            item.setUnitPrice(product.getPrice());</span>
+<span class="fc bfc" id="L172" title="All 2 branches covered.">            for (Long addOnId : Optional.ofNullable(request.addOnIds()).orElse(Set.of())) {</span>
+<span class="fc" id="L173">                AddOn addOn = allowedAddOn(addOnId);</span>
+<span class="fc" id="L174">                item.getAddOns().add(new OrderItemAddOn(addOn, addOn.getPrice()));</span>
+            }
+<span class="fc" id="L176">            order.addItem(item);</span>
+        }
+<span class="fc" id="L178">    }</span>
+
+    private Map&lt;Long, Product&gt; loadProducts(Set&lt;Long&gt; ids) {
+<span class="fc" id="L181">        Map&lt;Long, Product&gt; products = productRepository.findAllById(ids).stream()</span>
+<span class="fc" id="L182">                .collect(Collectors.toMap(Product::getId, Function.identity()));</span>
+<span class="fc" id="L183">        Set&lt;Long&gt; missing = new TreeSet&lt;&gt;(ids);</span>
+<span class="fc" id="L184">        missing.removeAll(products.keySet());</span>
+<span class="fc bfc" id="L185" title="All 2 branches covered.">        if (!missing.isEmpty()) {</span>
+<span class="fc" id="L186">            throw new ResourceNotFoundException(&quot;Product&quot;, missing);</span>
+        }
+<span class="fc" id="L188">        return products;</span>
+    }
+
+    // BE-02: Add-ons are a global catalog (the &quot;จัดการท็อปปิ้ง&quot; UI maintains it) that any product can use.
+    // The old product_add_ons link was blocking real-world flows: new menu items ship with addOnIds=[]
+    // so cashiers couldn't attach boba / extra shot without an admin pre-linking every combo. Now we
+    // only enforce that the add-on exists and is active; the product-level link is no longer required.
+    private AddOn allowedAddOn(Long addOnId) {
+<span class="fc" id="L196">        AddOn addOn = addOnRepository.findById(addOnId)</span>
+<span class="pc" id="L197">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;AddOn&quot;, addOnId));</span>
+<span class="fc bfc" id="L198" title="All 2 branches covered.">        if (!addOn.isActive()) {</span>
+<span class="fc" id="L199">            throw new BadRequestException(&quot;Add-on is not available: &quot; + addOn.getName());</span>
+        }
+<span class="fc" id="L201">        return addOn;</span>
+    }
+
+    /** Recalculates subtotal, discount and total; remembers type/value so later item changes can reuse them. */
+    private void applyDiscount(Order order, DiscountType type, BigDecimal value) {
+<span class="fc" id="L206">        BigDecimal subtotal = order.getItems().stream().map(OrderItem::lineTotal)</span>
+<span class="fc" id="L207">                .reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2, RoundingMode.HALF_UP);</span>
+<span class="fc" id="L208">        order.setSubtotal(subtotal);</span>
+<span class="pc bpc" id="L209" title="1 of 4 branches missed.">        BigDecimal normalizedValue = type == DiscountType.NONE || value == null ? null : value.setScale(2, RoundingMode.HALF_UP);</span>
+<span class="fc" id="L210">        BigDecimal discount = discountStrategies.get(type).calculate(subtotal, normalizedValue);</span>
+<span class="fc" id="L211">        order.setDiscountType(type);</span>
+<span class="fc" id="L212">        order.setDiscountValue(normalizedValue);</span>
+<span class="fc" id="L213">        order.setDiscountAmount(discount);</span>
+<span class="fc" id="L214">        order.setTotal(subtotal.subtract(discount));</span>
+<span class="fc" id="L215">    }</span>
+
+    /** Another cashier's order answers 404, same as a missing one, so ids can't be probed. */
+    private Order getVisibleOrder(Long id, CurrentUser actor) {
+<span class="fc" id="L219">        return orderRepository.findVisibleById(id, actor)</span>
+<span class="fc" id="L220">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Order&quot;, id));</span>
+    }
+
+    private OrderResponse toResponse(Order order) {
+<span class="fc" id="L224">        Long cashierId = order.getCashier().getId();</span>
+<span class="fc" id="L225">        return orderMapper.toResponse(order, cashierNames(Set.of(cashierId)).get(cashierId),</span>
+<span class="fc" id="L226">                paymentRepository.findByOrderId(order.getId()).orElse(null));</span>
+    }
+
+    /** One query for all cashiers on a page instead of one per order. */
+    private Map&lt;Long, String&gt; cashierNames(Set&lt;Long&gt; userIds) {
+<span class="fc" id="L231">        return profileRepository.findAllById(userIds).stream()</span>
+<span class="fc" id="L232">                .collect(Collectors.toMap(UserProfile::getId, UserProfile::getFullName));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SecurityConfig.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cafe-pos</a> &gt; <a href="index.source.html" class="el_package">com.cafepos.config</a> &gt; <span class="el_source">SecurityConfig.java</span></div><h1>SecurityConfig.java</h1><pre class="source lang-java linenums">package com.cafepos.config;
+
+import com.cafepos.dto.response.ApiErrorResponse;
+import com.nimbusds.jose.jwk.source.ImmutableSecret;
+import io.swagger.v3.oas.annotations.OpenAPIDefinition;
+import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.web.SecurityFilterChain;
+import tools.jackson.databind.json.JsonMapper;
+
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+
+/**
+ * Stateless JWT (HS256) security. Login issues the token (AuthServiceImpl); every other /api call must send
+ * &quot;Authorization: Bearer ...&quot;. Roles come from the &quot;roles&quot; claim.
+ */
+@Configuration
+@OpenAPIDefinition(security = @SecurityRequirement(name = &quot;bearer&quot;))
+@SecurityScheme(name = &quot;bearer&quot;, type = SecuritySchemeType.HTTP, scheme = &quot;bearer&quot;, bearerFormat = &quot;JWT&quot;)
+<span class="fc" id="L46">public class SecurityConfig {</span>
+
+<span class="fc" id="L48">    private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);</span>
+    private static final int MIN_SECRET_BYTES = 32;
+
+    @Bean
+    SecurityFilterChain securityFilterChain(HttpSecurity http, JsonMapper jsonMapper) throws Exception {
+<span class="fc" id="L53">        http</span>
+                // No cookies/sessions: the token is sent explicitly in a header, so CSRF does not apply.
+<span class="fc" id="L55">                .csrf(csrf -&gt; csrf.disable())</span>
+<span class="fc" id="L56">                .sessionManagement(s -&gt; s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))</span>
+<span class="fc" id="L57">                .authorizeHttpRequests(auth -&gt; auth</span>
+<span class="fc" id="L58">                        .requestMatchers(HttpMethod.POST, &quot;/api/v1/auth/login&quot;).permitAll()</span>
+
+<span class="fc" id="L60">                        .requestMatchers(&quot;/api/v1/users/me&quot;, &quot;/api/v1/users/me/**&quot;).authenticated()</span>
+<span class="fc" id="L61">                        .requestMatchers(&quot;/api/v1/users&quot;, &quot;/api/v1/users/**&quot;).hasRole(&quot;ADMIN&quot;)</span>
+<span class="fc" id="L62">                        .requestMatchers(&quot;/api/v1/reports/**&quot;).hasRole(&quot;ADMIN&quot;)</span>
+
+                        // Menu + promotions: cashiers read them for the POS, only admins change them.
+<span class="fc" id="L65">                        .requestMatchers(HttpMethod.GET, &quot;/api/v1/categories/**&quot;, &quot;/api/v1/add-ons/**&quot;, &quot;/api/v1/products/**&quot;, &quot;/api/v1/promotions/**&quot;).authenticated()</span>
+<span class="fc" id="L66">                        .requestMatchers(&quot;/api/v1/categories/**&quot;, &quot;/api/v1/add-ons/**&quot;, &quot;/api/v1/products/**&quot;, &quot;/api/v1/promotions/**&quot;).hasRole(&quot;ADMIN&quot;)</span>
+
+<span class="fc" id="L68">                        .requestMatchers(&quot;/api/**&quot;).authenticated()</span>
+                        // Swagger UI, API docs and the React app (static files + client routes).
+<span class="fc" id="L70">                        .anyRequest().permitAll())</span>
+<span class="fc" id="L71">                .oauth2ResourceServer(rs -&gt; rs</span>
+<span class="fc" id="L72">                        .jwt(jwt -&gt; jwt.jwtAuthenticationConverter(rolesConverter()))</span>
+<span class="fc" id="L73">                        .authenticationEntryPoint((req, res, ex) -&gt;</span>
+<span class="fc" id="L74">                                writeError(jsonMapper, req, res, HttpStatus.UNAUTHORIZED, &quot;Authentication required&quot;)))</span>
+<span class="fc" id="L75">                .exceptionHandling(e -&gt; e</span>
+<span class="fc" id="L76">                        .authenticationEntryPoint((req, res, ex) -&gt;</span>
+<span class="fc" id="L77">                                writeError(jsonMapper, req, res, HttpStatus.UNAUTHORIZED, &quot;Authentication required&quot;))</span>
+<span class="fc" id="L78">                        .accessDeniedHandler((req, res, ex) -&gt;</span>
+<span class="fc" id="L79">                                writeError(jsonMapper, req, res, HttpStatus.FORBIDDEN, &quot;Access denied&quot;)));</span>
+<span class="fc" id="L80">        return http.build();</span>
+    }
+
+    @Bean
+    SecretKey jwtSecretKey(@Value(&quot;${app.jwt.secret:}&quot;) String secret) {
+<span class="fc" id="L85">        byte[] bytes = secret.getBytes(StandardCharsets.UTF_8);</span>
+<span class="pc bpc" id="L86" title="1 of 2 branches missed.">        if (secret.isBlank()) {</span>
+            // Safe default: a random key can't be forged, it just logs everyone out on restart.
+<span class="fc" id="L88">            bytes = new byte[MIN_SECRET_BYTES];</span>
+<span class="fc" id="L89">            new SecureRandom().nextBytes(bytes);</span>
+<span class="fc" id="L90">            log.warn(&quot;JWT_SECRET is not set: using a random key, tokens become invalid after restart&quot;);</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">        } else if (bytes.length &lt; MIN_SECRET_BYTES) {</span>
+<span class="nc" id="L92">            throw new IllegalStateException(&quot;JWT_SECRET must be at least &quot; + MIN_SECRET_BYTES + &quot; bytes&quot;);</span>
+        }
+<span class="fc" id="L94">        return new SecretKeySpec(bytes, &quot;HmacSHA256&quot;);</span>
+    }
+
+    @Bean
+    JwtEncoder jwtEncoder(SecretKey jwtSecretKey) {
+<span class="fc" id="L99">        return new NimbusJwtEncoder(new ImmutableSecret&lt;&gt;(jwtSecretKey));</span>
+    }
+
+    @Bean
+    JwtDecoder jwtDecoder(SecretKey jwtSecretKey) {
+<span class="fc" id="L104">        return NimbusJwtDecoder.withSecretKey(jwtSecretKey).macAlgorithm(MacAlgorithm.HS256).build();</span>
+    }
+
+    @Bean
+    PasswordEncoder passwordEncoder() {
+<span class="fc" id="L109">        return new BCryptPasswordEncoder();</span>
+    }
+
+    private static JwtAuthenticationConverter rolesConverter() {
+<span class="fc" id="L113">        JwtGrantedAuthoritiesConverter authorities = new JwtGrantedAuthoritiesConverter();</span>
+<span class="fc" id="L114">        authorities.setAuthoritiesClaimName(&quot;roles&quot;);</span>
+<span class="fc" id="L115">        authorities.setAuthorityPrefix(&quot;ROLE_&quot;);</span>
+<span class="fc" id="L116">        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();</span>
+<span class="fc" id="L117">        converter.setJwtGrantedAuthoritiesConverter(authorities);</span>
+<span class="fc" id="L118">        return converter;</span>
+    }
+
+    // Security errors happen before Spring MVC, so GlobalExceptionHandler never sees them — same JSON format here.
+    private static void writeError(JsonMapper jsonMapper, HttpServletRequest req, HttpServletResponse res,
+                                   HttpStatus status, String message) throws IOException {
+<span class="fc" id="L124">        res.setStatus(status.value());</span>
+<span class="fc" id="L125">        res.setContentType(MediaType.APPLICATION_JSON_VALUE);</span>
+<span class="fc" id="L126">        jsonMapper.writeValue(res.getOutputStream(),</span>
+<span class="fc" id="L127">                ApiErrorResponse.of(status.value(), status.getReasonPhrase(), message, req.getRequestURI()));</span>
+<span class="fc" id="L128">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

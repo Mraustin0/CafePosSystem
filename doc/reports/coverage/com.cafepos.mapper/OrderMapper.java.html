@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cafe-pos</a> &gt; <a href="index.source.html" class="el_package">com.cafepos.mapper</a> &gt; <span class="el_source">OrderMapper.java</span></div><h1>OrderMapper.java</h1><pre class="source lang-java linenums">package com.cafepos.mapper;
+
+import com.cafepos.domain.entity.Order;
+import com.cafepos.domain.entity.OrderItem;
+import com.cafepos.domain.entity.OrderItemAddOn;
+import com.cafepos.domain.entity.Payment;
+import com.cafepos.dto.response.OrderItemAddOnResponse;
+import com.cafepos.dto.response.OrderItemResponse;
+import com.cafepos.dto.response.OrderResponse;
+import com.cafepos.dto.response.OrderSummaryResponse;
+import org.springframework.stereotype.Component;
+
+import java.util.Comparator;
+
+@Component
+public class OrderMapper {
+
+    private final PaymentMapper paymentMapper;
+
+<span class="fc" id="L20">    public OrderMapper(PaymentMapper paymentMapper) {</span>
+<span class="fc" id="L21">        this.paymentMapper = paymentMapper;</span>
+<span class="fc" id="L22">    }</span>
+
+    /** payment may be null (order not paid). */
+    public OrderResponse toResponse(Order order, String cashierName, Payment payment) {
+<span class="fc" id="L26">        return new OrderResponse(</span>
+<span class="fc" id="L27">                order.getId(),</span>
+<span class="fc" id="L28">                order.getOrderNumber(),</span>
+<span class="fc" id="L29">                order.getStatus(),</span>
+<span class="fc" id="L30">                order.getCashier().getId(),</span>
+<span class="fc" id="L31">                cashierName,</span>
+<span class="fc" id="L32">                order.getItems().stream().map(this::toItemResponse).toList(),</span>
+<span class="fc" id="L33">                order.getSubtotal(),</span>
+<span class="fc" id="L34">                order.getDiscountType(),</span>
+<span class="fc" id="L35">                order.getDiscountValue(),</span>
+<span class="fc" id="L36">                order.getDiscountAmount(),</span>
+<span class="fc" id="L37">                order.getTotal(),</span>
+<span class="fc" id="L38">                order.getCreatedAt(),</span>
+<span class="fc bfc" id="L39" title="All 2 branches covered.">                payment == null ? null : paymentMapper.toResponse(payment, order));</span>
+    }
+
+    public OrderSummaryResponse toSummary(Order order, String cashierName, com.cafepos.domain.enums.PaymentMethod paymentMethod, int itemCount) {
+<span class="fc" id="L43">        return new OrderSummaryResponse(order.getId(), order.getOrderNumber(), order.getStatus(), cashierName,</span>
+<span class="fc" id="L44">                itemCount, order.getTotal(), order.getCreatedAt(), paymentMethod);</span>
+    }
+
+    private OrderItemResponse toItemResponse(OrderItem item) {
+<span class="fc" id="L48">        return new OrderItemResponse(</span>
+<span class="fc" id="L49">                item.getId(),</span>
+<span class="fc" id="L50">                item.getProduct().getId(),</span>
+<span class="fc" id="L51">                item.getProduct().getName(),</span>
+<span class="fc" id="L52">                item.getQuantity(),</span>
+<span class="fc" id="L53">                item.getUnitPrice(),</span>
+<span class="fc" id="L54">                item.getAddOns().stream()</span>
+<span class="fc" id="L55">                        .map(a -&gt; new OrderItemAddOnResponse(a.getAddOn().getId(), a.getAddOn().getName(), a.getPrice()))</span>
+<span class="fc" id="L56">                        .sorted(Comparator.comparing(OrderItemAddOnResponse::name))</span>
+<span class="fc" id="L57">                        .toList(),</span>
+<span class="fc" id="L58">                item.lineTotal());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

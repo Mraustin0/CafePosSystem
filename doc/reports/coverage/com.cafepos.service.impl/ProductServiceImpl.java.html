@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProductServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cafe-pos</a> &gt; <a href="index.source.html" class="el_package">com.cafepos.service.impl</a> &gt; <span class="el_source">ProductServiceImpl.java</span></div><h1>ProductServiceImpl.java</h1><pre class="source lang-java linenums">package com.cafepos.service.impl;
+
+import com.cafepos.domain.entity.AddOn;
+import com.cafepos.domain.entity.Category;
+import com.cafepos.domain.entity.Product;
+import com.cafepos.dto.request.ProductRequest;
+import com.cafepos.dto.response.PageResponse;
+import com.cafepos.dto.response.ProductResponse;
+import com.cafepos.exception.ConflictException;
+import com.cafepos.exception.ResourceNotFoundException;
+import com.cafepos.mapper.ProductMapper;
+import com.cafepos.repository.AddOnRepository;
+import com.cafepos.repository.CategoryRepository;
+import com.cafepos.repository.OrderRepository;
+import com.cafepos.repository.ProductRepository;
+import com.cafepos.repository.ProductSpecifications;
+import com.cafepos.service.ProductService;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+@Service
+@Transactional(readOnly = true)
+public class ProductServiceImpl implements ProductService {
+
+    private final ProductRepository productRepository;
+    private final CategoryRepository categoryRepository;
+    private final AddOnRepository addOnRepository;
+    private final OrderRepository orderRepository;
+    private final ProductMapper productMapper;
+
+<span class="fc" id="L36">    public ProductServiceImpl(ProductRepository productRepository,</span>
+                              CategoryRepository categoryRepository,
+                              AddOnRepository addOnRepository,
+                              OrderRepository orderRepository,
+                              ProductMapper productMapper) {
+<span class="fc" id="L41">        this.productRepository = productRepository;</span>
+<span class="fc" id="L42">        this.categoryRepository = categoryRepository;</span>
+<span class="fc" id="L43">        this.addOnRepository = addOnRepository;</span>
+<span class="fc" id="L44">        this.orderRepository = orderRepository;</span>
+<span class="fc" id="L45">        this.productMapper = productMapper;</span>
+<span class="fc" id="L46">    }</span>
+
+    @Override
+    public PageResponse&lt;ProductResponse&gt; findAll(Long categoryId, String search, Boolean active, Pageable pageable) {
+<span class="fc" id="L50">        return PageResponse.of(</span>
+<span class="fc" id="L51">                productRepository.findAll(ProductSpecifications.filter(categoryId, search, active), pageable),</span>
+<span class="fc" id="L52">                productMapper::toResponse);</span>
+    }
+
+    @Override
+    public ProductResponse findById(Long id) {
+<span class="nc" id="L57">        return productMapper.toResponse(getProduct(id));</span>
+    }
+
+    @Override
+    @Transactional
+    public ProductResponse create(ProductRequest request) {
+<span class="fc" id="L63">        Product product = new Product();</span>
+<span class="fc" id="L64">        productMapper.updateEntity(product, request, getCategory(request.categoryId()), getAddOns(request.addOnIds()));</span>
+<span class="fc" id="L65">        return productMapper.toResponse(productRepository.save(product));</span>
+    }
+
+    @Override
+    @Transactional
+    public ProductResponse update(Long id, ProductRequest request) {
+<span class="fc" id="L71">        Product product = getProduct(id);</span>
+<span class="fc" id="L72">        productMapper.updateEntity(product, request, getCategory(request.categoryId()), getAddOns(request.addOnIds()));</span>
+<span class="fc" id="L73">        return productMapper.toResponse(product);</span>
+    }
+
+    @Override
+    @Transactional
+    public ProductResponse updateStatus(Long id, boolean active) {
+<span class="nc" id="L79">        Product product = getProduct(id);</span>
+<span class="nc" id="L80">        product.setActive(active);</span>
+<span class="nc" id="L81">        return productMapper.toResponse(product);</span>
+    }
+
+    @Override
+    @Transactional
+    public void delete(Long id) {
+<span class="nc" id="L87">        Product product = getProduct(id);</span>
+        // BE-05: block hard-delete once the product has been sold so historical bills / reports stay complete.
+<span class="nc bnc" id="L89" title="All 2 branches missed.">        if (orderRepository.existsOrderItemByProductId(id)) {</span>
+<span class="nc" id="L90">            throw new ConflictException(&quot;Product has order history; use PATCH /status to soft-delete instead&quot;);</span>
+        }
+<span class="nc" id="L92">        productRepository.delete(product);</span>
+<span class="nc" id="L93">    }</span>
+
+    private Product getProduct(Long id) {
+<span class="fc" id="L96">        return productRepository.findById(id)</span>
+<span class="fc" id="L97">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Product&quot;, id));</span>
+    }
+
+    private Category getCategory(Long id) {
+<span class="fc" id="L101">        return categoryRepository.findById(id)</span>
+<span class="fc" id="L102">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Category&quot;, id));</span>
+    }
+
+    /** All ids must exist, otherwise 404 listing the missing ones. null = no add-ons. */
+    private Set&lt;AddOn&gt; getAddOns(Set&lt;Long&gt; ids) {
+<span class="pc bpc" id="L107" title="1 of 4 branches missed.">        if (ids == null || ids.isEmpty()) {</span>
+<span class="fc" id="L108">            return Set.of();</span>
+        }
+<span class="fc" id="L110">        Set&lt;AddOn&gt; found = new HashSet&lt;&gt;(addOnRepository.findAllById(ids));</span>
+<span class="fc bfc" id="L111" title="All 2 branches covered.">        if (found.size() != ids.size()) {</span>
+<span class="fc" id="L112">            Set&lt;Long&gt; foundIds = found.stream().map(AddOn::getId).collect(Collectors.toSet());</span>
+<span class="fc bfc" id="L113" title="All 2 branches covered.">            Set&lt;Long&gt; missing = ids.stream().filter(id -&gt; !foundIds.contains(id)).collect(Collectors.toSet());</span>
+<span class="fc" id="L114">            throw new ResourceNotFoundException(&quot;Add-on&quot;, missing);</span>
+        }
+<span class="fc" id="L116">        return found;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

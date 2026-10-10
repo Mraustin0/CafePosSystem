@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CategoryServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cafe-pos</a> &gt; <a href="index.source.html" class="el_package">com.cafepos.service.impl</a> &gt; <span class="el_source">CategoryServiceImpl.java</span></div><h1>CategoryServiceImpl.java</h1><pre class="source lang-java linenums">package com.cafepos.service.impl;
+
+import com.cafepos.domain.entity.Category;
+import com.cafepos.dto.request.CategoryRequest;
+import com.cafepos.dto.response.CategoryResponse;
+import com.cafepos.exception.ConflictException;
+import com.cafepos.exception.ResourceNotFoundException;
+import com.cafepos.mapper.CategoryMapper;
+import com.cafepos.repository.CategoryRepository;
+import com.cafepos.repository.ProductRepository;
+import com.cafepos.service.CategoryService;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+@Service
+@Transactional(readOnly = true)
+public class CategoryServiceImpl implements CategoryService {
+
+    private final CategoryRepository categoryRepository;
+    private final ProductRepository productRepository;
+    private final CategoryMapper categoryMapper;
+
+    public CategoryServiceImpl(CategoryRepository categoryRepository,
+                               ProductRepository productRepository,
+<span class="fc" id="L28">                               CategoryMapper categoryMapper) {</span>
+<span class="fc" id="L29">        this.categoryRepository = categoryRepository;</span>
+<span class="fc" id="L30">        this.productRepository = productRepository;</span>
+<span class="fc" id="L31">        this.categoryMapper = categoryMapper;</span>
+<span class="fc" id="L32">    }</span>
+
+    @Override
+    public List&lt;CategoryResponse&gt; findAll() {
+<span class="nc" id="L36">        return categoryRepository.findAll(Sort.by(&quot;name&quot;)).stream()</span>
+<span class="nc" id="L37">                .map(categoryMapper::toResponse)</span>
+<span class="nc" id="L38">                .toList();</span>
+    }
+
+    @Override
+    public CategoryResponse findById(Long id) {
+<span class="nc" id="L43">        return categoryMapper.toResponse(getCategory(id));</span>
+    }
+
+    @Override
+    @Transactional
+    public CategoryResponse create(CategoryRequest request) {
+<span class="fc bfc" id="L49" title="All 2 branches covered.">        if (categoryRepository.existsByNameIgnoreCase(request.name().trim())) {</span>
+<span class="fc" id="L50">            throw new ConflictException(&quot;Category name already exists: &quot; + request.name());</span>
+        }
+<span class="fc" id="L52">        Category saved = categoryRepository.save(categoryMapper.toEntity(request));</span>
+<span class="fc" id="L53">        return categoryMapper.toResponse(saved);</span>
+    }
+
+    @Override
+    @Transactional
+    public CategoryResponse update(Long id, CategoryRequest request) {
+<span class="fc" id="L59">        Category category = getCategory(id);</span>
+<span class="pc bpc" id="L60" title="1 of 2 branches missed.">        if (categoryRepository.existsByNameIgnoreCaseAndIdNot(request.name().trim(), id)) {</span>
+<span class="fc" id="L61">            throw new ConflictException(&quot;Category name already exists: &quot; + request.name());</span>
+        }
+<span class="nc" id="L63">        categoryMapper.updateEntity(category, request);</span>
+<span class="nc" id="L64">        return categoryMapper.toResponse(category);</span>
+    }
+
+    @Override
+    @Transactional
+    public void delete(Long id) {
+<span class="fc" id="L70">        Category category = getCategory(id);</span>
+<span class="fc bfc" id="L71" title="All 2 branches covered.">        if (productRepository.existsByCategoryId(id)) {</span>
+<span class="fc" id="L72">            throw new ConflictException(&quot;Category still has products: &quot; + id);</span>
+        }
+<span class="fc" id="L74">        categoryRepository.delete(category);</span>
+<span class="fc" id="L75">    }</span>
+
+    private Category getCategory(Long id) {
+<span class="fc" id="L78">        return categoryRepository.findById(id)</span>
+<span class="fc" id="L79">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Category&quot;, id));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

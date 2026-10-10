@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderItemAddOn.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cafe-pos</a> &gt; <a href="index.source.html" class="el_package">com.cafepos.domain.entity</a> &gt; <span class="el_source">OrderItemAddOn.java</span></div><h1>OrderItemAddOn.java</h1><pre class="source lang-java linenums">package com.cafepos.domain.entity;
+
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.math.BigDecimal;
+
+/** A row of order_item_add_ons: which add-on a line got and what it cost at order time. */
+@Embeddable
+@Getter
+@Setter
+@NoArgsConstructor
+public class OrderItemAddOn {
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = &quot;add_on_id&quot;, nullable = false)
+    private AddOn addOn;
+
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal price;
+
+<span class="fc" id="L24">    public OrderItemAddOn(AddOn addOn, BigDecimal price) {</span>
+<span class="fc" id="L25">        this.addOn = addOn;</span>
+<span class="fc" id="L26">        this.price = price;</span>
+<span class="fc" id="L27">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

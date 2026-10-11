@@ -13,7 +13,7 @@
 | 1 | ภควัฒน์ สุขมณี | 673380418-9 | 04 | `Phakawat_6733804189_04` | Backend ทั้งหมด (REST API, Auth/JWT, Order, Payment, Promotion), เชื่อม Frontend กับ Backend, Docker / Deploy / CI, SOLID & Design Patterns, Test Report |
 | 2 | ธนนันค์ สาวิกัน | 673380568-8 | 04 | `Thana-nan_6733805868_04` | UI/UX ออกแบบหน้า POS หลัก (pos-demo), Bill Management, Dashboard wiring, ER Diagram, Use Case Diagram , slide |
 | 3 | กวินธิดา อนุนิวัฒน์ | 673380390-5 | 04 | `Kawinthida_6733803905_04` | Dashboard UI (KPI cards, ยอดขาย), User Management UI, CoffeeModal, TeaModal, MenuConfigModal, slide , User Management View, CashierSidebar (role-based), Reset Password Modal |
-| 4 | กัญญาวีร์ สิงห์ลี | 673380573-7 | 04 | `Kanyawee_6733805737_04` | Settings, Settings UI (Profile, Logout), Login , AddUserPage , report |
+| 4 | กัญญาวีร์ สิงห์ลี | 673380573-7 | 04 | `Kanyawee_6733805737_04` | Settings, Settings UI (Profile, Logout), Login , AddUserPage , จัดทำรายงานโครงงานรูปเล่มทั้ง 6 บท (report) |
 
 รายละเอียดการแบ่งงาน: [doc/system-functions.md](doc/system-functions.md#การแบ่งงาน)
 
